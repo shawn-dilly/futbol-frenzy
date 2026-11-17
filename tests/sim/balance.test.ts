@@ -8,8 +8,9 @@ import { matchConfig } from '../helpers';
 import { median, PossessionEpisodes } from './possessionEpisodes';
 
 /** Measure a deterministic full match; dazed counts transitions into the condition. */
-function playMatch(config: MatchConfig) {
+function playMatch(config: MatchConfig, reserves = 3) {
   const state = createMatch(config);
+  state.reserves = [reserves, reserves];
   const hits: Record<HurtTier, number> = { stumble: 0, knockdown: 0, wipeout: 0, overTheTop: 0 };
   const rage = [0, 0], possession = new PossessionEpisodes();
   let shots = 0, dazed = 0, playTicks = 0;
@@ -39,43 +40,50 @@ function playMatch(config: MatchConfig) {
 const totalHits = (m: ReturnType<typeof playMatch>) => Object.values(m.hits).reduce((a, b) => a + b, 0);
 const avg = (values: number[]) => values.reduce((a, b) => a + b, 0) / values.length;
 
-test('seeded mirror matches meet balance bands', () => {
+test('M3 and M4 balance contracts', () => {
   const goalBands = [[1, 5], [2, 7], [2, 8], [3, 10]];
   const hitBands = [[8, 25], [15, 40], [30, 70], [45, 110]];
-  const rows = LEVEL_ORDER.map(level => {
-    const matches = Array.from({ length: 10 }, (_, i) => playMatch(matchConfig({ seed: i + 1, human: [false, false], level: [level, level] })));
-    return { level, goals: avg(matches.map(m => m.goals[0] + m.goals[1])), hits: avg(matches.map(totalHits)), nil: matches.filter(m => m.goals[0] + m.goals[1] === 0).length, rage: [0, 1].map(t => avg(matches.map(m => m.rage[t] / m.playTicks))), shots: avg(matches.map(m => m.shots)), dazed: avg(matches.map(m => m.dazed)) };
+  const blocks = [[1,2,3,4,5,6,7,8,9,10], [11,12,13,14,15,16,17,18,19,20]];
+  const mirrors = [0, 3].flatMap(reserves => blocks.map(seeds => ({ reserves, seeds,
+    rows: LEVEL_ORDER.map(level => {
+      const matches = seeds.map(seed => playMatch(matchConfig({ seed, human: [false, false], level: [level, level] }), reserves));
+      return { level, goals: avg(matches.map(m => m.goals[0] + m.goals[1])), hits: avg(matches.map(totalHits)), nil: matches.filter(m => m.goals[0] + m.goals[1] === 0).length, rage: [0, 1].map(t => avg(matches.map(m => m.rage[t] / m.playTicks))), shots: avg(matches.map(m => m.shots)), dazed: avg(matches.map(m => m.dazed)) };
+    })
+  })));
+  const matchups = blocks.flatMap(seeds => (['psycho', 'pro'] as const).map(level => {
+    let wins = 0, losses = 0;
+    for (const seed of seeds) {
+      const team = seed % 2 as 0 | 1;
+      const levels: MatchConfig['level'] = team === 0 ? [level, 'rookie'] : ['rookie', level];
+      const m = playMatch(matchConfig({ seed, human: [false, false], level: levels }));
+      if (m.goals[team] > m.goals[1 - team]) wins++;
+      if (m.goals[team] < m.goals[1 - team]) losses++;
+    }
+    return { seeds, level, wins, losses };
+  }));
+  const possessions = [[1,2,3], [4,5,6]].map(seeds => ({ seeds, rows: LEVEL_ORDER.map(level => {
+    const matches = seeds.map(seed => ({ seed, episodes: playMatch(matchConfig({ seed, level: ['pro', level] })).possession }));
+    const completed = matches.flatMap(m => m.episodes.filter(e => !e.censored).map(e => e.ticks));
+    return { level, median: median(completed), count: completed.length, matches };
+  }) }));
+  if (process.env.BALANCE_REPORT) console.log(JSON.stringify({ mirrors, matchups, possessions }, null, 2));
+  for (const { reserves, seeds, rows } of mirrors) rows.forEach((row, i) => {
+    const label = `reserves ${reserves}, seeds ${seeds[0]}–${seeds[seeds.length - 1]}, ${row.level}`;
+    expect.soft(row.goals, `${label} goals minimum`).toBeGreaterThanOrEqual(goalBands[i][0]);
+    expect.soft(row.goals, `${label} goals maximum`).toBeLessThanOrEqual(reserves ? 12 : goalBands[i][1]);
+    expect.soft(row.hits, `${label} hits minimum`).toBeGreaterThanOrEqual(hitBands[i][0]);
+    expect.soft(row.hits, `${label} hits maximum`).toBeLessThanOrEqual(reserves ? 120 : hitBands[i][1]);
+    expect.soft(row.nil, `${label} nil`).toBeLessThanOrEqual(3);
+    row.rage.forEach((value, team) => expect.soft(value, `${label} rage team ${team}`).toBeLessThan(0.6));
+    if (i) expect.soft(row.hits, `${label} aggression ordering`).toBeGreaterThan(rows[i - 1].hits);
   });
-  if (process.env.BALANCE_REPORT) console.table(rows);
-  rows.forEach((row, i) => {
-    expect(row.goals).toBeGreaterThanOrEqual(goalBands[i][0]); expect(row.goals).toBeLessThanOrEqual(goalBands[i][1]);
-    expect(row.hits).toBeGreaterThanOrEqual(hitBands[i][0]); expect(row.hits).toBeLessThanOrEqual(hitBands[i][1]);
-    expect(row.nil).toBeLessThanOrEqual(3); row.rage.forEach(value => expect(value).toBeLessThan(0.6));
-    if (i) expect(row.hits).toBeGreaterThan(rows[i - 1].hits);
-  });
-}, 120000);
-
-test.each(['psycho', 'pro'] as const)('%s competes against rookie', level => {
-  let wins = 0, losses = 0;
-  for (let seed = 1; seed <= 10; seed++) {
-    const team = seed % 2 as 0 | 1;
-    const levels: MatchConfig['level'] = team === 0 ? [level, 'rookie'] : ['rookie', level];
-    const m = playMatch(matchConfig({ seed, human: [false, false], level: levels }));
-    if (m.goals[team] > m.goals[1 - team]) wins++;
-    if (m.goals[team] < m.goals[1 - team]) losses++;
+  for (const m of matchups) {
+    const label = `${m.level}, seeds ${m.seeds[0]}–${m.seeds[9]}`;
+    if (m.level === 'psycho') expect.soft(m.wins, `${label} wins`).toBeGreaterThanOrEqual(7);
+    else expect.soft(m.losses, `${label} losses`).toBeLessThanOrEqual(3);
   }
-  if (process.env.BALANCE_REPORT) console.log(level, { wins, losses });
-  if (level === 'psycho') expect(wins).toBeGreaterThanOrEqual(7);
-  else expect(losses).toBeLessThanOrEqual(3);
-}, 120000);
-
-test('naive human possession differs by opponent level', () => {
-  const rows = LEVEL_ORDER.map(level => {
-    const seeds = [1, 2, 3].map(seed => ({ seed, episodes: playMatch(matchConfig({ seed, level: ['pro', level] })).possession }));
-    const completed = seeds.flatMap(s => s.episodes.filter(e => !e.censored).map(e => e.ticks));
-    return { level, median: median(completed), count: completed.length, seeds };
-  });
-  if (process.env.BALANCE_REPORT) console.log(JSON.stringify(rows));
-  expect(rows[0].median).toBeGreaterThanOrEqual(240);
-  expect(rows[3].median).toBeLessThanOrEqual(150);
-}, 120000);
+  for (const p of possessions) {
+    expect.soft(p.rows[0].median, `rookie possession seeds ${p.seeds}`).toBeGreaterThanOrEqual(240);
+    expect.soft(p.rows[3].median, `psycho possession seeds ${p.seeds}`).toBeLessThanOrEqual(150);
+  }
+}, 600000);

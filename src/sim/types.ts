@@ -40,13 +40,15 @@ export type SimEvent =
   | { type: 'kick'; kind: 'pass' | 'shot'; player: number }
   | { type: 'bounce' }
   | { type: 'goal'; team: TeamId }
-  | { type: 'hit'; tackler: number; victim: number; hit: HitType; tier: HurtTier; variant: number; damage: number; late: boolean }
+  | { type: 'hit'; tackler: number; victim: number; hit: HitType; tier: HurtTier; variant: number; damage: number; late: boolean; impact?: PlayerState; substituted?: boolean }
   | { type: 'whiff'; player: number; hit: HitType }
   | { type: 'whistle'; what: 'kickoff' | 'halftime' | 'fulltime' };
+export interface TeamStats { shots: number; bigHits: number; kos: number; steals: number }
+export interface HalfHit { tick: number; eventIndex: number; damage: number }
 export interface MatchState {
   config: MatchConfig & { ratings: [Ratings, Ratings] }; tick: number; rng: number;
   phase: Phase; phaseTicks: number; half: 1 | 2; clockTicks: number;
-  score: [number, number]; kickoffTeam: TeamId;
+  score: [number, number]; stats: [TeamStats, TeamStats]; halfHits: [HalfHit | null, HalfHit | null]; reserves: [number, number]; kickoffTeam: TeamId;
   rage: [number, number]; lastHitTick: [number, number] /* tick the team last landed a hit */;
   players: PlayerState[]; ball: BallState;
   brain: BrainMemory[];

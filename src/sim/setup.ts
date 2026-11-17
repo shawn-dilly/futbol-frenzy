@@ -1,6 +1,6 @@
 import type { BrainMemory, MatchConfig, MatchState, PadInput, PlayerIntent, PlayerState, Ratings, TeamId, Vec } from './types';
 import {
-  FIELD_MID_Y, FIELD_W, FORMATION, KICKER_BEHIND_BALL, KICKOFF_PAUSE_TICKS, MAX_HEALTH, TICK_HZ,
+  FIELD_MID_Y, FIELD_W, FORMATION, KICKER_BEHIND_BALL, KICKOFF_PAUSE_TICKS, MAX_HEALTH, TICK_HZ, TEAM_RESERVES,
 } from './constants';
 import { dist } from './vec';
 import { LEVELS } from './levels';
@@ -33,7 +33,7 @@ export function blankMemory(): BrainMemory {
   return { thinkAt: 0, role: 'support', target: { x: 0, y: 0 }, action: 'none', aim: { x: 0, y: 0 }, turbo: false, holdHitUntil: 0, thinkOwner: null, targetPlayer: null, aimError: 0 };
 }
 
-function makePlayer(team: TeamId, index: number): PlayerState {
+export function makePlayer(team: TeamId, index: number): PlayerState {
   const f = FORMATION[index];
   const anchor = { x: team === 0 ? f.x : FIELD_W - f.x, y: f.y };
   return {
@@ -91,7 +91,7 @@ export function createMatch(config: MatchConfig): MatchState {
   const state: MatchState = {
     config: normalizedConfig, tick: 0, rng: config.seed,
     phase: 'kickoff', phaseTicks: 0, half: 1, clockTicks: config.halfSeconds * TICK_HZ,
-    score: [0, 0], kickoffTeam: 0, rage: [0, 0], lastHitTick: [0, 0],
+    score: [0, 0], stats: [{ shots: 0, bigHits: 0, kos: 0, steals: 0 }, { shots: 0, bigHits: 0, kos: 0, steals: 0 }], halfHits: [null, null], reserves: [TEAM_RESERVES, TEAM_RESERVES], kickoffTeam: 0, rage: [0, 0], lastHitTick: [0, 0],
     players, ball: { pos: { ...KICKOFF_SPOT }, vel: { x: 0, y: 0 }, owner: null, ownerTicks: 0, passTarget: null },
     brain: players.map(blankMemory), liveTicks: 0, defensiveHitAt: [], controlled: [0, 0], turbo: [1, 1],
     prevInput: [neutralPad(), neutralPad()], events: [],

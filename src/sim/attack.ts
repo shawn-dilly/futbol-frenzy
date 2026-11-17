@@ -55,8 +55,8 @@ export function updateAttack(state: MatchState, p: PlayerState, intent: PlayerIn
 }
 
 /** The nearest opponent within reach who is not down and was not hurt earlier this tick. */
-function findVictim(state: MatchState, tackler: PlayerState, reach: number): PlayerState | null {
-  const candidates = state.players.filter(q => q.team !== tackler.team && !isDown(q) && !(q.status.kind === 'hurt' && q.statusTick === 0));
+function findVictim(state: MatchState, tackler: PlayerState, reach: number, hitVictims: Set<number>): PlayerState | null {
+  const candidates = state.players.filter(q => q.team !== tackler.team && !hitVictims.has(q.id) && !isDown(q) && !(q.status.kind === 'hurt' && q.statusTick === 0));
   return nearestTo(candidates, tackler.pos, reach); // ascending id: ties go to the lower id
 }
 
@@ -67,9 +67,20 @@ function land(state: MatchState, tackler: PlayerState, victim: PlayerState, hit:
   // Dirty teams hit harder when the victim is away from the ball.
   const damage = hitDamage(hit, state.rage[tackler.team], tackler.turboTicks > 0, power) * (late ? 1 + (ratings.dirty - 0.5) * RATING_DIRTY_LATE_DAMAGE_SPAN : 1);
   const tier = tierFor(damage);
+  const lethal = victim.health <= damage;
   const variant = hurtPlayer(state, victim, tier, tackler.facing, damage);
+  const impact = { ...victim, pos: { ...victim.pos }, vel: { ...victim.vel }, facing: { ...victim.facing }, anchor: { ...victim.anchor }, knock: { ...victim.knock }, status: { ...victim.status } } as PlayerState;
+  const substituted = state.players[victim.id] !== victim;
+  const stats = state.stats[tackler.team];
+  if (hit === 'big') stats.bigHits++;
+  if (lethal) stats.kos++;
+  if (!late) stats.steals++;
   rageAfterHit(state, tackler.team, tier);
-  state.events.push({ type: 'hit', tackler: tackler.id, victim: victim.id, hit, tier, variant, damage, late });
+  const eventIndex = state.events.length;
+  state.events.push({ type: 'hit', tackler: tackler.id, victim: victim.id, hit, tier, variant, damage, late, ...(substituted ? { impact, substituted } : {}) });
+  const halfIndex = state.half - 1;
+  const previous = state.halfHits[halfIndex];
+  if (!previous || damage > previous.damage) state.halfHits[halfIndex] = { tick: state.tick + 1, eventIndex, damage };
   setStatus(tackler, { kind: 'recovering', hit, landed: true }, HIT_LANDED_RECOVER_TICKS);
   tackler.hitCooldown = cooldownAfter(state, tackler, late ? LATE_HIT_COOLDOWN_TICKS : HIT_COOLDOWN_TICKS);
 }
@@ -82,11 +93,12 @@ function whiff(state: MatchState, tackler: PlayerState, hit: HitType): void {
 
 /** After movement: every lunging player in ascending id lands on the nearest valid opponent, or whiffs on his last lunge tick. */
 export function resolveContacts(state: MatchState): void {
+  const hitVictims = new Set<number>();
   for (const p of state.players) {
     if (p.status.kind !== 'lunging') continue; // checked live: a player hurt earlier this tick no longer lunges
     const hit = p.status.hit;
-    const victim = findVictim(state, p, HITS[hit].reach);
-    if (victim) land(state, p, victim, hit);
+    const victim = findVictim(state, p, HITS[hit].reach, hitVictims);
+    if (victim) { hitVictims.add(victim.id); land(state, p, victim, hit); }
     else if (p.statusTick >= HITS[hit].lungeTicks - 1) whiff(state, p, hit);
   }
 }

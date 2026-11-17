@@ -4,6 +4,7 @@ import { PAL } from '../art/palette';
 import { ORIGIN_X, ORIGIN_Y, frameIndex, frameKey } from '../art/sprites';
 import { ANIMATIONS, airTicks } from '../content/animations';
 import type { MatchState, PlayerState, TeamId, Vec } from '../sim';
+import { outgoingAt } from './outgoing';
 import { animFor } from './playerAnim';
 import { ATLAS_KEY, BALL_KEY, BALL_PX } from './BootScene';
 import { DEPTH, PITCH_TEX_H, PITCH_TEX_W, arcLift, cameraTarget, nextFlip, pitchImagePos, worldToScreen } from './layout';
@@ -39,6 +40,7 @@ export class MatchView {
   private readonly ballShadow: Phaser.GameObjects.Rectangle;
   private readonly markers: Phaser.GameObjects.Rectangle[];
   private players: PlayerView[] = [];
+  private readonly outgoing: { player: PlayerState; start: number; view: PlayerView }[] = [];
   private readonly craters: Crater[] = [];
   private readonly bursts: StarBurst[] = [];
   private camX: number | null = null;
@@ -85,6 +87,10 @@ export class MatchView {
     this.craters.length = 0;
   }
 
+  addOutgoing(player: PlayerState, start: number): void {
+    this.outgoing.push({ player, start, view: this.createPlayerView(player) });
+  }
+
   sync(state: MatchState, nowMs: number): void {
     this.offset = this.currentShake(nowMs);
     const target = cameraTarget(state.ball.pos.x);
@@ -97,6 +103,15 @@ export class MatchView {
     this.markers.forEach(m => m.setVisible(false));
     state.players.forEach((p, i) => this.syncPlayer(this.players[i], p, state, camX));
 
+    for (let i = this.outgoing.length - 1; i >= 0; i--) {
+      const actor = this.outgoing[i];
+      const elapsed = state.tick - actor.start;
+      if (elapsed >= actor.player.statusTicks) {
+        actor.view.sprite.destroy(); actor.view.shadow.destroy(); actor.view.dazed.forEach(d => d.destroy());
+        this.outgoing.splice(i, 1); continue;
+      }
+      this.syncPlayer(actor.view, outgoingAt(actor.player, elapsed), state, camX, false);
+    }
     const b = this.screenPos(state.ball.pos, camX);
     this.ball.setPosition(Math.round(b.x) - BALL_CENTER_PX, Math.round(b.y)).setDepth(state.ball.pos.y + DEPTH.ball);
     this.ballShadow.setPosition(Math.round(b.x) - BALL_CENTER_PX, Math.round(b.y));
@@ -139,7 +154,7 @@ export class MatchView {
     return { sprite: this.scene.add.image(0, 0, ATLAS_KEY).setOrigin(0, 0), shadow: this.shadowRect(SHADOW.w), dazed, flip: nextFlip(false, p.facing.x) };
   }
 
-  private syncPlayer(view: PlayerView, p: PlayerState, state: MatchState, camX: number): void {
+  private syncPlayer(view: PlayerView, p: PlayerState, state: MatchState, camX: number, marker = true): void {
     const s = this.screenPos(p.pos, camX);
     const x = Math.round(s.x), y = Math.round(s.y);
     const kit = p.team + (p.role === 'gk' ? GOALKEEPER_KIT_OFFSET : 0);
@@ -155,7 +170,7 @@ export class MatchView {
     view.shadow.setPosition(x - SHADOW.w / 2, y);
     const dazedOn = dazedMarkerVisible(p, state.tick);
     view.dazed.forEach((d, i) => d.setVisible(dazedOn).setPosition(x + (i === 0 ? DAZED.dxLeft : DAZED.dxRight), y - DAZED.above - Math.round(lift)));
-    if (state.config.human[p.team] && state.controlled[p.team] === p.id) {
+    if (marker && state.config.human[p.team] && state.controlled[p.team] === p.id) {
       this.markers[p.team as TeamId].setVisible(true).setPosition(x - 1, y - MARKER.above);
     }
   }

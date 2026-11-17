@@ -4,6 +4,9 @@ import { nextRandom } from './rng';
 import { isDown, isHumanControlled, setStatus } from './status';
 import { switchControl } from './possession';
 import { norm, scale } from './vec';
+import { blankMemory, makePlayer } from './setup';
+import { LEVELS } from './levels';
+import { FORMATION } from './constants';
 
 export { isDazed } from './status';
 
@@ -18,6 +21,7 @@ export function hurtPlayer(state: MatchState, victim: PlayerState, tier: HurtTie
   const thrown = norm(dir);
   if (thrown.x !== 0 || thrown.y !== 0) victim.facing = thrown; // lands facing the way they are thrown
   victim.knock = scale(thrown, spec.knockSpeed);
+  const substitute = victim.health - damage <= 0 && state.reserves[victim.team] > 0;
   victim.health = Math.max(1, victim.health - damage);
   if (state.ball.owner === victim.id) {
     state.ball.owner = null; state.ball.ownerTicks = 0; state.ball.passTarget = null;
@@ -26,6 +30,13 @@ export function hurtPlayer(state: MatchState, victim: PlayerState, tier: HurtTie
   }
   if (isDown(victim) && isHumanControlled(state, victim)) {
     switchControl(state, victim.team);
+  }
+  if (substitute) {
+    state.reserves[victim.team]--;
+    state.players[victim.id] = makePlayer(victim.team, victim.id % FORMATION.length);
+    state.brain[victim.id] = blankMemory();
+    state.defensiveHitAt[victim.id] = state.liveTicks + LEVELS[state.config.level[victim.team]].defensiveHitIntervalTicks;
+    if (state.ball.passTarget === victim.id) state.ball.passTarget = null;
   }
   return variant;
 }

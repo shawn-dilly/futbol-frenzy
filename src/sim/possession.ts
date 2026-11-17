@@ -13,22 +13,22 @@ export function tickKickCooldowns(state: MatchState): void {
   for (const p of state.players) p.kickCooldown = Math.max(0, p.kickCooldown - 1);
 }
 
-function nearestPickup(state: MatchState): PlayerState | null {
+function nearestPickup(state: MatchState, excluded: ReadonlySet<number>): PlayerState | null {
   let best: PlayerState | null = null, bestDist = Infinity;
   const ballTooFastForOutfield = len(state.ball.vel) > PICKUP_MAX_BALL_SPEED;
   for (const p of state.players) { // ascending id, so strict < gives ties to the lower id
     const d = dist(p.pos, state.ball.pos);
-    if (!canAct(p) || (p.role === 'out' && ballTooFastForOutfield)) continue;
+    if (excluded.has(p.id) || !canAct(p) || (p.role === 'out' && ballTooFastForOutfield)) continue;
     if (p.kickCooldown === 0 && d <= PICKUP_RADIUS && d < bestDist) { best = p; bestDist = d; }
   }
   return best;
 }
 
 /** Pickup while the ball is free; dribble position while it is owned. */
-export function updatePossession(state: MatchState): void {
+export function updatePossession(state: MatchState, excluded: ReadonlySet<number> = new Set()): void {
   const ball = state.ball;
   if (ball.owner === null) {
-    const taker = nearestPickup(state);
+    const taker = nearestPickup(state, excluded);
     if (!taker) return;
     if (ball.passTarget === taker.id && isDazed(taker) && nextRandom(state) < DAZED_FUMBLE_CHANCE) {
       taker.kickCooldown = FUMBLE_COOLDOWN_TICKS; // misses the trap; the ball runs on
@@ -81,6 +81,7 @@ export function kick(state: MatchState, p: PlayerState, kind: 'pass' | 'shot', a
   p.kickCooldown = KICK_COOLDOWN_TICKS;
   setStatus(p, { kind: 'kicking' }, KICK_ANIM_TICKS);
   state.events.push({ type: 'kick', kind, player: p.id });
+  if (kind === 'shot') state.stats[p.team].shots++;
 }
 
 /** The team's outfield player nearest the ball, preferring standing players (ties to the lower id). */

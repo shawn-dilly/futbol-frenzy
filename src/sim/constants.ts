@@ -68,3 +68,6 @@ export const CATCHUP_GOAL_GAP = 2, CATCHUP_SPEED_FACTOR = 1.06, CATCHUP_TURBO_RE
 // Rating adjustments around neutral 0.5. Power spans 0.8–1.3.
 export const RATING_SPEED_SPAN = 0.2, RATING_SKILL_KICK_SPAN = 0.2, RATING_DIRTY_LATE_DAMAGE_SPAN = 0.2;
 export const RATING_POWER_MIN = 0.8, RATING_POWER_SPAN = 0.5;
+
+/** Available substitutions per team per match. */
+export const TEAM_RESERVES = 3;

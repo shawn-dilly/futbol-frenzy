@@ -13,6 +13,7 @@ import { bigHitReady, chargeFill, chargeJustStarted } from './indicators';
 import { MatchView } from './MatchView';
 import { FixedStepper } from './loop';
 import { parseMatchParams } from './params';
+import { outgoingAt } from './outgoing';
 import { Sfx, sfxForEvent } from '../audio/sfx';
 
 declare global {
@@ -41,7 +42,7 @@ export class MatchScene extends Phaser.Scene {
   /** Whether the human's controlled player was charging on the previous step, to play the charge sound once per charge. */
   private wasCharging = false;
   /** Craters waiting for their victim to land: the sim tick they appear on, and who lands. */
-  private pendingCraters: { tick: number; victim: number }[] = [];
+  private pendingCraters: { tick: number; victim: number; impact?: import('../sim').PlayerState; startTick: number }[] = [];
   private seed = 0;
   /** Sim tick of the full-time whistle, null until it blows. */
   private fulltimeTick: number | null = null;
@@ -172,9 +173,10 @@ export class MatchScene extends Phaser.Scene {
     this.view.shake(fb.shakePx, fb.shakeMs, this.nowMs);
     this.freezeTicks = Math.max(this.freezeTicks, fb.freezeTicks);
     if (fb.flash) this.flashStartMs = this.nowMs;
-    if (fb.stars) this.view.addStarBurst({ ...this.state.players[e.victim].pos }, this.nowMs);
+    if (e.substituted && e.impact) this.view.addOutgoing(e.impact, this.state.tick);
+    if (fb.stars) this.view.addStarBurst({ ...(e.impact?.pos ?? this.state.players[e.victim].pos) }, this.nowMs);
     const landTicks = craterLandTicks(e.tier, e.variant);
-    if (landTicks !== null) this.pendingCraters.push({ tick: this.state.tick + landTicks, victim: e.victim });
+    if (landTicks !== null) this.pendingCraters.push({ tick: this.state.tick + landTicks, victim: e.victim, impact: e.substituted ? e.impact : undefined, startTick: this.state.tick });
     if (callout) this.calloutBanner.show(callout.text, e.tier, this.state.tick);
   }
 
@@ -182,7 +184,7 @@ export class MatchScene extends Phaser.Scene {
   private landCraters(): void {
     this.pendingCraters = this.pendingCraters.filter(c => {
       if (c.tick > this.state.tick) return true;
-      const { x, y } = this.state.players[c.victim].pos;
+      const { x, y } = c.impact ? outgoingAt(c.impact, this.state.tick - c.startTick).pos : this.state.players[c.victim].pos;
       this.view.addCrater({ x, y });
       return false;
     });

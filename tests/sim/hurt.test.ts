@@ -47,7 +47,7 @@ test('the victim ends up facing the way they are thrown, and keeps facing when t
   expect(s.players[3].facing.x).toBeCloseTo(-0.6, 9); expect(s.players[3].facing.y).toBeCloseTo(0.8, 9);
 });
 test('health drops by the damage, never below 1', () => {
-  const s = playing();
+  const s = playing(); s.reserves = [0, 0];
   hurtPlayer(s, s.players[3], 'knockdown', { x: 1, y: 0 }, 20);
   expect(s.players[3].health).toBe(80);
   hurtPlayer(s, s.players[3], 'overTheTop', { x: 1, y: 0 }, 500);

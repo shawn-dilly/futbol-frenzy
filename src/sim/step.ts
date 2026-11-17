@@ -62,8 +62,10 @@ function stepPlay(state: MatchState, inputs: [PadInput, PadInput]): TeamId | nul
   applyActions(state, intents);
   for (const p of state.players) applyMovement(state, p, intents[p.id]);
   updateTurboMeters(state);
+  const beforeContacts = [...state.players];
   resolveContacts(state);
-  updatePossession(state);
+  const substituted = new Set(state.players.filter((p, i) => p !== beforeContacts[i]).map(p => p.id));
+  updatePossession(state, substituted);
   const scored = moveFreeBall(state);
   decayRage(state);
   regenHealth(state);
