@@ -71,3 +71,6 @@ export const RATING_POWER_MIN = 0.8, RATING_POWER_SPAN = 0.5;
 
 /** Available substitutions per team per match. */
 export const TEAM_RESERVES = 3;
+
+/** First-to-five reaches halftime when a team scores three. */
+export const TARGET_HALFTIME_GOALS = 3;

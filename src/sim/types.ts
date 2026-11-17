@@ -21,7 +21,7 @@ export interface PlayerState {
 export interface BallState { pos: Vec; vel: Vec; owner: number | null; ownerTicks: number; passTarget: number | null }
 export interface Ratings { speed: number; power: number; skill: number; dirty: number }
 /** `level[team]` drives every brain-controlled player of that team. */
-export interface MatchConfig { seed: number; halfSeconds: number; human: [boolean, boolean]; level: [Level, Level]; ratings?: [Ratings, Ratings] }
+export interface MatchConfig { seed: number; halfSeconds: number; targetGoals?: number; human: [boolean, boolean]; level: [Level, Level]; ratings?: [Ratings, Ratings] }
 export type BrainRole = 'keeper' | 'carrier' | 'presser' | 'cover' | 'marker' | 'support' | 'receiver' | 'chaser';
 /** What the computer brain remembers between re-thinks, one per player (index = player id). */
 export interface BrainMemory {

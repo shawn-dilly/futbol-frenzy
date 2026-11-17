@@ -87,7 +87,8 @@ export function createMatch(config: MatchConfig): MatchState {
     const value = (n: number | undefined) => Number.isFinite(n) ? Math.max(0, Math.min(1, n!)) : 0.5;
     return { speed: value(ratings?.speed), power: value(ratings?.power), skill: value(ratings?.skill), dirty: value(ratings?.dirty) };
   };
-  const normalizedConfig = { ...config, human: [...config.human] as MatchConfig['human'], level: [...config.level] as MatchConfig['level'], ratings: [normalize(config.ratings?.[0]), normalize(config.ratings?.[1])] as [Ratings, Ratings] };
+  const { targetGoals, ...baseConfig } = config;
+  const normalizedConfig = { ...baseConfig, ...(Number.isSafeInteger(targetGoals) && targetGoals! > 0 ? { targetGoals } : {}), human: [...config.human] as MatchConfig['human'], level: [...config.level] as MatchConfig['level'], ratings: [normalize(config.ratings?.[0]), normalize(config.ratings?.[1])] as [Ratings, Ratings] };
   const state: MatchState = {
     config: normalizedConfig, tick: 0, rng: config.seed,
     phase: 'kickoff', phaseTicks: 0, half: 1, clockTicks: config.halfSeconds * TICK_HZ,

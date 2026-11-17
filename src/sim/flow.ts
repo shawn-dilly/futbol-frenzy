@@ -1,5 +1,5 @@
 import type { MatchState, TeamId } from './types';
-import { GOAL_PAUSE_TICKS, HALFTIME_HEAL, HALFTIME_PAUSE_TICKS, MAX_HEALTH, RAGE_CONCEDE_GAIN, TICK_HZ } from './constants';
+import { GOAL_PAUSE_TICKS, HALFTIME_HEAL, HALFTIME_PAUSE_TICKS, MAX_HEALTH, RAGE_CONCEDE_GAIN, TARGET_HALFTIME_GOALS, TICK_HZ } from './constants';
 import { addRage } from './rage';
 import { otherTeam, placeForKickoff } from './setup';
 
@@ -9,23 +9,37 @@ function pauseElapsed(state: MatchState): boolean {
   return state.phaseTicks <= 0;
 }
 
+function halftime(state: MatchState): void {
+  for (const p of state.players) p.health = Math.min(MAX_HEALTH, p.health + HALFTIME_HEAL);
+  state.phase = 'halftime';
+  state.phaseTicks = HALFTIME_PAUSE_TICKS;
+  state.events.push({ type: 'whistle', what: 'halftime' });
+}
+
 function advancePlay(state: MatchState, scored: TeamId | null): void {
   if (scored !== null) {
     state.score[scored] += 1;
     addRage(state, otherTeam(scored), RAGE_CONCEDE_GAIN);
     state.events.push({ type: 'goal', team: scored });
+    if (state.config.targetGoals !== undefined && state.score[scored] >= state.config.targetGoals) {
+      state.phase = 'fulltime';
+      state.events.push({ type: 'whistle', what: 'fulltime' });
+      return;
+    }
+    if (state.config.targetGoals !== undefined && state.half === 1 && state.score[scored] >= TARGET_HALFTIME_GOALS) {
+      halftime(state);
+      return;
+    }
     state.phase = 'goal';
     state.phaseTicks = GOAL_PAUSE_TICKS;
     state.kickoffTeam = otherTeam(scored);
     return;
   }
+  if (state.config.targetGoals !== undefined) return;
   state.clockTicks -= 1;
   if (state.clockTicks > 0) return;
   if (state.half === 1) {
-    for (const p of state.players) p.health = Math.min(MAX_HEALTH, p.health + HALFTIME_HEAL);
-    state.phase = 'halftime';
-    state.phaseTicks = HALFTIME_PAUSE_TICKS;
-    state.events.push({ type: 'whistle', what: 'halftime' });
+    halftime(state);
   } else {
     state.phase = 'fulltime';
     state.events.push({ type: 'whistle', what: 'fulltime' });
