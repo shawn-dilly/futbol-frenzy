@@ -13,19 +13,21 @@ import { bigHitReady, chargeFill, chargeJustStarted } from './indicators';
 import { MatchView } from './MatchView';
 import { FixedStepper } from './loop';
 import { parseMatchParams } from './params';
+import { createReplayRecord, recordReplayInput, type ReplayRecord } from './replay';
 import { outgoingAt } from './outgoing';
 import { Sfx, sfxForEvent } from '../audio/sfx';
 
 declare global {
   interface Window {
     /** Dev/test hooks: `showCallout` shows the callout a hit of that tier and type would; `calloutText` is what the banner shows now ('' if nothing). */
-    __ff?: { state: MatchState; showCallout: (tier: HurtTier, hit: HitType) => void; calloutText: () => string }
+    __ff?: { state: MatchState; showCallout: (tier: HurtTier, hit: HitType) => void; calloutText: () => string; replay: () => ReplayRecord }
   }
 }
 
 /** Runs the sim at a fixed 60 Hz and hands the state to the view and HUD. */
 export class MatchScene extends Phaser.Scene {
   private state!: MatchState;
+  private replay!: ReplayRecord;
   private view!: MatchView;
   private hud!: Hud;
   private callouts!: CalloutPicker;
@@ -64,9 +66,11 @@ export class MatchScene extends Phaser.Scene {
     const params = parseMatchParams(window.location.search);
     this.sfx.muted = params.mute;
     this.state = createMatch({ seed: this.seed, halfSeconds: params.halfSeconds, human: [!params.demo, false], level: [params.level2 ?? params.level, params.level] });
+    this.replay = createReplayRecord(this.state.config);
     this.callouts = new CalloutPicker(CALLOUTS, seededRandom(this.seed ^ CALLOUT_SEED_SALT));
     window.__ff = {
       state: this.state,
+      replay: () => structuredClone(this.replay),
       showCallout: (tier, hit) => { const c = this.callouts.pick(tier, hit); if (c) this.calloutBanner.show(c.text, tier, this.state.tick); },
       calloutText: () => this.calloutBanner.visibleText(this.state.tick),
     };
@@ -105,7 +109,9 @@ export class MatchScene extends Phaser.Scene {
     this.nowMs = time;
     const steps = this.stepper.advance(delta);
     for (let i = 0; i < steps; i++) {
-      step(this.state, this.readPads());
+      const inputs = this.readPads();
+      recordReplayInput(this.replay, inputs);
+      step(this.state, inputs);
       this.handleEvents(this.state.events);
       this.landCraters();
       this.playChargeSound();
