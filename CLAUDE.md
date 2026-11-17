@@ -49,5 +49,6 @@ The computer brain keeps per-player memory in match state and thinks on a level-
 - In Claude Code, the roles are `ff-implementer` (Sonnet), `ff-reviewer` (Opus), and `ff-playtester` (Sonnet); their definitions live in `.claude/agents/`. In Codex / T3, follow the model and review mapping in `AGENTS.md`. Harness-specific agent definitions do not configure another harness.
 - Inspect and preserve unfinished work already in the working tree. Stage only the files for the authorized task; report conflicts or blocked checks.
 - **Progress lives in the plan file.** When a step is done, tick its checkbox (`- [x]`) in the same commit as the work. `docs/ROADMAP.md` shows milestone status; update it when a milestone starts or lands.
+- Every M milestone ends only after required tests and independent Sol review pass, and all milestone code, docs, and progress are committed and the milestone branch is pushed to origin. Verify the push and report the commit hash and branch. Do not call a milestone delivered if the push fails. This rule does not authorize force pushes or automatic merges to main.
 - Commit after every task with a conventional message (`feat(sim): ...`, `test(e2e): ...`).
 - A task is not done until `npm test` passes and, for anything visual, a screenshot has been looked at.

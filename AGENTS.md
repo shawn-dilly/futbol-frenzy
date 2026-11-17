@@ -7,3 +7,5 @@ For milestone plan work, use **gpt-6.1-terra** for implementation and **gpt-6.1-
 Work on one plan task at a time. Give the implementer the task brief and project standards; have it report changes, checks and their results, and any gaps. An independent reviewer then checks the brief, diff, standards, and evidence before the next task. For visual work, the verifier runs the game, inspects screenshots against the mockups, and reports observations and gaps. This brief → implementation → report → independent review contract is the portable equivalent of legacy references to `superpowers:subagent-driven-development`; it does not require Claude plugin scripts or skills. Follow the active harness and user instructions on whether delegation is permitted.
 
 Inspect the working tree before starting. Preserve existing unfinished work, do not reset or overwrite it, and stage only the files belonging to the authorized task. Report any conflicts or checks blocked by that work.
+
+Follow the milestone completion, commit, and verified push rule in the shared `CLAUDE.md` Workflow.
