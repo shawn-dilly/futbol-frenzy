@@ -857,8 +857,8 @@ test('muted play never throws', () => {
 **Interfaces:**
 - Consumes: `window.__ff.state` and the `demo`, `seed`, `half`, `mute` URL params from Task 9.
 
-- [ ] **Step 1:** `npm i -D @playwright/test` and `npx playwright install chromium`. `playwright.config.ts`: `testDir: 'e2e'`, `webServer` runs `npm run build && npx vite preview --port 4173 --strictPort`, `use.baseURL` `http://localhost:4173`, viewport 960x540.
-- [ ] **Step 2: Write the test**
+- [x] **Step 1:** `npm i -D @playwright/test` and `npx playwright install chromium`. `playwright.config.ts`: `testDir: 'e2e'`, `webServer` runs `npm run build && npx vite preview --port 4173 --strictPort`, `use.baseURL` `http://localhost:4173`, viewport 960x540.
+- [x] **Step 2: Write the test**
 
 ```ts
 // e2e/demo.spec.ts
@@ -879,9 +879,9 @@ test('a CPU-v-CPU match runs, players move, no errors', async ({ page }) => {
 });
 ```
 
-- [ ] **Step 3:** Run `npm run e2e`. Expected: 1 passed, both screenshots written.
-- [ ] **Step 4:** Open `artifacts/m1-demo.png` and `artifacts/m1-fulltime.png` and look at them. Expected: pitch, crowd, ten players, ball, HUD all present and crisp (no blurred pixels); "FULL TIME" banner and the final score on the second. Fix anything wrong and re-run.
-- [ ] **Step 5:** Commit: `test(e2e): headless demo match smoke test with screenshots`.
+- [x] **Step 3:** Run `npm run e2e`. Expected: 1 passed, both screenshots written.
+- [x] **Step 4:** Open `artifacts/m1-demo.png` and `artifacts/m1-fulltime.png` and look at them. Expected: pitch, crowd, ten players, ball, HUD all present and crisp (no blurred pixels); "FULL TIME" banner and the final score on the second. Fix anything wrong and re-run.
+- [x] **Step 5:** Commit: `test(e2e): headless demo match smoke test with screenshots`.
 
 ---
 
