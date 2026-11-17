@@ -12,8 +12,8 @@ test('button hit areas', () => {
   expect(buttonAt({ x: 222, y: 166 })).toBe('turbo'); expect(buttonAt({ x: 160, y: 90 })).toBeNull();
 });
 test('hit area is the radius plus 4 and the nearest centre wins on overlap', () => {
-  expect(buttonAt({ x: 248 + 17, y: 150 })).toBe('pass');
-  expect(buttonAt({ x: 248 + 17.5, y: 150 })).toBeNull();
+  expect(buttonAt({ x: 248 + 19, y: 150 })).toBe('pass');
+  expect(buttonAt({ x: 248 + 19.5, y: 150 })).toBeNull();
   // between pass (248,150) and turbo (222,166): closer to turbo
   expect(buttonAt({ x: 232, y: 160 })).toBe('turbo');
 });

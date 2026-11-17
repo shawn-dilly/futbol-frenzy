@@ -19,7 +19,7 @@ export function stickVector(origin: Vec, pointer: Vec): { x: number; y: number }
 
 export type ButtonName = 'pass' | 'shoot' | 'hit' | 'turbo';
 export const BUTTONS: Record<ButtonName, { x: number; y: number; r: number }> = {
-  pass: { x: 248, y: 150, r: 13 },
+  pass: { x: 248, y: 150, r: 15 },
   shoot: { x: 276, y: 124, r: 13 },
   hit: { x: 302, y: 152, r: 13 },
   turbo: { x: 222, y: 166, r: 10 },

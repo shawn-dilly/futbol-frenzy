@@ -21,8 +21,7 @@ const BALL_SHADOW_W = BALL_PX + 1;
 const BALL_CENTER_PX = Math.floor(BALL_PX / 2); // sprite columns left of the ball's position
 /** Body centre is column ORIGIN_X, but flipX mirrors about x = ORIGIN_X; shift a flipped sprite right to keep the body still. */
 const FLIP_OFFSET_PX = 1;
-const MARKER = { w: 3, h: 2, above: 20, color: Phaser.Display.Color.HexStringToColor(PAL.yel).color }; // px above the feet
-
+const MARKER = { w: 8, h: 5, above: 19, color: Phaser.Display.Color.HexStringToColor(PAL.yel).color }; // px above the feet
 /** Dazed marker: two yellow pixels this far above the feet, and this far either side of the body centre. */
 const DAZED = { above: 24, dxLeft: -3, dxRight: 2, color: MARKER.color };
 
@@ -39,7 +38,7 @@ export class MatchView {
   private readonly pitch: Phaser.GameObjects.Image;
   private readonly ball: Phaser.GameObjects.Image;
   private readonly ballShadow: Phaser.GameObjects.Rectangle;
-  private readonly markers: Phaser.GameObjects.Rectangle[];
+  private readonly markers: Phaser.GameObjects.Triangle[];
   private players: PlayerView[] = [];
   private readonly outgoing: { player: PlayerState; start: number; view: PlayerView }[] = [];
   private readonly craters: Crater[] = [];
@@ -58,7 +57,7 @@ export class MatchView {
     this.pitch = scene.add.image(0, 0, PITCH_KEY).setOrigin(0, 0).setDepth(DEPTH.pitch);
     this.ballShadow = this.shadowRect(BALL_SHADOW_W);
     this.ball = scene.add.image(0, 0, BALL_KEY).setOrigin(0, 1).setDepth(DEPTH.ball);
-    this.markers = [0, 1].map(() => scene.add.rectangle(0, 0, MARKER.w, MARKER.h, MARKER.color).setOrigin(0, 0).setDepth(DEPTH.marker).setVisible(false));
+    this.markers = [0, 1].map(() => scene.add.triangle(0, 0, 0, 0, MARKER.w, 0, MARKER.w / 2, MARKER.h, MARKER.color).setStrokeStyle(1, 0x171722).setOrigin(0.5, 1).setDepth(DEPTH.marker).setVisible(false));
     const crater = scene.textures.createCanvas(CRATER_KEY, CRATER_W, CRATER_H);
     if (!crater) throw new Error('crater texture could not be created');
     drawCrater(canvasRect(crater.context));
@@ -189,7 +188,7 @@ export class MatchView {
     const dazedOn = dazedMarkerVisible(p, state.tick);
     view.dazed.forEach((d, i) => d.setVisible(dazedOn).setPosition(x + (i === 0 ? DAZED.dxLeft : DAZED.dxRight), y - DAZED.above - Math.round(lift)));
     if (marker && state.config.human[p.team] && state.controlled[p.team] === p.id) {
-      this.markers[p.team as TeamId].setVisible(true).setPosition(x - 1, y - MARKER.above);
+      this.markers[p.team as TeamId].setVisible(true).setPosition(x, y - MARKER.above - Math.round(lift));
     }
   }
 }

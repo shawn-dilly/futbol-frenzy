@@ -340,7 +340,7 @@ export class MatchScene extends Phaser.Scene {
     this.flash.setAlpha(flashAlpha(this.nowMs - this.flashStartMs));
     if (this.touch) {
       const me = this.state.players[this.state.controlled[0]];
-      this.touch.draw(chargeFill(me), bigHitReady(me, this.state.turbo[0]));
+      this.touch.draw(chargeFill(me), bigHitReady(me, this.state.turbo[0]), this.state.ball.owner === me.id);
     }
   }
 

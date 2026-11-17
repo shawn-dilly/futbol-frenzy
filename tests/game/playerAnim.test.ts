@@ -29,12 +29,12 @@ test('lunging is lunge_<hit>', () => {
 test('recovering after a miss is recover_<hit>', () => {
   expect(animFor(player({ kind: 'recovering', hit: 'shoulder', landed: false }, 6), 123)).toEqual({ key: 'recover_shoulder', tick: 6 });
 });
-test('recovering after a landed shoulder charge is idle', () => {
-  expect(animFor(player({ kind: 'recovering', hit: 'shoulder', landed: true }, 2), 123)).toEqual({ key: 'idle', tick: 2 });
-});
-test('recovering after a landed slide or big hit gets up on the status tick', () => {
-  expect(animFor(player({ kind: 'recovering', hit: 'slide', landed: true }, 2), 123)).toEqual({ key: 'getup', tick: 2 });
-  expect(animFor(player({ kind: 'recovering', hit: 'big', landed: true }, 7), 123)).toEqual({ key: 'getup', tick: 7 });
+test('immediate contact holds the extended attack before the follow-through', () => {
+  for (const hit of ['shoulder', 'slide', 'big'] as const) {
+    const status = { kind: 'recovering', hit, landed: true } as const;
+    expect(animFor(player(status, 2), 0).key).toBe(`lunge_${hit}`);
+    expect(animFor(player(status, 7), 0).key).toBe(hit === 'shoulder' ? 'recover_shoulder' : 'getup');
+  }
 });
 const withLength = (status: PlayerStatus, statusTick: number, statusTicks: number): PlayerState => {
   const p = player(status, statusTick); p.statusTicks = statusTicks; return p;

@@ -1,7 +1,7 @@
 import Phaser from 'phaser';
 import { canvasRect } from '../art/canvasRect';
 import { PAL } from '../art/palette';
-import { drawText } from '../art/pixelFont';
+import { drawShadowedText } from '../art/pixelFont';
 import { neutralPad, type PadInput } from '../sim';
 import { DEPTH, SCREEN_H, SCREEN_W } from '../game/layout';
 import { BUTTONS, PadTracker, STICK_RADIUS, type ButtonName } from './stick';
@@ -73,11 +73,11 @@ export class TouchControls {
   }
 
   /** Redraws if anything changed; call once per frame. `chargeFill` (0..1) is the HIT button's fill, yellow when `bigHitReady`. */
-  draw(chargeFill: number, bigHitReady: boolean): void {
+  draw(chargeFill: number, bigHitReady: boolean, hasBall: boolean): void {
     const { pad } = this;
     const stick = this.tracker.stick();
     const fillR = Math.round(BUTTONS.hit.r * chargeFill);
-    const key = [stick ? `${stick.origin.x},${stick.origin.y},${stick.pointer.x},${stick.pointer.y}` : '-',
+    const key = [hasBall, stick ? `${stick.origin.x},${stick.origin.y},${stick.pointer.x},${stick.pointer.y}` : '-',
       BUTTON_ORDER.map((b) => (pad[b] ? 1 : 0)).join(''), `${fillR}${bigHitReady ? 'y' : ''}`].join('|');
     if (key === this.lastKey) return;
     this.lastKey = key;
@@ -112,7 +112,8 @@ export class TouchControls {
       disc(b.x, b.y, b.r, FACE[name].color, pad[name] ? ALPHA.pressed : ALPHA.button);
       if (name === 'hit' && fillR > 0) disc(b.x, b.y, fillR, bigHitReady ? PAL.yel : PAL.wht, ALPHA.pressed);
       disc(b.x, b.y, b.r, PAL.ink, 1, BUTTON_RING_PX);
-      drawText(rect, FACE[name].label, b.x + LABEL_DX, b.y + LABEL_DY, PAL.ink, 1, 'c');
+      const label = name === 'pass' && !hasBall ? 'SWITCH' : FACE[name].label;
+      drawShadowedText(rect, label, b.x + LABEL_DX, b.y + LABEL_DY, PAL.wht, 1, 'c');
     }
     this.texture.refresh();
   }

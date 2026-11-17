@@ -303,7 +303,7 @@ export const ANIMATIONS: Record<string, AnimDef> = {
 
   // Hurt: stumble
   hurt_stumble_0: {
-    ticksPerFrame: 6, loop: false,
+    ticksPerFrame: 6, loop: false, arcHeight: 3, airFrames: 2,
     frames: [
       // hopping on the left foot, the other held up
       [...px('skin', [[-2, -3, 2, 2], [1, -5, 3, 1]]), ...px('boot', [[-2, -1, 3, 1], [4, -6, 2, 2]]),
@@ -317,7 +317,7 @@ export const ANIMATIONS: Record<string, AnimDef> = {
     ],
   },
   hurt_stumble_1: {
-    ticksPerFrame: 6, loop: false,
+    ticksPerFrame: 6, loop: false, arcHeight: 3, airFrames: 2,
     frames: [
       // arms windmilling: up/down, forward/back, down/up, back/forward
       standing(0, [[-4, -3, 2, 2], [3, -3, 2, 2]], [[-5, -1, 3, 1], [3, -1, 3, 1]], [[4, -13, 1, 3], [-4, -8, 1, 3]]),
@@ -329,7 +329,7 @@ export const ANIMATIONS: Record<string, AnimDef> = {
 
   // Hurt: knockdown
   hurt_knockdown_0: {
-    ticksPerFrame: 5, loop: false,
+    ticksPerFrame: 5, loop: false, arcHeight: 5, airFrames: 2,
     frames: [
       // pitching forward
       [...px('skin', [[-2, -3, 2, 2], [0, -3, 2, 2]]), ...px('boot', [[-4, -1, 3, 1], [0, -1, 3, 1]]),
@@ -344,7 +344,7 @@ export const ANIMATIONS: Record<string, AnimDef> = {
     ],
   },
   hurt_knockdown_1: {
-    ticksPerFrame: 5, loop: false,
+    ticksPerFrame: 5, loop: false, arcHeight: 5, airFrames: 2,
     frames: [
       // leaning back, arms up
       [...px('skin', [[-3, -3, 2, 2], [2, -3, 2, 2]]), ...px('boot', [[-3, -1, 2, 1], [2, -1, 3, 1]]),
