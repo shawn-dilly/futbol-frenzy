@@ -3,7 +3,7 @@ import { startCup, consumeResult, retryCup, quitCup, cupMatchConfig } from '../.
 import { TEAMS } from '../../src/content/teams';
 
 const settings = { seed: 3, halfSeconds: 120, human: [true, false] as [boolean, boolean], level: ['pro', 'rookie'] as const };
-const start = () => startCup(TEAMS[1], { ...settings, level: [...settings.level] });
+const start = () => startCup(TEAMS[1], { ...settings, level: [...settings.level] }, 'run');
 describe('cup session', () => {
   it('visits every other team in table order and completes once', () => {
     let s = start(); const ids = new Set<string>();
@@ -22,9 +22,20 @@ describe('cup session', () => {
     expect(consumeResult(retry, s.matchId, 'win')).toEqual(retry);
     expect(quitCup(retry).status).toBe('quit'); expect(retryCup(quitCup(retry)).status).toBe('quit');
   });
+  it('rejects stale results across runs and encodes arbitrary run identities without collisions', () => {
+    const first = start();
+    const quit = quitCup(first);
+    expect(quit.status).toBe('quit');
+    const second = startCup(TEAMS[1], { ...settings, level: [...settings.level] }, 'run:1');
+    expect(consumeResult(second, first.matchId, 'win')).toBe(second);
+    const advanced = consumeResult(first, first.matchId, 'win');
+    expect(consumeResult(advanced, first.matchId, 'win')).toBe(advanced);
+    expect(advanced.matchId).not.toBe(second.matchId);
+    expect(() => startCup(TEAMS[1], { ...settings, level: [...settings.level] }, '')).toThrow();
+  });
   it('copies inputs and resets a new session', () => {
     const team = structuredClone(TEAMS[0]); const config = { ...settings, level: [...settings.level] as ['pro', 'rookie'], human: [...settings.human] as [boolean, boolean] };
-    const s = startCup(team, config); team.ratings.speed = 0; config.human[0] = false;
+    const s = startCup(team, config, 'run'); team.ratings.speed = 0; config.human[0] = false;
     expect(s.selectedTeam.ratings.speed).toBe(TEAMS[0].ratings.speed); expect(s.settings.human[0]).toBe(true);
     const match = cupMatchConfig(s); match.ratings![0].speed = 0; expect(s.selectedTeam.ratings.speed).toBe(TEAMS[0].ratings.speed);
     expect(start()).toEqual(start());
