@@ -5,7 +5,7 @@ Status values: not started, in progress, done. Task-level progress is the checkb
 | # | Milestone | Plan | Status |
 |---|---|---|---|
 | M1 | Playable core: move, pass, shoot, score against a basic computer side; browser and Android | `superpowers/plans/2026-11-16-m1-playable-core.md` | done (merged to `main`); real-phone check outstanding |
-| M2 | Hits, rage, tiered hurt animations, rotating callouts | `superpowers/plans/2026-11-17-m2-hits-rage-callouts.md` | built and reviewed on branch `m2-hits-rage-callouts` |
+| M2 | Hits, rage, tiered hurt animations, rotating callouts | `superpowers/plans/2026-11-17-m2-hits-rage-callouts.md` | done (merged to `main`); real-phone check and a listen to the sounds outstanding |
 | M3 | Computer opponent with four difficulty levels | not written yet | not started |
 | M4 | Game shell: title, setup, teams, stats, substitutions, Cup Run | not written yet | not started |
 | M5 | Android release: signed build, icon, vibration, settings | not written yet | not started |
