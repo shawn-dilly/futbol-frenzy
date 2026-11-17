@@ -64,3 +64,25 @@ test('Cup starts against the first other team', async ({ page }) => {
     { speed: 0.8, power: 0.4, skill: 0.6, dirty: 0.5 },
   ] });
 });
+
+test('Cup keyboard navigation skips the fixed opponent', async ({ page }) => {
+  await page.goto('/?seed=19&mute=1');
+  await page.waitForSelector('canvas');
+  await page.waitForTimeout(500);
+  await page.keyboard.press('ArrowDown');
+  await page.waitForTimeout(60);
+  await page.keyboard.press('Enter');
+  await page.waitForTimeout(100);
+  await page.screenshot({ path: 'artifacts/cup-setup.png' });
+  await page.keyboard.press('ArrowDown');
+  await page.waitForTimeout(60);
+  await page.keyboard.press('ArrowRight'); // difficulty, immediately after team
+  await page.waitForTimeout(60);
+  await page.keyboard.press('ArrowUp');
+  await page.waitForTimeout(60);
+  await page.keyboard.press('ArrowUp'); // kickoff
+  await page.waitForTimeout(60);
+  await page.keyboard.press('Enter');
+  await page.waitForFunction(() => !!window.__ff);
+  expect(await page.evaluate(() => window.__ff!.state.config.level)).toEqual(['bruiser', 'bruiser']);
+});

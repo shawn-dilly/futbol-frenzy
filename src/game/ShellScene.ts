@@ -30,9 +30,10 @@ export class ShellScene extends Phaser.Scene {
   }
   private onKey(event: KeyboardEvent): void {
     if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Enter', ' ', 'Escape', 'Tab'].includes(event.key)) event.preventDefault();
-    const count = this.screen === 'title' ? 2 : 6;
-    if (event.key === 'ArrowUp') this.focus = (this.focus + count - 1) % count;
-    else if (event.key === 'ArrowDown' || event.key === 'Tab') this.focus = (this.focus + (event.shiftKey ? count - 1 : 1)) % count;
+    const targets = this.screen === 'title' ? [0, 1] : this.mode === 'cup' ? [0, 2, 3, 4, 5] : [0, 1, 2, 3, 4, 5];
+    const position = targets.indexOf(this.focus);
+    if (event.key === 'ArrowUp') this.focus = targets[(position + targets.length - 1) % targets.length];
+    else if (event.key === 'ArrowDown' || event.key === 'Tab') this.focus = targets[(position + (event.shiftKey ? targets.length - 1 : 1)) % targets.length];
     else if (event.key === 'Escape') { this.screen = 'title'; this.focus = 0; }
     else if (this.screen === 'setup' && (event.key === 'ArrowLeft' || event.key === 'ArrowRight')) this.activate(this.focus, event.key === 'ArrowLeft' ? -1 : 1);
     else if (event.key === 'Enter' || event.key === ' ') this.activate(this.focus, 1);
@@ -52,6 +53,7 @@ export class ShellScene extends Phaser.Scene {
     const params = parseMatchParams(window.location.search);
     let config = setupConfig(this.selection, params.seed);
     let matchId: string | null = null;
+    if (this.mode === 'friendly') this.cup = null;
     if (this.mode === 'cup') {
       this.cup = startCup(TEAMS[this.selection.team], config, `run-${++runCounter}`);
       config = cupMatchConfig(this.cup);
