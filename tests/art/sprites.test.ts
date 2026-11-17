@@ -26,10 +26,11 @@ test('atlas layout has one unique slot per kit, anim, and frame', () => {
 test('every animation has as many poses as its declared frame count', () => {
   for (const a of Object.keys(ANIMS) as AnimName[]) expect(POSES[a].length, a).toBe(ANIMS[a].frames);
 });
-test('run frame 5 is frame 2 on the other leg: support leg mirrored, trailing leg and boots unchanged', () => {
+test('run frame 5 is frame 2 on the other leg: support leg mirrored, trailing leg unchanged, support boot moves with its leg', () => {
   const mirror = ([x, y, w, h]: number[]) => [0 - (x + w - 1), y, w, h];
   const [f2, f5] = [POSES.run[2], POSES.run[5]];
   expect(f5.legs[0]).toEqual(mirror(f2.legs[0]));
   expect(f5.legs.slice(1)).toEqual(f2.legs.slice(1));
-  expect(f5.boots).toEqual(f2.boots);
+  const [supportBoot, trailBoot] = f2.boots;
+  expect(f5.boots).toEqual([[supportBoot[0] + 1, supportBoot[1], supportBoot[2], supportBoot[3]], trailBoot]);
 });

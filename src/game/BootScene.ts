@@ -6,7 +6,8 @@ import type { AnimName } from '../sim';
 
 export const ATLAS_KEY = 'atlas';
 export const BALL_KEY = 'ball';
-const BALL_PX = 3;
+/** Ball sprite size in pixels. */
+export const BALL_PX = 3;
 
 /** Draws the sprite atlas and the ball into canvas textures, then starts the match. */
 export class BootScene extends Phaser.Scene {

@@ -56,7 +56,7 @@ export const POSES: Record<AnimName, Pose[]> = {
     { bob: 1, legs: [[2, -2, 2, 1], [-4, -2, 2, 1]], boots: [[2, -1, 3, 1], [-5, -1, 2, 1]],
       arms: [[4, -9, 1, 2], [5, -10, 1, 2], [-4, -9, 1, 2], [-5, -8, 1, 2]] },
     // 5 passing: frame 2 on the other leg (support leg mirrored about the body centre, trailing foot still behind), arms swapped
-    { bob: 0, legs: [[0, -3, 2, 2], [-4, -3, 2, 1], [-5, -2, 2, 1]], boots: [[-1, -1, 3, 1], [-7, -2, 2, 1]],
+    { bob: 0, legs: [[0, -3, 2, 2], [-4, -3, 2, 1], [-5, -2, 2, 1]], boots: [[0, -1, 3, 1], [-7, -2, 2, 1]],
       arms: [[-4, -8, 1, 3], [4, -10, 1, 3]] },
   ],
   kick: [

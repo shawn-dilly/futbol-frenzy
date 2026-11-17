@@ -2,8 +2,8 @@ import Phaser from 'phaser';
 import { canvasRect } from '../art/canvasRect';
 import { PAL } from '../art/palette';
 import { drawText } from '../art/pixelFont';
-import { TURBO_COST, type MatchState } from '../sim';
-import { SCREEN_H, SCREEN_W, formatClock } from './layout';
+import type { MatchState } from '../sim';
+import { SCREEN_H, SCREEN_W, TURBO_PIPS, formatClock, turboPips } from './layout';
 
 const HUD_KEY = 'hud';
 const DEPTH_HUD = 2000;
@@ -11,7 +11,7 @@ const BAR_H = 11;
 const BADGE = { y: 2, size: 7 }, TEXT_Y = 3;
 const LEFT = { badgeX: 4, nameX: 14, scoreX: 46 };
 const RIGHT = { badgeX: 309, nameRightX: 304, scoreX: 270 };
-const PIP = { count: 3, w: 6, h: 4, gap: 2, y: 174 };
+const PIP = { count: TURBO_PIPS, w: 6, h: 4, gap: 2, y: 174 };
 const PIP_UNLIT = PAL.dk;
 const BANNER = { y: 56, scale: 3, shadowDx: 1, shadowDy: 1 };
 const HALF_LABEL = { 1: '1ST', 2: '2ND' } as const;
@@ -20,7 +20,6 @@ const HALF_LABEL = { 1: '1ST', 2: '2ND' } as const;
 export class Hud {
   private readonly texture: Phaser.Textures.CanvasTexture;
   private lastKey = '';
-  private lastTick = 0;
   private banner: { text: string; untilTick: number } | null = null;
 
   constructor(scene: Phaser.Scene) {
@@ -31,15 +30,14 @@ export class Hud {
     scene.events.once('shutdown', () => scene.textures.remove(HUD_KEY));
   }
 
-  /** Shows `text` for `ticks` sim ticks from the last synced tick. */
-  showBanner(text: string, ticks: number): void {
-    this.banner = { text, untilTick: this.lastTick + ticks };
+  /** Shows `text` for `ticks` sim ticks counted from `nowTick`, the tick of the event that asked for it. */
+  showBanner(text: string, ticks: number, nowTick: number): void {
+    this.banner = { text, untilTick: nowTick + ticks };
   }
 
   sync(state: MatchState): void {
-    this.lastTick = state.tick;
     if (this.banner && state.tick >= this.banner.untilTick) this.banner = null;
-    const lit = Math.floor(state.turbo[0] / TURBO_COST + 1e-9);
+    const lit = turboPips(state.turbo[0]);
     const clock = `${HALF_LABEL[state.half]} ${formatClock(state.clockTicks)}`;
     const bannerText = this.banner?.text ?? '';
     const key = [state.score[0], state.score[1], clock, lit, bannerText].join('|');

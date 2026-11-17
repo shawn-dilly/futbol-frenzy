@@ -1,4 +1,4 @@
-import { TICK_HZ, type Vec } from '../sim';
+import { TICK_HZ, TURBO_COST, type Vec } from '../sim';
 
 export const SCREEN_W = 320;
 export const SCREEN_H = 180;
@@ -29,3 +29,17 @@ export const PITCH_TEX_ORIGIN_X = -CAMERA_MIN_X;
 
 /** Ticks the GOAL! banner stays up. */
 export const GOAL_BANNER_TICKS = 90;
+
+export const TURBO_PIPS = 3;
+
+/** How many turbo pips (0..TURBO_PIPS) a meter value lights; a pip is lit once the meter covers it. */
+export function turboPips(meter: number): number {
+  const lit = Math.floor(meter / TURBO_COST + 1e-9);
+  return Math.min(TURBO_PIPS, Math.max(0, lit));
+}
+
+/** Whether a sprite is mirrored: follows horizontal facing, keeps its last side on purely vertical moves. */
+export function nextFlip(prevFlip: boolean, facingX: number): boolean {
+  if (facingX < 0) return true;
+  return facingX > 0 ? false : prevFlip;
+}

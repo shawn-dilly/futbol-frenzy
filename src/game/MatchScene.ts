@@ -60,9 +60,9 @@ export class MatchScene extends Phaser.Scene {
   /** The one place sim events become presentation; sound joins here. */
   private handleEvents(events: SimEvent[]): void {
     for (const e of events) {
-      if (e.type === 'goal') this.hud.showBanner('GOAL!', GOAL_BANNER_TICKS);
-      else if (e.type === 'whistle' && e.what === 'halftime') this.hud.showBanner('HALF TIME', HALFTIME_PAUSE_TICKS);
-      else if (e.type === 'whistle' && e.what === 'fulltime') this.hud.showBanner('FULL TIME', Infinity);
+      if (e.type === 'goal') this.hud.showBanner('GOAL!', GOAL_BANNER_TICKS, this.state.tick);
+      else if (e.type === 'whistle' && e.what === 'halftime') this.hud.showBanner('HALF TIME', HALFTIME_PAUSE_TICKS, this.state.tick);
+      else if (e.type === 'whistle' && e.what === 'fulltime') this.hud.showBanner('FULL TIME', Infinity, this.state.tick);
     }
   }
 }
