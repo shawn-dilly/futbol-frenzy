@@ -2,7 +2,7 @@
 
 Arcade 5-a-side soccer for Android with a retro 8-bit look and no referee. Built with TypeScript, Phaser 4 and Vite, wrapped for Android with Capacitor 8. All art is drawn in code and all sound is synthesised.
 
-**Status:** milestone 1 (playable core) is done: move, pass, shoot and score against a basic computer side. Tackling, rage and callouts are milestone 2. See [`docs/ROADMAP.md`](docs/ROADMAP.md).
+**Status:** milestones 1 and 2 are built: move, pass, shoot and score, plus hits, rage, hurt animations and announcer callouts, against a basic computer side. A smarter opponent is milestone 3. See [`docs/ROADMAP.md`](docs/ROADMAP.md).
 
 ## Run it
 
@@ -18,8 +18,10 @@ npm run dev      # http://localhost:5173
 | Arrows / WASD | move |
 | J | pass (switch player without the ball) |
 | K | shoot |
-| L | hit |
+| L | hit (see below) |
 | Space | turbo |
+
+**Hits.** A hit launches when you release HIT. A quick tap is a shoulder charge. A tap while a turbo burst is active is a slide tackle. Hold for about half a second (30 ticks) and release for a big hit; it costs a turbo segment, and on screen the HIT button fills and turns yellow when a big hit is ready. The ball carrier cannot hit. Players who are lunging, recovering or hurt cannot pick up the ball, and a flattened player is thrown in the direction of the hit. Hits fill the rage meters under the scores, and low health leaves a player Dazed.
 
 On a phone or a touch screen the stick and buttons appear on screen. URL options: `?demo=1` (computer v computer), `?seed=N`, `?half=SECONDS`, `?mute=1`.
 
@@ -30,6 +32,24 @@ npm test             # unit tests
 npm run typecheck
 npm run e2e          # headless-browser smoke test (first run: npx playwright install chromium)
 ```
+
+## How to add a callout
+
+Callouts are the announcer lines shown after a hard hit. Each is one entry in `CALLOUTS` in `src/content/callouts.ts`; nothing else changes.
+
+```ts
+{ id: 'timber', text: 'TIMBER!', tiers: ['knockdown'] },
+{ id: 'pow', text: 'POW!', tiers: ['wipeout', 'overTheTop'], hitTypes: ['big'], weight: 2 },
+```
+
+- `id`: the text in lower-case kebab-case (`'timber'`). Must be unique.
+- `text`: upper case, only glyphs the pixel font has, at most two lines at its tier's size.
+- `tiers`: which hits may trigger it: `knockdown`, `wipeout`, `overTheTop`. A stumble has no callout. Each tier needs at least 10 lines.
+- `hitTypes` (optional): narrow it to `shoulder`, `slide` or `big` hits.
+- `weight` (optional, default 1, at least 1): a higher weight makes it turn up more often.
+- `audio` (optional): the name of a recorded clip to play with it.
+
+Lines are drawn from a shuffle bag, so they rotate without back-to-back repeats. Run `npm test` after adding one: the callout tests check ids, glyphs, line wrapping and the minimum per tier.
 
 ## Android
 

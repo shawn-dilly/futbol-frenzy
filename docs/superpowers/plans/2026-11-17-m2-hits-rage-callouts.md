@@ -244,7 +244,7 @@ export const HIT_FEEDBACK: Record<HurtTier, HitFeedback>;
 
 **Files:** Modify `e2e/demo.spec.ts`, `README.md`, `CLAUDE.md`, `docs/ROADMAP.md`.
 
-- [ ] **Step 1:** E2E: (a) the demo match still reaches full time; (b) a human test that walks the controlled player into the nearest opponent, taps L, and asserts a recorded `hit` event and a visible callout layer or, for a stumble, the victim's `hurt` status; (c) hold L 40 ticks and release: a `hit` or `whiff` event with `hit: 'big'`.
-- [ ] **Step 2:** `npm run android:apk` builds (JDK 21+); record the APK size. If no emulator is available say so in the report rather than claiming a device check.
-- [ ] **Step 3:** Update `README.md` (HIT controls: tap, tap with turbo, hold), `CLAUDE.md` (content tables, status model), `docs/ROADMAP.md` (M2 status, remove finished carry-overs, list what is left for M3).
-- [ ] **Step 4:** Full check plus `npm run e2e`; commit `test(e2e): hits and callouts; docs for M2`.
+- [x] **Step 1:** E2E: (a) the demo match still reaches full time; (b) a human test that walks the controlled player into the nearest opponent, taps L, and asserts a recorded `hit` event and a visible callout layer or, for a stumble, the victim's `hurt` status; (c) hold L 40 ticks and release: a `hit` or `whiff` event with `hit: 'big'`.
+- [x] **Step 2:** `npm run android:apk` builds (JDK 21+); record the APK size. If no emulator is available say so in the report rather than claiming a device check.
+- [x] **Step 3:** Update `README.md` (HIT controls: tap, tap with turbo, hold), `CLAUDE.md` (content tables, status model), `docs/ROADMAP.md` (M2 status, remove finished carry-overs, list what is left for M3).
+- [x] **Step 4:** Full check plus `npm run e2e`; commit `test(e2e): hits and callouts; docs for M2`.

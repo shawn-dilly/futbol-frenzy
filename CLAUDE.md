@@ -35,6 +35,8 @@ Three layers. Each depends only on the ones above it in this list.
 - **No magic numbers.** Tunable values live in `src/sim/constants.ts` (rules) or a data file (`src/content/`), named, with units in the name or a comment.
 - **Content is data.** Teams, callouts, animation definitions, and difficulty settings are data tables. Adding one must not require a logic change.
 - **Build only what the task asks.** No speculative options or abstractions.
+- **Content tables:** callouts in `src/content/callouts.ts` (with `shuffleBag.ts`), sound recipes in `src/content/sounds.ts`, sprite and hurt animations in `src/content/animations.ts` (a test forbids detached sprite pieces). Rules constants live in `src/sim/constants.ts`.
+- **Status model:** each sim player has one `status` (`free`, `kicking`, `charging`, `lunging`, `recovering`, `hurt` with tier and variant) plus `statusTick` and `statusTicks`. Presentation maps status to an animation key; it never stores animation state in the sim. Only `free` players act and pick up the ball.
 - **Check current docs** for Phaser 4 and Capacitor 8 before using an API you are not sure of: `npx ctx7@latest library "<name>" "<topic>"`, then `npx ctx7@latest docs <id> "<topic>"`.
 - All art is drawn in code and all sound is synthesised until the design says otherwise.
 
