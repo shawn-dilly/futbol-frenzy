@@ -68,8 +68,8 @@ export function fullTimeLines(score: readonly [number, number], restartAllowed: 
   return lines;
 }
 
-/** Pixels a sprite is lifted `statusTick` ticks into a status of `statusTicks`: 0 at both ends, `arcHeight` at the midpoint. */
-export function arcLift(arcHeight: number | undefined, statusTick: number, statusTicks: number): number {
-  if (!arcHeight || statusTicks <= 0) return 0;
-  return arcHeight * Math.sin(Math.PI * Math.min(statusTick, statusTicks) / statusTicks);
+/** Pixels a sprite is lifted `tick` ticks into its air time: 0 at the start, `arcHeight` at half the air time, 0 from the end on. */
+export function arcLift(arcHeight: number | undefined, tick: number, airTicks: number): number {
+  if (!arcHeight || airTicks <= 0 || tick >= airTicks) return 0;
+  return arcHeight * Math.sin(Math.PI * tick / airTicks);
 }

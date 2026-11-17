@@ -8,7 +8,7 @@ export const FRAME_H = 20;
 export const ORIGIN_X = 12;
 export const ORIGIN_Y = 18;
 /** The atlas texture is at most this many pixels wide. */
-const ATLAS_MAX_W = 1024;
+export const ATLAS_MAX_W = 1024;
 const ATLAS_COLUMNS = Math.floor(ATLAS_MAX_W / FRAME_W);
 
 const colorOf = (kit: Kit, role: ColorRole): string => {

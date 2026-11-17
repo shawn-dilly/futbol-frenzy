@@ -38,6 +38,13 @@ test('knock is the unit direction times the tier knock speed', () => {
   hurtPlayer(s, s.players[3], 'knockdown', { x: 3, y: 4 }, 20);
   expect(s.players[3].knock.x).toBeCloseTo(42, 9); expect(s.players[3].knock.y).toBeCloseTo(56, 9);
 });
+test('the victim ends up facing the way they are thrown, and keeps facing when the direction is zero', () => {
+  const s = playing();
+  hurtPlayer(s, s.players[3], 'knockdown', { x: -3, y: 4 }, 20);
+  expect(s.players[3].facing.x).toBeCloseTo(-0.6, 9); expect(s.players[3].facing.y).toBeCloseTo(0.8, 9);
+  hurtPlayer(s, s.players[3], 'knockdown', { x: 0, y: 0 }, 20);
+  expect(s.players[3].facing.x).toBeCloseTo(-0.6, 9); expect(s.players[3].facing.y).toBeCloseTo(0.8, 9);
+});
 test('health drops by the damage, never below 1', () => {
   const s = playing();
   hurtPlayer(s, s.players[3], 'knockdown', { x: 1, y: 0 }, 20);

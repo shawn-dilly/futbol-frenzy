@@ -71,7 +71,8 @@ export class MatchView {
     const kit = p.team + (p.role === 'gk' ? GOALKEEPER_KIT_OFFSET : 0);
     view.flip = nextFlip(view.flip, p.facing.x);
     const { key, tick } = animFor(p, state.tick);
-    const lift = arcLift(ANIMATIONS[key].arcHeight, p.statusTick, p.statusTicks);
+    const def = ANIMATIONS[key];
+    const lift = arcLift(def.arcHeight, tick, (def.airFrames ?? 0) * def.ticksPerFrame);
     view.sprite
       .setFrame(frameKey(kit, key, frameIndex(key, tick)))
       .setFlipX(view.flip)

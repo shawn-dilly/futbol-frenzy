@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'vitest';
-import { ANIMATIONS, hurtAnimKey } from '../../src/content/animations';
+import { ANIMATIONS, GETUP_TICKS, hurtAnimKey } from '../../src/content/animations';
 import { FRAME_H, FRAME_W, ORIGIN_X, ORIGIN_Y } from '../../src/art/sprites';
 import { HURT, HURT_TIERS, type HitType, type PlayerState, type PlayerStatus } from '../../src/sim';
 import { createMatch } from '../../src/sim/setup';
@@ -22,11 +22,14 @@ describe('animation data', () => {
     for (const hit of HITS) {
       statuses.push({ kind: 'lunging', hit }, { kind: 'recovering', hit, landed: true }, { kind: 'recovering', hit, landed: false });
     }
-    for (const tier of HURT_TIERS) for (let variant = 0; variant < HURT[tier].variants; variant++) statuses.push({ kind: 'hurt', tier, variant });
+    for (const tier of HURT_TIERS) for (let variant = 0; variant < HURT[tier].variants; variant++) {
+      statuses.push({ kind: 'hurt', tier, variant });
+    }
     for (const s of statuses) for (const moving of [false, true]) {
       const key = keyFor(s, moving);
       expect(Object.hasOwn(ANIMATIONS, key), key).toBe(true);
     }
+    expect(Object.hasOwn(ANIMATIONS, 'getup')).toBe(true);
   });
 
   test('every frame has a rect and every rect lies inside the cell', () => {
@@ -54,11 +57,31 @@ describe('animation data', () => {
     expect(ANIMATIONS.charge.frames.length).toBe(2);
   });
 
-  test('a hurt animation that does not loop shows its lying frame within the shortest down time', () => {
+  test('a hurt animation that does not loop reaches its last frame within its own tier down time', () => {
     for (const tier of HURT_TIERS) for (let v = 0; v < HURT[tier].variants; v++) {
       const def = ANIMATIONS[hurtAnimKey(tier, v)];
       if (!def.loop) expect(def.frames.length * def.ticksPerFrame, hurtAnimKey(tier, v)).toBeLessThanOrEqual(HURT[tier].downTicks);
     }
+  });
+
+  test('every animation with an arc has between 1 and all of its frames airborne, and a landed frame to rest on', () => {
+    for (const [key, def] of Object.entries(ANIMATIONS)) {
+      if (def.arcHeight === undefined) { expect(def.airFrames, key).toBeUndefined(); continue; }
+      expect(def.airFrames, key).toBeGreaterThanOrEqual(1);
+      expect(def.airFrames, key).toBeLessThan(def.frames.length);
+    }
+    for (const key of ['hurt_overTheTop_0', 'hurt_overTheTop_1', 'hurt_overTheTop_2']) expect(ANIMATIONS[key].airFrames, key).toBeDefined();
+  });
+
+  test('getup is two frames that fill the get-up window', () => {
+    const def = ANIMATIONS.getup;
+    expect(def.loop).toBe(false);
+    expect(def.frames.length * def.ticksPerFrame).toBe(GETUP_TICKS);
+    expect(GETUP_TICKS).toBe(12);
+  });
+
+  test('wipeout_0 rocks: its four frames are all different', () => {
+    expect(new Set(ANIMATIONS.hurt_wipeout_0.frames.map(f => JSON.stringify(f))).size).toBe(4);
   });
 
   test('wipeout_1 shows orbiting stars and the stars move', () => {

@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'vitest';
 import { KITS } from '../../src/art/palette';
-import { FRAME_H, FRAME_W, atlasLayout, drawFrame, frameIndex, frameKey } from '../../src/art/sprites';
+import { ATLAS_MAX_W, FRAME_H, FRAME_W, atlasLayout, drawFrame, frameIndex, frameKey } from '../../src/art/sprites';
 import { ANIMATIONS } from '../../src/content/animations';
 import legacy from './fixtures/legacy-frames.json';
 
@@ -34,14 +34,14 @@ describe('sprites', () => {
     expect(frameIndex('hurt_knockdown_0', 10000)).toBe(knock.frames.length - 1);
   });
 
-  test('atlas keys are unique, aligned to cells and at most 1024 px wide', () => {
+  test('atlas keys are unique, aligned to cells and within the atlas width', () => {
     const layout = atlasLayout();
     const frameCount = Object.values(ANIMATIONS).reduce((n, a) => n + a.frames.length, 0);
     expect(layout.length).toBe(KITS.length * frameCount);
     expect(new Set(layout.map(e => e.key)).size).toBe(layout.length);
     expect(new Set(layout.map(e => `${e.x},${e.y}`)).size).toBe(layout.length);
     for (const e of layout) {
-      expect(e.x + FRAME_W).toBeLessThanOrEqual(1024);
+      expect(e.x + FRAME_W).toBeLessThanOrEqual(ATLAS_MAX_W);
       expect(e.x % FRAME_W).toBe(0);
       expect(e.y % FRAME_H).toBe(0);
     }

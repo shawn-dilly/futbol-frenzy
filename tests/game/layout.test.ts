@@ -38,13 +38,14 @@ test('full-time banner lines: result always, hint once restart is allowed', () =
   expect(fullTimeLines([0, 0], true)).toEqual(['FULL TIME', 'RHINOS 0 - 0 VIPERS', 'TAP TO PLAY AGAIN']);
 });
 
-test('arcLift is zero at both ends and peaks at the midpoint', () => {
+test('arcLift is 0 at the start, peaks at half the air time, and is 0 at and after the air time', () => {
   expect(arcLift(22, 0, 100)).toBe(0);
-  expect(arcLift(22, 100, 100)).toBeCloseTo(0, 10);
   expect(arcLift(22, 50, 100)).toBeCloseTo(22, 10);
   expect(arcLift(30, 25, 100)).toBeCloseTo(30 * Math.sin(Math.PI / 4), 10);
+  expect(arcLift(22, 100, 100)).toBe(0);
+  expect(arcLift(22, 160, 100)).toBe(0);
 });
-test('arcLift is zero without an arc or for an open-ended status', () => {
+test('arcLift is zero without an arc or without air time', () => {
   expect(arcLift(undefined, 40, 100)).toBe(0);
   expect(arcLift(22, 40, 0)).toBe(0);
 });
