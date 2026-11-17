@@ -54,3 +54,41 @@ test('restarting during replay creates a fresh match without errors', async ({ p
   await page.waitForFunction(() => window.__ff?.state.config.seed === 42 && window.__ff.state.tick > 0);
   expect(errors).toEqual([]);
 });
+
+test('lethal replay animates the outgoing victim alongside the reserve', async ({ page }) => {
+  await page.goto('/?demo=1&seed=8&half=20&level=psycho&mute=1');
+  await page.waitForFunction(() => window.__ff?.state.phase === 'halftime');
+  const before = await page.evaluate(() => {
+    const hook = window.__ff!;
+    hook.pause();
+    return { state: hook.state, record: hook.replay() };
+  });
+  expect(before.state.halfHits[0]?.tick).toBe(1123);
+  const clip = reconstructReplay(before.record, before.state.halfHits[0], 0, 0);
+  if (clip.kind !== 'window') throw new Error('Missing hit');
+  const hit = clip.states[0].events[clip.hit.eventIndex];
+  if (hit.type !== 'hit' || !hit.substituted || hit.tier !== 'wipeout') throw new Error('Expected lethal wipeout');
+  const sample = await page.evaluate(async ({ tick, victim }) => {
+    const hook = window.__ff!;
+    hook.startReplay(0);
+    const frames = [];
+    while ((hook.replayTick() ?? 0) < tick + 24) {
+      await new Promise(requestAnimationFrame);
+      if (hook.replayTick()! >= tick) frames.push(hook.renderedPlayers(victim));
+    }
+    return frames;
+  }, { tick: clip.hit.tick, victim: hit.victim });
+  const hurt = sample.flatMap(pair => pair.filter(actor => actor.frame.includes('hurt_wipeout')));
+  expect(new Set(hurt.map(actor => actor.frame)).size).toBeGreaterThan(1);
+  expect(new Set(hurt.map(actor => actor.y)).size).toBeGreaterThan(1);
+  expect(sample.some(pair => pair.length === 2 && pair.some(actor => /_(idle|run)_/.test(actor.frame)))).toBe(true);
+  await page.screenshot({ path: 'artifacts/lethal-replay.png' });
+  const after = await page.evaluate(victim => {
+    const hook = window.__ff!;
+    hook.endReplay();
+    return { actors: hook.renderedPlayers(victim), state: hook.state, record: hook.replay() };
+  }, hit.victim);
+  expect(after.actors).toHaveLength(1);
+  expect(after.state).toEqual(before.state);
+  expect(after.record).toEqual(before.record);
+});

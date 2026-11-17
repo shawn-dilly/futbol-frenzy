@@ -96,6 +96,14 @@ export class MatchView {
     this.shaking = null;
   }
 
+  /** Visible sprites for one roster slot, including its outgoing actor during a substitution. */
+  renderedPlayers(id: number) {
+    return this.scene.children.getChildren()
+      .filter((child): child is Phaser.GameObjects.Image =>
+        child instanceof Phaser.GameObjects.Image && child.name === `player-${id}` && child.visible)
+      .map(sprite => ({ frame: sprite.frame.name, y: sprite.y }));
+  }
+
   addOutgoing(player: PlayerState, start: number): void {
     this.outgoing.push({ player, start, view: this.createPlayerView(player) });
   }
@@ -160,7 +168,7 @@ export class MatchView {
 
   private createPlayerView(p: PlayerState): PlayerView {
     const dazed = [0, 1].map(() => this.scene.add.rectangle(0, 0, 1, 1, DAZED.color).setOrigin(0, 0).setDepth(DEPTH.marker).setVisible(false));
-    return { sprite: this.scene.add.image(0, 0, ATLAS_KEY).setOrigin(0, 0), shadow: this.shadowRect(SHADOW.w), dazed, flip: nextFlip(false, p.facing.x) };
+    return { sprite: this.scene.add.image(0, 0, ATLAS_KEY).setName(`player-${p.id}`).setOrigin(0, 0), shadow: this.shadowRect(SHADOW.w), dazed, flip: nextFlip(false, p.facing.x) };
   }
 
   private syncPlayer(view: PlayerView, p: PlayerState, state: MatchState, camX: number, marker = true): void {

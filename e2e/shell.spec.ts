@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import { drawText } from '../src/art/pixelFont';
 
 test('title, setup, back and kickoff work with keyboard', async ({ page }) => {
   await page.goto('/?seed=42&mute=1');
@@ -85,4 +86,36 @@ test('Cup keyboard navigation skips the fixed opponent', async ({ page }) => {
   await page.keyboard.press('Enter');
   await page.waitForFunction(() => !!window.__ff);
   expect(await page.evaluate(() => window.__ff!.state.config.level)).toEqual(['bruiser', 'bruiser']);
+});
+
+test('First to 5 setup draws the target in the playing HUD', async ({ page }) => {
+  await page.setViewportSize({ width: 640, height: 360 });
+  await page.goto('/?seed=42&mute=1');
+  await page.waitForSelector('canvas');
+  await page.waitForTimeout(300);
+  await page.mouse.click(320, 246);
+  await page.waitForTimeout(100);
+  await page.mouse.click(375, 246); // previous length wraps from short to First to 5
+  await page.waitForTimeout(100);
+  await page.mouse.click(410, 314);
+  await page.waitForFunction(() => window.__ff?.state.phase === 'play');
+  expect(await page.evaluate(() => window.__ff!.state.config.targetGoals)).toBe(5);
+  const bar = await page.screenshot({ clip: { x: 260, y: 0, width: 120, height: 22 } });
+  const pixels = await page.evaluate(async (png) => {
+    const img = new Image();
+    img.src = 'data:image/png;base64,' + png;
+    await img.decode();
+    const canvas = document.createElement('canvas');
+    canvas.width = 60;
+    canvas.height = 11;
+    const ctx = canvas.getContext('2d')!;
+    ctx.imageSmoothingEnabled = false;
+    ctx.drawImage(img, 0, 0, 60, 11);
+    return Array.from(ctx.getImageData(0, 0, 60, 11).data);
+  }, bar.toString('base64'));
+  const expected = new Set<number>();
+  drawText((x, y) => expected.add(y * 60 + x), 'FIRST TO 5', 30, 3, '', 1, 'c');
+  const white = pixels.flatMap((r, i) => i % 4 === 0 && r === 244 ? [i / 4] : []);
+  expect(new Set(white)).toEqual(expected);
+  await page.screenshot({ path: 'artifacts/first-to-five.png' });
 });

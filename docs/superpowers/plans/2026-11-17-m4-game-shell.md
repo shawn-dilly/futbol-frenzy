@@ -66,6 +66,14 @@ Task 6 implementation checks passed with 554 unit tests, typecheck, production b
 
 Task 6 independent Sol review approved `90e3d94` with no findings. On that commit Sol independently passed 554 unit tests, typecheck, production build and all 25 Playwright tests. Task 7 uses those results because the candidate changes only this plan and the roadmap. GPT-6.2 Astra prepared the candidate. Whole-milestone Sol signoff and verified push are pending.
 
+**Whole-milestone review corrections after `1043cc9`.** Astra reproduced both Sol findings in Chromium. The normal friendly setup selected First to 5, but the playing HUD failed a pixel comparison against the target label. In the seed 8 Psycho/Psycho match with 20-second halves, the selected hit at tick 1123 consumed a reserve and playback displayed zero wipeout frames for the outgoing victim.
+
+The HUD now draws the configured target in the centered scoreboard slot. Replay uses the same presentation code as live play to spawn the outgoing actor from the hit snapshot at its recorded tick. The browser regression samples the victim's roster slot on Phaser's display list, checks changing wipeout frames and vertical position alongside the reserve, then checks cleanup and deep equality of the paused match and input record on return.
+
+Implementation checks passed for both focused browser regressions, all 554 unit tests, typecheck, production build and all 27 Playwright tests. One earlier full run timed out in the existing friendly-results test waiting for kickoff after returning to the title. The full suite passed on the same code on rerun.
+
+Astra inspected `artifacts/first-to-five.png` at 640×360 and `artifacts/lethal-replay.png` at 960×540 against the gameplay reference in `mockups.html`. The white target label fits between the yellow scores on the dark bar. The timed replay shows the half and countdown above the replay controls, with the blue victim down on the pitch beside the tackler. Physical-device verification and independent Sol re-review remain pending.
+
 | M4 requirement | Candidate evidence |
 |---|---|
 | Normal launch and setup | Shell browser tests cover title, back, settings selection, keyboard kickoff and Cup pointer navigation. Task 5 checked all 72 team/length/difficulty combinations. Six teams use four effective ratings and contrasting side-based kits. |

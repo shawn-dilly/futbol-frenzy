@@ -24,7 +24,7 @@ import { Sfx, sfxForEvent } from '../audio/sfx';
 declare global {
   interface Window {
     /** Dev/test hooks: `showCallout` shows the callout a hit of that tier and type would; `calloutText` is what the banner shows now ('' if nothing). */
-    __ff?: { state: MatchState; showCallout: (tier: HurtTier, hit: HitType) => void; calloutText: () => string; replay: () => ReplayRecord; startReplay: (half: 0 | 1) => void; endReplay: () => void; replayTick: () => number | null; pause: () => void; resume: () => void; halftimeGate: () => boolean; continueHalftime: () => void; launch: (launch?: MatchLaunch) => void }
+    __ff?: { state: MatchState; renderedPlayers: MatchView['renderedPlayers']; showCallout: (tier: HurtTier, hit: HitType) => void; calloutText: () => string; replay: () => ReplayRecord; startReplay: (half: 0 | 1) => void; endReplay: () => void; replayTick: () => number | null; pause: () => void; resume: () => void; halftimeGate: () => boolean; continueHalftime: () => void; launch: (launch?: MatchLaunch) => void }
   }
 }
 
@@ -95,6 +95,7 @@ export class MatchScene extends Phaser.Scene {
     let active = true;
     const hook: NonNullable<Window["__ff"]> = {
       state: this.state,
+      renderedPlayers: id => active ? this.view.renderedPlayers(id) : [],
       pause: () => { if (active) this.pause(); },
       resume: () => { if (active) this.resume(); },
       replay: () => structuredClone(this.replay),
@@ -169,7 +170,7 @@ export class MatchScene extends Phaser.Scene {
         for (let i = 0; i < steps && this.playback.cursor < this.playback.states.length - 1; i++) {
           this.playback.cursor++;
           const snapshot = this.playback.states[this.playback.cursor];
-          for (const event of snapshot.events) if (event.type === 'hit') this.view.addStarBurst({ ...(event.impact?.pos ?? snapshot.players[event.victim].pos) }, time);
+          this.showReplayHits(snapshot);
         }
         this.syncPresentation();
       }
@@ -220,6 +221,7 @@ export class MatchScene extends Phaser.Scene {
     this.view.clearTransientEffects();
     this.pendingCraters = [];
     this.flashStartMs = -Infinity;
+    if (result.kind === 'window') this.showReplayHits(result.states[0]);
     this.replayLabel = this.add.graphics().setDepth(2200);
     const graphics = this.replayLabel;
     const rect = (x: number, y: number, w: number, h: number, color: string) => {
@@ -369,6 +371,17 @@ export class MatchScene extends Phaser.Scene {
     }
   }
 
+  private showReplayHits(snapshot: MatchState): void {
+    for (const event of snapshot.events) {
+      if (event.type === 'hit') this.showHitActors(event, snapshot, true);
+    }
+  }
+
+  private showHitActors(event: Extract<SimEvent, { type: 'hit' }>, state: MatchState, stars: boolean): void {
+    if (event.substituted && event.impact) this.view.addOutgoing(event.impact, state.tick);
+    if (stars) this.view.addStarBurst({ ...(event.impact?.pos ?? state.players[event.victim].pos) }, this.nowMs);
+  }
+
   private onHit(e: Extract<SimEvent, { type: 'hit' }>): void {
     const fb = HIT_FEEDBACK[e.tier];
     const callout = this.callouts.pick(e.tier, e.hit);
@@ -377,8 +390,7 @@ export class MatchScene extends Phaser.Scene {
     this.view.shake(fb.shakePx, fb.shakeMs, this.nowMs);
     this.freezeTicks = Math.max(this.freezeTicks, fb.freezeTicks);
     if (fb.flash) this.flashStartMs = this.nowMs;
-    if (e.substituted && e.impact) this.view.addOutgoing(e.impact, this.state.tick);
-    if (fb.stars) this.view.addStarBurst({ ...(e.impact?.pos ?? this.state.players[e.victim].pos) }, this.nowMs);
+    this.showHitActors(e, this.state, fb.stars);
     const landTicks = craterLandTicks(e.tier, e.variant);
     if (landTicks !== null) this.pendingCraters.push({ tick: this.state.tick + landTicks, victim: e.victim, impact: e.substituted ? e.impact : undefined, startTick: this.state.tick });
     if (callout) this.calloutBanner.show(callout.text, e.tier, this.state.tick);

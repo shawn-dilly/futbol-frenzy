@@ -50,19 +50,21 @@ export class Hud {
   sync(state: MatchState, replay = false): void {
     if (!replay && this.banner && state.tick >= this.banner.untilTick) this.banner = null;
     const lit = turboPips(state.turbo[0]);
-    const clock = `${HALF_LABEL[state.half]} ${formatClock(state.clockTicks)}`;
+    const matchLabel = state.config.targetGoals === undefined
+      ? `${HALF_LABEL[state.half]} ${formatClock(state.clockTicks)}`
+      : `FIRST TO ${state.config.targetGoals}`;
     const lines = replay ? [] : this.fulltimeTick !== null
       ? fullTimeLines(state.score, canRestart(state.phase, state.tick, this.fulltimeTick))
       : this.banner ? [this.banner.text] : [];
     const rage = state.rage.map(r => ({ px: rageBarWidth(r, RAGE.maxPx), flashOn: isRageFlashing(r) && blinkOn(state.tick, RAGE_FLASH_TICKS) }));
     const level = LEVELS[state.config.level[1]].label.toUpperCase();
-    const key = [level, state.score[0], state.score[1], clock, lit, lines.join('/'), rage.map(r => `${r.px}${r.flashOn ? 'f' : ''}`).join(',')].join('|');
+    const key = [level, state.score[0], state.score[1], matchLabel, lit, lines.join('/'), rage.map(r => `${r.px}${r.flashOn ? 'f' : ''}`).join(',')].join('|');
     if (key === this.lastKey) return;
     this.lastKey = key;
-    this.draw(state.score, clock, lit, lines, rage, level);
+    this.draw(state.score, matchLabel, lit, lines, rage, level);
   }
 
-  private draw(score: [number, number], clock: string, lit: number, bannerLines: string[], rage: { px: number; flashOn: boolean }[], level: string): void {
+  private draw(score: [number, number], matchLabel: string, lit: number, bannerLines: string[], rage: { px: number; flashOn: boolean }[], level: string): void {
     const ctx = this.texture.context;
     ctx.clearRect(0, 0, SCREEN_W, SCREEN_H);
     const rect = canvasRect(ctx);
@@ -70,7 +72,7 @@ export class Hud {
     rect(LEFT.badgeX, BADGE.y, BADGE.size, BADGE.size, PAL.red);
     drawText(rect, this.teamNames[0], LEFT.nameX, TEXT_Y, PAL.wht);
     drawText(rect, String(score[0]), LEFT.scoreX, TEXT_Y, PAL.yel);
-    drawText(rect, clock, SCREEN_W / 2, TEXT_Y, PAL.wht, 1, 'c');
+    drawText(rect, matchLabel, SCREEN_W / 2, TEXT_Y, PAL.wht, 1, 'c');
     drawText(rect, String(score[1]), RIGHT.scoreX, TEXT_Y, PAL.yel);
     drawText(rect, this.teamNames[1], RIGHT.nameRightX, TEXT_Y, PAL.wht, 1, 'r');
     rect(RIGHT.badgeX, BADGE.y, BADGE.size, BADGE.size, PAL.blue);
