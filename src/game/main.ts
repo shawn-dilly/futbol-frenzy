@@ -1,18 +1,17 @@
 import Phaser from 'phaser';
 import { BootScene } from './BootScene';
 import { MatchScene } from './MatchScene';
-
-const LOGICAL_WIDTH_PX = 320;
-const LOGICAL_HEIGHT_PX = 180;
+import { SCREEN_H, SCREEN_W } from './layout';
+import { PAL } from '../art/palette';
 
 new Phaser.Game({
   type: Phaser.AUTO,
-  width: LOGICAL_WIDTH_PX,
-  height: LOGICAL_HEIGHT_PX,
+  width: SCREEN_W,
+  height: SCREEN_H,
   pixelArt: true,
   audio: { noAudio: true }, // all sound is our own Web Audio in src/audio
   parent: 'game',
-  backgroundColor: '#16162a',
+  backgroundColor: PAL.navy,
   scale: {
     mode: Phaser.Scale.FIT,
     autoCenter: Phaser.Scale.CENTER_BOTH,
