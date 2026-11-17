@@ -96,6 +96,9 @@ export class Sfx {
     } catch { /* stay silent */ }
   }
 
+  /** Plays a recorded clip by name; returns false when it is unavailable (always, until clips are added). */
+  playClip(_name: string): boolean { return false; }
+
   private resume(ctx: AudioContext): void {
     try { void Promise.resolve(ctx.resume()).catch(() => {}); } catch { /* stay silent */ }
   }

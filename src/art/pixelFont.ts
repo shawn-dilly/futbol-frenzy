@@ -38,3 +38,19 @@ export function drawText(
     }
   }
 }
+
+/** Whether the font has a glyph for `ch` (case-insensitive). */
+export function hasGlyph(ch: string): boolean {
+  return ch.toUpperCase() in FONT;
+}
+
+/** Greedy word wrap: lines are as long as fit in `maxWidth` pixels at `scale`; a word wider than that gets its own line. */
+export function wrapText(s: string, maxWidth: number, scale = 1): string[] {
+  const lines: string[] = [];
+  for (const word of s.split(' ').filter((w) => w.length > 0)) {
+    const last = lines.length - 1;
+    if (last >= 0 && textWidth(`${lines[last]} ${word}`, scale) <= maxWidth) lines[last] += ` ${word}`;
+    else lines.push(word);
+  }
+  return lines;
+}

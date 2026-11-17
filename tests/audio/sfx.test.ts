@@ -127,3 +127,8 @@ test('a context left over from a failed setup is closed, and unlock can retry', 
   expect(log.closed).toBe(1);
   s.unlock(); expect(made).toBe(2);
 });
+
+test('playClip is the hook for recorded lines: no clips exist yet, so it reports false and stays silent', () => {
+  const s = new Sfx(() => { throw new Error('x'); });
+  expect(s.playClip('crunch')).toBe(false);
+});

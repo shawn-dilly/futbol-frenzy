@@ -1,8 +1,12 @@
 import Phaser from 'phaser';
 import { GOAL_BANNER_TICKS, canRestart } from './layout';
-import { HALFTIME_PAUSE_TICKS, createMatch, neutralPad, step, type MatchState, type PadInput, type SimEvent } from '../sim';
+import { HALFTIME_PAUSE_TICKS, createMatch, neutralPad, step, type HitType, type HurtTier, type MatchState, type PadInput, type SimEvent } from '../sim';
 import { KeyboardPad, mergePads } from '../input/keyboard';
 import { TouchControls } from '../input/TouchControls';
+import { CALLOUTS } from '../content/callouts';
+import { seededRandom } from '../content/shuffleBag';
+import { CalloutBanner } from './CalloutBanner';
+import { CalloutPicker } from './calloutPicker';
 import { Hud } from './Hud';
 import { MatchView } from './MatchView';
 import { FixedStepper } from './loop';
@@ -10,7 +14,10 @@ import { parseMatchParams } from './params';
 import { Sfx, sfxForEvent } from '../audio/sfx';
 
 declare global {
-  interface Window { __ff?: { state: MatchState } }
+  interface Window {
+    /** `showCallout` is a dev/test hook: shows the callout a hit of that tier and type would. */
+    __ff?: { state: MatchState; showCallout: (tier: HurtTier, hit: HitType) => void }
+  }
 }
 
 /** Runs the sim at a fixed 60 Hz and hands the state to the view and HUD. */
@@ -18,6 +25,8 @@ export class MatchScene extends Phaser.Scene {
   private state!: MatchState;
   private view!: MatchView;
   private hud!: Hud;
+  private callouts!: CalloutPicker;
+  private calloutBanner!: CalloutBanner;
   private touch: TouchControls | null = null;
   private keys!: KeyboardPad;
   private readonly stepper = new FixedStepper();
@@ -38,14 +47,17 @@ export class MatchScene extends Phaser.Scene {
     const params = parseMatchParams(window.location.search);
     this.sfx.muted = params.mute;
     this.state = createMatch({ seed: this.seed, halfSeconds: params.halfSeconds, human: [!params.demo, false] });
-    window.__ff = { state: this.state };
+    this.callouts = new CalloutPicker(CALLOUTS, seededRandom(this.seed));
+    window.__ff = { state: this.state, showCallout: (tier, hit) => this.showCallout(tier, hit) };
     this.view = new MatchView(this);
     this.hud = new Hud(this);
+    this.calloutBanner = new CalloutBanner(this);
     this.keys = new KeyboardPad(this);
     this.touch = params.demo ? null : new TouchControls(this);
     this.handleEvents(this.state.events);
     this.view.sync(this.state);
     this.hud.sync(this.state);
+    this.calloutBanner.sync(this.state.tick);
 
     // Only a fresh press restarts: a key already held at full time keeps auto-repeating keydown, which must not count.
     const restart = () => {
@@ -77,6 +89,7 @@ export class MatchScene extends Phaser.Scene {
     }
     this.view.sync(this.state);
     this.hud.sync(this.state);
+    this.calloutBanner.sync(this.state.tick);
   }
 
   /** Team 0 is the human (touch and keyboard, absent in demo mode); team 1 is always the CPU. */
@@ -90,12 +103,21 @@ export class MatchScene extends Phaser.Scene {
     for (const e of events) {
       const sound = sfxForEvent(e);
       if (sound) this.sfx.play(sound);
-      if (e.type === 'goal') this.hud.showBanner('GOAL!', GOAL_BANNER_TICKS, this.state.tick);
+      if (e.type === 'hit') this.showCallout(e.tier, e.hit);
+      else if (e.type === 'goal') this.hud.showBanner('GOAL!', GOAL_BANNER_TICKS, this.state.tick);
       else if (e.type === 'whistle' && e.what === 'halftime') this.hud.showBanner('HALF TIME', HALFTIME_PAUSE_TICKS, this.state.tick);
       else if (e.type === 'whistle' && e.what === 'fulltime') {
         this.fulltimeTick = this.state.tick;
         this.hud.showFullTime(this.state.tick);
       }
     }
+  }
+
+  /** Shows the next callout for a hit of this tier and type, if the pool has one; the newest always replaces the last. */
+  private showCallout(tier: HurtTier, hit: HitType): void {
+    const callout = this.callouts.pick(tier, hit);
+    if (!callout) return;
+    this.calloutBanner.show(callout.text, tier, this.state.tick);
+    if (callout.audio) this.sfx.playClip(callout.audio);
   }
 }

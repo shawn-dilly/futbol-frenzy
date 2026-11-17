@@ -30,8 +30,12 @@ export const PITCH_TEX_ORIGIN_X = -CAMERA_MIN_X;
 /** Ticks the GOAL! banner stays up. */
 export const GOAL_BANNER_TICKS = 90;
 
-/** Draw order, back to front: pitch, shadows, ball (plus its y), marker, touch controls, then the HUD layer with banners. */
-export const DEPTH = { pitch: -100, shadow: -50, ball: 0.1, marker: 1000, controls: 1500, hud: 2000 } as const;
+/** Draw order, back to front: pitch, shadows, ball (plus its y), marker, touch controls, then callouts, then the HUD layer with banners. */
+export const DEPTH = { pitch: -100, shadow: -50, ball: 0.1, marker: 1000, controls: 1500, callout: 1800, hud: 2000 } as const;
+
+/** Callout banner: centre y on screen and the widest a line may be (320 minus a 4 px margin each side). */
+export const CALLOUT_CENTER_Y = 62;
+export const CALLOUT_MAX_W = 312;
 
 export const TURBO_PIPS = 3;
 
