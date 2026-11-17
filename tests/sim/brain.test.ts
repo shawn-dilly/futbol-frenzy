@@ -1,12 +1,15 @@
 import { describe, expect, test } from 'vitest';
-import { createMatch } from '../../src/sim/setup';
+import { blankMemory, createMatch } from '../../src/sim/setup';
+import { hurtPlayer } from '../../src/sim/hurt';
 import { brainIntent } from '../../src/sim/brain';
 import { goalCenter } from '../../src/sim/setup';
-import { ANCHOR_SHIFT_X, ANCHOR_SHIFT_Y, ARRIVE_DIST, CPU_ENGAGE_RANGE, CPU_HIT_RANGE, CPU_SHOOT_RANGE, FIELD_MID_Y, JOCKEY_DIST } from '../../src/sim/constants';
+import { ANCHOR_SHIFT_X, ANCHOR_SHIFT_Y, ARRIVE_DIST, CPU_ENGAGE_RANGE, CPU_SHOOT_RANGE, FIELD_MID_Y, JOCKEY_DIST } from '../../src/sim/constants';
 import { add, norm, scale, sub } from '../../src/sim/vec';
-import { runTicks } from '../helpers';
+import { LEVELS } from '../../src/sim/levels';
+import { runTicks, matchConfig } from '../helpers';
 
-const cpu = { seed: 7, halfSeconds: 120, human: [false, false] as [boolean, boolean] };
+const cpu = matchConfig({ seed: 7, human: [false, false] });
+const HIT_RANGE = LEVELS.pro.hitRange;
 
 describe('placeholder brain', () => {
   test('keeper tracks the ball inside the goal mouth only', () => {
@@ -55,25 +58,42 @@ describe('placeholder brain', () => {
         s.players[4].pos = { x: 300, y: 40 }; s.ball.pos = { x: 307, y: 40 };
         return { s, chaser };
       };
-      test('a chaser within CPU_HIT_RANGE of the carrier shoulders him, moving straight at him', () => {
-        const { s, chaser } = carried(); chaser.pos = { x: 300 + CPU_HIT_RANGE, y: 40 };
+      test('hitRange is read from the level of the chaser own team', () => {
+        const { s, chaser } = carried(); chaser.pos = { x: 300 + HIT_RANGE, y: 40 };
         const i = brainIntent(s, chaser);
-        expect(i.hit).toBe('shoulder'); expect(i.moveX).toBeCloseTo(-1, 9); expect(i.moveY).toBeCloseTo(0, 9);
+        expect(i.hitPress).toBe(true); expect(i.hitHeld).toBe(true); expect(i.moveX).toBeCloseTo(-1, 9); expect(i.moveY).toBeCloseTo(0, 9);
       });
-      test('just outside CPU_HIT_RANGE it closes in without hitting', () => {
-        const { s, chaser } = carried(); chaser.pos = { x: 300 + CPU_HIT_RANGE + 1, y: 40 };
+      test('just outside hitRange it closes in without hitting', () => {
+        const { s, chaser } = carried(); chaser.pos = { x: 300 + HIT_RANGE + 1, y: 40 };
         const i = brainIntent(s, chaser);
-        expect(i.hit).toBeUndefined(); expect(i.moveX).toBeCloseTo(-1, 9);
+        expect(i.hitPress).toBe(false); expect(i.moveX).toBeCloseTo(-1, 9);
+      });
+      test('the tap is one tick down and at least one tick up, and the press is remembered in his memory', () => {
+        const { s, chaser } = carried(); chaser.pos = { x: 300 + HIT_RANGE, y: 40 };
+        const seen: string[] = [];
+        for (let t = 0; t < 4; t++) {
+          const i = brainIntent(s, chaser); seen.push(`${i.hitPress ? 'P' : '-'}${i.hitHeld ? 'H' : '-'}`);
+          if (t === 0) expect(s.brain[chaser.id].holdHitUntil).toBe(s.tick + 1);
+          s.tick += 1;
+        }
+        expect(seen).toEqual(['PH', '--', 'PH', '--']);
+      });
+      test('hitRange is read from the level of the chaser\'s own team', () => {
+        const { s, chaser } = carried(); s.config.level = ['psycho', 'rookie'];
+        chaser.pos = { x: 300 + LEVELS.rookie.hitRange + 1, y: 40 };
+        expect(brainIntent(s, chaser).hitPress).toBe(false);
+        s.config.level = ['rookie', 'psycho'];
+        expect(brainIntent(s, chaser).hitPress).toBe(true);
       });
       test('beyond CPU_ENGAGE_RANGE it still jockeys, and on cooldown it jockeys at any range', () => {
         const { s, chaser } = carried();
         const jockey = add(s.ball.pos, scale(norm(sub(goalCenter(1), s.ball.pos)), JOCKEY_DIST));
         chaser.pos = { x: 300 + CPU_ENGAGE_RANGE + 1, y: 40 };
         let d = norm(sub(jockey, chaser.pos)), i = brainIntent(s, chaser);
-        expect(i.hit).toBeUndefined(); expect(i.moveX).toBeCloseTo(d.x, 9); expect(i.moveY).toBeCloseTo(d.y, 9);
-        chaser.pos = { x: 300 + CPU_HIT_RANGE, y: 44 }; chaser.hitCooldown = 5;
+        expect(i.hitPress).toBe(false); expect(i.moveX).toBeCloseTo(d.x, 9); expect(i.moveY).toBeCloseTo(d.y, 9);
+        chaser.pos = { x: 300 + HIT_RANGE, y: 44 }; chaser.hitCooldown = 5;
         d = norm(sub(jockey, chaser.pos)); i = brainIntent(s, chaser);
-        expect(i.hit).toBeUndefined(); expect(i.moveX).toBeCloseTo(d.x, 9); expect(i.moveY).toBeCloseTo(d.y, 9);
+        expect(i.hitPress).toBe(false); expect(i.moveX).toBeCloseTo(d.x, 9); expect(i.moveY).toBeCloseTo(d.y, 9);
       });
     });
     test('still runs straight at a free ball', () => {
@@ -136,5 +156,22 @@ describe('placeholder brain', () => {
     carrier.pos = { x: goal.x - (CPU_SHOOT_RANGE - 1), y: 62 };
     const shot = brainIntent(s, carrier);
     expect(shot.kick).toBe('shot'); expect(shot.aim).toBeDefined(); expect(s.rng).not.toBe(rng);
+  });
+  test('a flattened computer player gets up with blank memory', () => {
+    const s = createMatch(cpu); runTicks(s, 60);
+    const p = s.players[7];
+    s.brain[7] = { ...s.brain[7], thinkAt: 500, action: 'chargeBig', holdHitUntil: s.tick + 40, turbo: true };
+    hurtPlayer(s, p, 'knockdown', { x: 1, y: 0 }, 30);
+    runTicks(s, 1);
+    expect(s.brain[7]).toEqual(blankMemory());
+  });
+  test('a flattened computer player does not fire a held hit when he gets up', () => {
+    const s = createMatch(cpu); runTicks(s, 60);
+    const p = s.players[7]; s.ball.owner = null; s.ball.pos = { x: 30, y: 10 };
+    s.brain[7].holdHitUntil = s.tick + 1000;
+    hurtPlayer(s, p, 'knockdown', { x: 1, y: 0 }, 30);
+    runTicks(s, 200);
+    expect(s.events.some(e => e.type === 'whiff' && e.player === 7)).toBe(false);
+    expect(s.brain[7].holdHitUntil).toBeLessThan(s.tick + 1000);
   });
 });

@@ -3,14 +3,14 @@ import { createMatch, neutralPad } from '../../src/sim/setup';
 import type { PadInput } from '../../src/sim/types';
 import { norm, sub } from '../../src/sim/vec';
 import { step } from '../../src/sim/step';
-import { runTicks } from '../helpers';
+import { runTicks, matchConfig } from '../helpers';
 
 const STRIKER = 4, PASS_RUN_TICKS = 120;
 const pad = (o: Partial<PadInput>): PadInput => ({ ...neutralPad(), ...o });
 
 describe('a human can complete a pass after dribbling', () => {
   test.each([30, 60, 120])('dribble %i ticks then pass straight back', dribbleTicks => {
-    const s = createMatch({ seed: 1, halfSeconds: 120, human: [true, false] });
+    const s = createMatch(matchConfig({ human: [true, false] }));
     runTicks(s, 60);
     for (const q of s.players) if (q.team === 1) q.hitCooldown = Infinity; // the opponents only jockey; this test is about passing, not tackles
     runTicks(s, dribbleTicks, [pad({ moveX: 1 }), neutralPad()]);

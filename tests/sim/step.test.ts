@@ -1,7 +1,7 @@
 import { test, expect } from 'vitest';
 import { padToIntent } from '../../src/sim/step';
 import { createMatch, neutralPad } from '../../src/sim/setup';
-import { runTicks } from '../helpers';
+import { runTicks, matchConfig } from '../helpers';
 import type { PadInput } from '../../src/sim/types';
 
 const pad = (o: Partial<PadInput>): PadInput => ({ ...neutralPad(), ...o });
@@ -19,7 +19,7 @@ test('move axes pass through unchanged', () => {
 });
 
 test('step moves a free ball by its velocity', () => {
-  const s = createMatch({ seed: 1, halfSeconds: 120, human: [true, false] });
+  const s = createMatch(matchConfig({ human: [true, false] }));
   runTicks(s, 60);
   s.ball.owner = null; s.ball.pos = { x: 300, y: 40 }; s.ball.vel = { x: 60, y: 0 };
   runTicks(s, 1);

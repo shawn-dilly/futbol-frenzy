@@ -6,11 +6,12 @@ import { applyMovement } from '../../src/sim/movement';
 import { hurtPlayer } from '../../src/sim/hurt';
 import { step } from '../../src/sim/step';
 import {
-  BIG_HIT_CHARGE_TICKS, BIG_HIT_MAX_HOLD_TICKS, CHARGE_MOVE_FACTOR, CPU_HIT_COOLDOWN_TICKS, HIT_COOLDOWN_TICKS, RUN_SPEED, HIT_LANDED_RECOVER_TICKS, HITS, LATE_HIT_COOLDOWN_TICKS,
+  BIG_HIT_CHARGE_TICKS, BIG_HIT_MAX_HOLD_TICKS, CHARGE_MOVE_FACTOR, HIT_COOLDOWN_TICKS, RUN_SPEED, HIT_LANDED_RECOVER_TICKS, HITS, LATE_HIT_COOLDOWN_TICKS,
   TICK_HZ, TURBO_COST, TURBO_REFILL_PER_TICK,
 } from '../../src/sim/constants';
-import type { MatchState, PadInput, PlayerState, SimEvent } from '../../src/sim/types';
-import { runTicks } from '../helpers';
+import { LEVELS, LEVEL_ORDER } from '../../src/sim/levels';
+import type { Level, MatchState, PadInput, PlayerState, SimEvent } from '../../src/sim/types';
+import { runTicks, matchConfig } from '../helpers';
 
 const pad = (o: Partial<PadInput>): PadInput => ({ ...neutralPad(), ...o });
 const HIT_DOWN: [PadInput, PadInput] = [pad({ hit: true }), neutralPad()];
@@ -19,7 +20,7 @@ const TACKLER = 3, VICTIM = 6, MATE = 2;
 
 /** Both teams human, so the controlled players (3 and 6) obey neutral pads and stand still. The ball is parked far away. */
 function playing(): MatchState {
-  const s = createMatch({ seed: 1, halfSeconds: 120, human: [true, true] });
+  const s = createMatch(matchConfig({ human: [true, true] }));
   runTicks(s, 60);
   expect(s.phase).toBe('play');
   s.controlled = [TACKLER, VICTIM];
@@ -118,14 +119,46 @@ describe('charging and launching', () => {
     expect(status(s)).toEqual({ kind: 'free' }); expect(s.events.some(e => e.type === 'whiff')).toBe(false);
     runTicks(s, 12); expect(status(s)).toEqual({ kind: 'free' });
   });
-  test('the brain launches a shoulder directly when free, off cooldown and not the carrier', () => {
-    const s = playing(); const p = s.players[7];
-    updateAttack(s, p, { ...neutralIntent(), hit: 'shoulder' });
-    expect(p.status).toEqual({ kind: 'lunging', hit: 'shoulder' });
-    const q = s.players[8]; q.hitCooldown = 1;
-    updateAttack(s, q, { ...neutralIntent(), hit: 'shoulder' }); expect(q.status).toEqual({ kind: 'free' });
-    const c = s.players[9]; s.ball.owner = 9;
-    updateAttack(s, c, { ...neutralIntent(), hit: 'shoulder' }); expect(c.status).toEqual({ kind: 'free' });
+  test('a brain-driven player of a human team never starts a charge', () => {
+    const s = playing(); const p = s.players[MATE];
+    updateAttack(s, p, { ...neutralIntent(), hitPress: true, hitHeld: true });
+    expect(p.status).toEqual({ kind: 'free' });
+  });
+});
+
+describe('one hit path for the computer', () => {
+  const PRESS = { ...neutralIntent(), hitPress: true, hitHeld: true }, HELD = { ...neutralIntent(), hitHeld: true }, RELEASE = neutralIntent();
+  const cpuPlaying = (): MatchState => {
+    const s = createMatch(matchConfig({ human: [true, false] })); runTicks(s, 60);
+    s.ball.owner = null; s.ball.pos = { x: 30, y: 10 };
+    return s;
+  };
+  test('a computer player holding HIT for 30 ticks with a full meter launches big and pays TURBO_COST', () => {
+    const s = cpuPlaying(); const p = s.players[7]; s.turbo[1] = 1;
+    updateAttack(s, p, PRESS); expect(p.status).toEqual({ kind: 'charging' });
+    for (let i = 0; i < BIG_HIT_CHARGE_TICKS; i++) { tickStatus(p); updateAttack(s, p, HELD); }
+    expect(p.status).toEqual({ kind: 'charging' });
+    tickStatus(p); updateAttack(s, p, RELEASE);
+    expect(p.status).toEqual({ kind: 'lunging', hit: 'big' }); expect(s.turbo[1]).toBeCloseTo(1 - TURBO_COST, 9);
+  });
+  test('with an empty meter the same hold launches a shoulder', () => {
+    const s = cpuPlaying(); const p = s.players[7]; s.turbo[1] = 0;
+    updateAttack(s, p, PRESS);
+    for (let i = 0; i < BIG_HIT_CHARGE_TICKS; i++) { tickStatus(p); updateAttack(s, p, HELD); }
+    tickStatus(p); updateAttack(s, p, RELEASE);
+    expect(p.status).toEqual({ kind: 'lunging', hit: 'shoulder' }); expect(s.turbo[1]).toBe(0);
+  });
+  test('a computer tap during a turbo burst is a slide', () => {
+    const s = cpuPlaying(); const p = s.players[7]; p.turboTicks = 50;
+    updateAttack(s, p, PRESS); tickStatus(p); updateAttack(s, p, RELEASE);
+    expect(p.status).toEqual({ kind: 'lunging', hit: 'slide' });
+  });
+  test('a computer charge survives while he is the brain, and is cancelled when he gains the ball', () => {
+    const s = cpuPlaying(); const p = s.players[7];
+    updateAttack(s, p, PRESS); tickStatus(p); updateAttack(s, p, HELD);
+    expect(p.status).toEqual({ kind: 'charging' });
+    s.ball.owner = 7; tickStatus(p); updateAttack(s, p, HELD);
+    expect(p.status).toEqual({ kind: 'free' });
   });
 });
 
@@ -268,34 +301,47 @@ describe('lunging players and the ball', () => {
 });
 
 describe('the computer side hits less often, as a team', () => {
-  const cpuTackler = () => {
-    const s = createMatch({ seed: 1, halfSeconds: 120, human: [true, false] }); runTicks(s, 60);
+  const cpuTackler = (level: Level = 'pro') => {
+    const s = createMatch(matchConfig({ human: [true, false], level: ['pro', level] })); runTicks(s, 60);
     s.ball.owner = null; s.ball.pos = { x: 30, y: 10 };
     const t = s.players[7], v = s.players[3];
     t.pos = { x: 300, y: 52 }; t.facing = { x: -1, y: 0 }; v.pos = { x: 295, y: 52 };
     for (const p of s.players) if (p.team === 1 && p.id !== 7) p.pos = { x: 460, y: 10 };
     return { s, t, v };
   };
-  test('a brain hit that lands sets the cooldown to 480 (a late hit would only be 90)', () => {
-    const { s, t } = cpuTackler();
-    updateAttack(s, t, { ...neutralIntent(), hit: 'shoulder' }); resolveContacts(s);
-    expect(s.events).toContainEqual(expect.objectContaining({ type: 'hit', tackler: 7, late: true }));
-    expect(t.hitCooldown).toBe(CPU_HIT_COOLDOWN_TICKS);
-  });
-  test('a brain hit that misses sets the cooldown to 480', () => {
-    const { s, t, v } = cpuTackler(); v.pos = { x: 100, y: 100 };
-    updateAttack(s, t, { ...neutralIntent(), hit: 'shoulder' });
+  /** Press then release: the computer's tap, launching a shoulder. */
+  const tap = (s: MatchState, t: PlayerState) => {
+    updateAttack(s, t, { ...neutralIntent(), hitPress: true, hitHeld: true }); tickStatus(t);
+    updateAttack(s, t, neutralIntent());
+  };
+  for (const level of LEVEL_ORDER) {
+    test(`${level}: a brain hit that lands sets the cooldown to the level's team value (a late hit would only be 90)`, () => {
+      const { s, t } = cpuTackler(level); tap(s, t); resolveContacts(s);
+      expect(s.events).toContainEqual(expect.objectContaining({ type: 'hit', tackler: 7, late: true }));
+      expect(t.hitCooldown).toBe(LEVELS[level].teamHitCooldownTicks);
+    });
+  }
+  test('a brain hit that misses sets the cooldown to the level value', () => {
+    const { s, t, v } = cpuTackler('bruiser'); v.pos = { x: 100, y: 100 };
+    tap(s, t);
     for (let i = 0; i < HITS.shoulder.lungeTicks; i++) { if (i > 0) tickStatus(t); applyMovement(s, t, neutralIntent()); resolveContacts(s); }
     expect(s.events).toContainEqual({ type: 'whiff', player: 7, hit: 'shoulder' });
-    expect(t.hitCooldown).toBe(CPU_HIT_COOLDOWN_TICKS);
+    expect(t.hitCooldown).toBe(LEVELS.bruiser.teamHitCooldownTicks);
   });
-  test('the cooldown constant is 480 ticks (8 s)', () => { expect(CPU_HIT_COOLDOWN_TICKS).toBe(480); });
-  test('launching a hit gives every teammate at least 480 cooldown, never lowering a longer one, and leaves the other team alone', () => {
-    const { s, t } = cpuTackler();
+  test('launching a hit gives every teammate at least the level cooldown, never lowering a longer one, and leaves the other team alone', () => {
+    const { s, t } = cpuTackler('psycho');
     s.players[8].hitCooldown = 600; s.players[9].hitCooldown = 100;
-    updateAttack(s, t, { ...neutralIntent(), hit: 'shoulder' });
-    expect([5, 6, 7, 8, 9].map(i => s.players[i].hitCooldown)).toEqual([480, 480, 480, 600, 480]);
+    tap(s, t);
+    const c = LEVELS.psycho.teamHitCooldownTicks;
+    expect([5, 6, 7, 8, 9].map(i => s.players[i].hitCooldown)).toEqual([c, c, c, 600, c]);
     expect([0, 1, 2, 3, 4].map(i => s.players[i].hitCooldown)).toEqual([0, 0, 0, 0, 0]);
+  });
+  test('each team reads its own level', () => {
+    const s = createMatch(matchConfig({ human: [false, false], level: ['rookie', 'psycho'] })); runTicks(s, 60);
+    s.ball.owner = null; s.ball.pos = { x: 30, y: 10 };
+    const a = s.players[3], b = s.players[7];
+    tap(s, a); tap(s, b);
+    expect(a.hitCooldown).toBe(LEVELS.rookie.teamHitCooldownTicks); expect(b.hitCooldown).toBe(LEVELS.psycho.teamHitCooldownTicks);
   });
   test('a human hit does not touch teammates cooldowns', () => {
     const s = playing(); placeVictimAhead(s, 5); s.ball.owner = VICTIM;
@@ -328,7 +374,7 @@ describe('outside play', () => {
 
 describe('the placeholder computer side', () => {
   test('a chaser takes the ball off a stationary carrier within 600 ticks', () => {
-    const s = createMatch({ seed: 1, halfSeconds: 120, human: [true, false] });
+    const s = createMatch(matchConfig({ human: [true, false] }));
     runTicks(s, 60);
     let taken = false;
     for (let t = 0; t < 600 && !taken; t++) {

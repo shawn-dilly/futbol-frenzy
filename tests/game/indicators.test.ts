@@ -1,8 +1,9 @@
 import { expect, test } from 'vitest';
 import { DAZED_BLINK_TICKS, bigHitReady, chargeFill, chargeJustStarted, dazedMarkerVisible } from '../../src/game/indicators';
 import { BIG_HIT_CHARGE_TICKS, DAZED_HEALTH, MAX_HEALTH, TURBO_COST, createMatch, type PlayerState } from '../../src/sim';
+import { matchConfig } from '../helpers';
 
-const player = (): PlayerState => createMatch({ seed: 1, halfSeconds: 120, human: [true, false] }).players[4];
+const player = (): PlayerState => createMatch(matchConfig({ human: [true, false] })).players[4];
 
 test('charge fill grows over BIG_HIT_CHARGE_TICKS and is zero when not charging', () => {
   const p = player();

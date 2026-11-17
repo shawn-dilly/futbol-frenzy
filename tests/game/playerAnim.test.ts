@@ -2,8 +2,9 @@ import { test, expect } from 'vitest';
 import { createMatch } from '../../src/sim/setup';
 import { animFor } from '../../src/game/playerAnim';
 import type { PlayerState, PlayerStatus } from '../../src/sim/types';
+import { matchConfig } from '../helpers';
 
-const cfg = { seed: 1, halfSeconds: 120, human: [true, false] as [boolean, boolean] };
+const cfg = matchConfig({ human: [true, false] });
 const player = (status: PlayerStatus, statusTick = 0, vel = { x: 0, y: 0 }): PlayerState => {
   const p = createMatch(cfg).players[4]; p.status = status; p.statusTick = statusTick; p.vel = vel; return p;
 };

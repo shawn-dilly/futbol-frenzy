@@ -6,9 +6,9 @@ import {
 import { otherTeam } from './setup';
 import { clamp } from './vec';
 
-/** Damage of a hit: base, scaled up by the tackler's team rage, team power and an active turbo burst. */
-export function hitDamage(hit: HitType, rage: number, turboActive: boolean): number {
-  return HITS[hit].base * (1 + RAGE_DAMAGE_FACTOR * rage / RAGE_MAX) * TEAM_POWER * (turboActive ? TURBO_HIT_FACTOR : 1);
+/** Damage of a hit: base, scaled up by the tackler's team rage, the team's power and an active turbo burst. */
+export function hitDamage(hit: HitType, rage: number, turboActive: boolean, power = TEAM_POWER): number {
+  return HITS[hit].base * (1 + RAGE_DAMAGE_FACTOR * rage / RAGE_MAX) * power * (turboActive ? TURBO_HIT_FACTOR : 1);
 }
 
 /** The highest tier whose minimum damage the hit reaches. */

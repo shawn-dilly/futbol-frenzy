@@ -4,7 +4,7 @@ import { moveFreeBall } from './ball';
 import { advanceFlow } from './flow';
 import { brainIntent, type BrainIntent } from './brain';
 import { resolveContacts, updateAttack } from './attack';
-import { neutralIntent } from './setup';
+import { blankMemory, neutralIntent } from './setup';
 import { canAct, isHumanControlled, tickStatus } from './status';
 import { decayRage } from './rage';
 import { regenHealth } from './hurt';
@@ -26,7 +26,10 @@ export function padToIntent(pad: PadInput, prev: PadInput): PlayerIntent {
 function intentFor(state: MatchState, p: PlayerState, inputs: [PadInput, PadInput]): BrainIntent {
   const human = isHumanControlled(state, p);
   const padIntent = human ? padToIntent(inputs[p.team], state.prevInput[p.team]) : null;
-  if (!canAct(p)) return padIntent ? { ...neutralIntent(), pass: padIntent.pass } : neutralIntent(); // PASS still switches control
+  if (!canAct(p)) {
+    if (!padIntent) state.brain[p.id] = blankMemory(); // a flattened computer player gets up with no stale plan
+    return padIntent ? { ...neutralIntent(), pass: padIntent.pass } : neutralIntent(); // PASS still switches control
+  }
   return padIntent ?? brainIntent(state, p);
 }
 

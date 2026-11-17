@@ -3,8 +3,9 @@ import { createMatch } from '../../src/sim/setup';
 import { canAct, isDown, isHumanControlled, setStatus, tickStatus } from '../../src/sim/status';
 import { HURT_TIERS } from '../../src/sim/constants';
 import type { HitType, PlayerState, PlayerStatus } from '../../src/sim/types';
+import { matchConfig } from '../helpers';
 
-const cfg = { seed: 1, halfSeconds: 120, human: [true, false] as [boolean, boolean] };
+const cfg = matchConfig({ human: [true, false] });
 const HITS: HitType[] = ['shoulder', 'slide', 'big'];
 const player = (): PlayerState => createMatch(cfg).players[4];
 

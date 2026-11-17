@@ -1,10 +1,10 @@
 import { describe, expect, test } from 'vitest';
 import type { PadInput } from '../../src/sim/types';
 import { createMatch, neutralPad } from '../../src/sim/setup';
-import { runTicks } from '../helpers';
+import { runTicks, matchConfig } from '../helpers';
 
-const cfg = { seed: 1, halfSeconds: 120, human: [true, false] as [boolean, boolean] };
-const short = { seed: 1, halfSeconds: 2, human: [true, true] as [boolean, boolean] }; // both human with neutral pads: nobody shoots, so tick counts are exact
+const cfg = matchConfig({ human: [true, false] });
+const short = matchConfig({ halfSeconds: 2, human: [true, true] }); // both human with neutral pads: nobody shoots, so tick counts are exact
 
 describe('match flow', () => {
   test('a goal scores, pauses 120 ticks, then the conceding team kicks off', () => {

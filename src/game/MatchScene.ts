@@ -62,7 +62,7 @@ export class MatchScene extends Phaser.Scene {
     this.flashStartMs = -Infinity;
     const params = parseMatchParams(window.location.search);
     this.sfx.muted = params.mute;
-    this.state = createMatch({ seed: this.seed, halfSeconds: params.halfSeconds, human: [!params.demo, false] });
+    this.state = createMatch({ seed: this.seed, halfSeconds: params.halfSeconds, human: [!params.demo, false], level: [params.level2 ?? params.level, params.level] });
     this.callouts = new CalloutPicker(CALLOUTS, seededRandom(this.seed ^ CALLOUT_SEED_SALT));
     window.__ff = {
       state: this.state,

@@ -2,9 +2,9 @@ import { test, expect } from 'vitest';
 import { createMatch, neutralPad } from '../../src/sim/setup';
 import { dist } from '../../src/sim/vec';
 import type { PadInput } from '../../src/sim/types';
-import { runTicks } from '../helpers';
+import { runTicks, matchConfig } from '../helpers';
 
-const cfg = { seed: 1, halfSeconds: 120, human: [true, true] as [boolean, boolean] };
+const cfg = matchConfig({ human: [true, true] });
 const pad = (o: Partial<PadInput>) => ({ ...neutralPad(), ...o });
 const playing = () => { const s = createMatch(cfg); runTicks(s, 60); expect(s.phase).toBe('play'); return s; };
 test('nobody moves during the kickoff pause', () => {

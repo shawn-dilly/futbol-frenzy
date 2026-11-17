@@ -1,7 +1,8 @@
 import { test, expect } from 'vitest';
 import { createMatch, attackDir, goalCenter, placeForKickoff } from '../../src/sim/setup';
+import { matchConfig } from '../helpers';
 
-const cfg = { seed: 1, halfSeconds: 120, human: [true, false] as [boolean, boolean] };
+const cfg = matchConfig({ human: [true, false] });
 test('ten players, mirrored, in their own halves', () => {
   const s = createMatch(cfg);
   expect(s.players).toHaveLength(10);

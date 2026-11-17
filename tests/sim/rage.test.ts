@@ -2,9 +2,9 @@ import { test, expect } from 'vitest';
 import { createMatch } from '../../src/sim/setup';
 import { addRage, decayRage, hitDamage, rageAfterHit, tierFor } from '../../src/sim/rage';
 import { RAGE_DECAY_DELAY_TICKS } from '../../src/sim/constants';
-import { runTicks } from '../helpers';
+import { runTicks, matchConfig } from '../helpers';
 
-const match = () => createMatch({ seed: 1, halfSeconds: 120, human: [true, true] }); // nobody hits unless a test says so
+const match = () => createMatch(matchConfig({ human: [true, true] })); // nobody hits unless a test says so
 
 test('damage scales with rage and turbo', () => {
   expect(hitDamage('shoulder', 0, false)).toBeCloseTo(10, 9);
@@ -14,6 +14,8 @@ test('damage scales with rage and turbo', () => {
   expect(hitDamage('big', 0, false)).toBeCloseTo(24, 9);
   expect(hitDamage('big', 50, false)).toBeCloseTo(42, 9);
   expect(hitDamage('big', 100, false)).toBeCloseTo(60, 9);
+  expect(hitDamage('big', 0, false, 1.5)).toBeCloseTo(36, 9);
+  expect(hitDamage('shoulder', 100, true, 0.5)).toBeCloseTo(15, 9);
 });
 test('tiers map to the documented tiers at the boundaries', () => {
   expect(tierFor(10)).toBe('stumble');

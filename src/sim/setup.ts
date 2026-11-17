@@ -1,4 +1,4 @@
-import type { MatchConfig, MatchState, PadInput, PlayerIntent, PlayerState, TeamId, Vec } from './types';
+import type { BrainMemory, MatchConfig, MatchState, PadInput, PlayerIntent, PlayerState, TeamId, Vec } from './types';
 import {
   FIELD_MID_Y, FIELD_W, FORMATION, KICKER_BEHIND_BALL, KICKOFF_PAUSE_TICKS, MAX_HEALTH, TICK_HZ,
 } from './constants';
@@ -28,6 +28,10 @@ export function neutralIntent(): PlayerIntent {
   return { moveX: 0, moveY: 0, pass: false, shoot: false, turbo: false, hitPress: false, hitHeld: false };
 }
 
+export function blankMemory(): BrainMemory {
+  return { thinkAt: 0, role: 'support', target: { x: 0, y: 0 }, action: 'none', aim: { x: 0, y: 0 }, turbo: false, holdHitUntil: 0 };
+}
+
 function makePlayer(team: TeamId, index: number): PlayerState {
   const f = FORMATION[index];
   const anchor = { x: team === 0 ? f.x : FIELD_W - f.x, y: f.y };
@@ -49,6 +53,7 @@ export function placeForKickoff(state: MatchState, kicking: TeamId): void {
     p.kickCooldown = 0; p.turboTicks = 0; p.hitCooldown = 0; p.knock = { x: 0, y: 0 };
     setStatus(p, { kind: 'free' }, 0);
   }
+  state.brain = state.players.map(blankMemory);
   state.ball = { pos: { ...KICKOFF_SPOT }, vel: { x: 0, y: 0 }, owner: null, ownerTicks: 0, passTarget: null };
 
   const kicker = state.players[kicking * PLAYERS_PER_TEAM + STRIKER_INDEX];
@@ -80,7 +85,7 @@ export function createMatch(config: MatchConfig): MatchState {
     phase: 'kickoff', phaseTicks: 0, half: 1, clockTicks: config.halfSeconds * TICK_HZ,
     score: [0, 0], kickoffTeam: 0, rage: [0, 0], lastHitTick: [0, 0],
     players, ball: { pos: { ...KICKOFF_SPOT }, vel: { x: 0, y: 0 }, owner: null, ownerTicks: 0, passTarget: null },
-    controlled: [0, 0], turbo: [1, 1],
+    brain: players.map(blankMemory), controlled: [0, 0], turbo: [1, 1],
     prevInput: [neutralPad(), neutralPad()], events: [],
   };
   placeForKickoff(state, 0);

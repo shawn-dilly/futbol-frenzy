@@ -4,9 +4,10 @@ import { FRAME_H, FRAME_W, ORIGIN_X, ORIGIN_Y } from '../../src/art/sprites';
 import { HURT, HURT_TIERS, type HitType, type PlayerState, type PlayerStatus } from '../../src/sim';
 import { createMatch } from '../../src/sim/setup';
 import { animFor } from '../../src/game/playerAnim';
+import { matchConfig } from '../helpers';
 
 const HITS: HitType[] = ['shoulder', 'slide', 'big'];
-const base = createMatch({ seed: 1, halfSeconds: 120, human: [true, false] }).players[4];
+const base = createMatch(matchConfig({ human: [true, false] })).players[4];
 const keyFor = (status: PlayerStatus, moving = false): string => {
   const p: PlayerState = { ...base, status, vel: { x: moving ? 60 : 0, y: 0 } };
   return animFor(p, 0).key;

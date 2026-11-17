@@ -12,9 +12,9 @@ import {
 } from '../../src/sim/constants';
 import { add, norm, scale, sub } from '../../src/sim/vec';
 import type { MatchState, PadInput } from '../../src/sim/types';
-import { runTicks } from '../helpers';
+import { runTicks, matchConfig } from '../helpers';
 
-const cfg = { seed: 1, halfSeconds: 120, human: [true, false] as [boolean, boolean] };
+const cfg = matchConfig({ human: [true, false] });
 const pad = (o: Partial<PadInput>): PadInput => ({ ...neutralPad(), ...o });
 const fresh = () => createMatch(cfg);
 const playing = (): MatchState => { const s = createMatch(cfg); runTicks(s, 60); expect(s.phase).toBe('play'); return s; };

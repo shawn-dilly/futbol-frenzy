@@ -1,6 +1,7 @@
 export type Vec = { x: number; y: number };
 export type TeamId = 0 | 1;
 export type Phase = 'kickoff' | 'play' | 'goal' | 'halftime' | 'fulltime';
+export type Level = 'rookie' | 'pro' | 'bruiser' | 'psycho';
 export type HitType = 'shoulder' | 'slide' | 'big';
 export type HurtTier = 'stumble' | 'knockdown' | 'wipeout' | 'overTheTop';
 export type PlayerStatus =
@@ -18,7 +19,19 @@ export interface PlayerState {
   health: number; hitCooldown: number; knock: Vec /* knockback velocity, units/s */;
 }
 export interface BallState { pos: Vec; vel: Vec; owner: number | null; ownerTicks: number; passTarget: number | null }
-export interface MatchConfig { seed: number; halfSeconds: number; human: [boolean, boolean] }
+/** `level[team]` drives every brain-controlled player of that team. */
+export interface MatchConfig { seed: number; halfSeconds: number; human: [boolean, boolean]; level: [Level, Level] }
+export type BrainRole = 'keeper' | 'carrier' | 'presser' | 'cover' | 'marker' | 'support' | 'receiver' | 'chaser';
+/** What the computer brain remembers between re-thinks, one per player (index = player id). */
+export interface BrainMemory {
+  thinkAt: number; // tick of the next re-think
+  role: BrainRole;
+  target: Vec; // where the plan says to go
+  action: 'none' | 'pass' | 'shot' | 'tap' | 'chargeBig'; // what to do with the buttons on the way
+  aim: Vec; // kick aim (zero when unused)
+  turbo: boolean; // press turbo when available
+  holdHitUntil: number; // tick until which HIT stays held (big-hit charge); 0 = not holding
+}
 export type SimEvent =
   | { type: 'kick'; kind: 'pass' | 'shot'; player: number }
   | { type: 'bounce' }
@@ -32,6 +45,7 @@ export interface MatchState {
   score: [number, number]; kickoffTeam: TeamId;
   rage: [number, number]; lastHitTick: [number, number] /* tick the team last landed a hit */;
   players: PlayerState[]; ball: BallState;
+  brain: BrainMemory[];
   controlled: [number, number]; turbo: [number, number];
   prevInput: [PadInput, PadInput]; events: SimEvent[];
 }

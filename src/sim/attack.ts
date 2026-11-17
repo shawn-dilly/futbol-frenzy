@@ -1,27 +1,30 @@
-import type { HitType, MatchState, PlayerState, TeamId } from './types';
+import type { HitType, MatchState, PlayerIntent, PlayerState, TeamId } from './types';
 import {
-  BIG_HIT_CHARGE_TICKS, BIG_HIT_MAX_HOLD_TICKS, CPU_HIT_COOLDOWN_TICKS, HIT_COOLDOWN_TICKS, HIT_LANDED_RECOVER_TICKS, HITS,
-  LATE_HIT_COOLDOWN_TICKS, TURBO_COST,
+  BIG_HIT_CHARGE_TICKS, BIG_HIT_MAX_HOLD_TICKS, HIT_COOLDOWN_TICKS, HIT_LANDED_RECOVER_TICKS, HITS,
+  LATE_HIT_COOLDOWN_TICKS, TURBO_COST, TEAM_POWER,
 } from './constants';
-import type { BrainIntent } from './brain';
 import { hurtPlayer } from './hurt';
+import { LEVELS } from './levels';
 import { hitDamage, rageAfterHit, tierFor } from './rage';
 import { attackDir } from './setup';
 import { isDown, isHumanControlled, setStatus } from './status';
 import { dist, isZero, norm } from './vec';
 
-/** The cooldown after a hit: the computer side waits at least CPU_HIT_COOLDOWN_TICKS, whatever the hit did. */
+/** How long a computer team waits between hits (its level's value). */
+const teamCooldown = (state: MatchState, team: TeamId): number => LEVELS[state.config.level[team]].teamHitCooldownTicks;
+
+/** The cooldown after a hit: the computer side waits at least its level's team cooldown, whatever the hit did. */
 function cooldownAfter(state: MatchState, p: PlayerState, ticks: number): number {
-  return state.config.human[p.team] ? ticks : Math.max(ticks, CPU_HIT_COOLDOWN_TICKS);
+  return state.config.human[p.team] ? ticks : Math.max(ticks, teamCooldown(state, p.team));
 }
 
 /** The computer's hit cooldown is team-wide: a hit launched by one of its players holds the whole team back. */
 function holdComputerTeam(state: MatchState, team: TeamId): void {
-  for (const q of state.players) if (q.team === team) q.hitCooldown = Math.max(q.hitCooldown, CPU_HIT_COOLDOWN_TICKS);
+  for (const q of state.players) if (q.team === team) q.hitCooldown = Math.max(q.hitCooldown, teamCooldown(state, team));
 }
 
 /** Starts the lunge: the facing is fixed here (the intent's heading if any, else the team's attack direction). */
-function launch(state: MatchState, p: PlayerState, hit: HitType, intent: BrainIntent): void {
+function launch(state: MatchState, p: PlayerState, hit: HitType, intent: PlayerIntent): void {
   if (!state.config.human[p.team]) holdComputerTeam(state, p.team);
   const heading = { x: intent.moveX, y: intent.moveY };
   if (!isZero(heading)) p.facing = norm(heading);
@@ -39,17 +42,17 @@ function releasedHit(state: MatchState, p: PlayerState): HitType {
 }
 
 /** Charge start, release and launch for one player this tick. */
-export function updateAttack(state: MatchState, p: PlayerState, intent: BrainIntent): void {
+export function updateAttack(state: MatchState, p: PlayerState, intent: PlayerIntent): void {
   if (p.status.kind === 'charging') {
-    const stillHis = isHumanControlled(state, p);
-    if (state.ball.owner === p.id || !stillHis) setStatus(p, { kind: 'free' }, 0); // picked the ball up, or control moved on: no hit
+    const controlMoved = state.config.human[p.team] && !isHumanControlled(state, p);
+    if (state.ball.owner === p.id || controlMoved) setStatus(p, { kind: 'free' }, 0); // picked the ball up, or a human's control moved on: no hit
     else if (!intent.hitHeld || p.statusTick >= BIG_HIT_MAX_HOLD_TICKS) launch(state, p, releasedHit(state, p), intent);
     return;
   }
   // hitPress is an edge, so a button held through a hurt spell or a kickoff never starts a charge
   if (p.status.kind !== 'free' || p.hitCooldown > 0 || state.ball.owner === p.id) return;
-  if (intent.hit) launch(state, p, intent.hit, intent);
-  else if (intent.hitPress) setStatus(p, { kind: 'charging' }, 0);
+  if (state.config.human[p.team] && !isHumanControlled(state, p)) return; // a human's teammates never start a hit
+  if (intent.hitPress) setStatus(p, { kind: 'charging' }, 0);
 }
 
 /** The nearest opponent within reach who is not down and was not hurt earlier this tick. */
@@ -65,7 +68,7 @@ function findVictim(state: MatchState, tackler: PlayerState, reach: number): Pla
 }
 
 function land(state: MatchState, tackler: PlayerState, victim: PlayerState, hit: HitType): void {
-  const damage = hitDamage(hit, state.rage[tackler.team], tackler.turboTicks > 0);
+  const damage = hitDamage(hit, state.rage[tackler.team], tackler.turboTicks > 0, TEAM_POWER);
   const tier = tierFor(damage);
   const late = state.ball.owner !== victim.id;
   const variant = hurtPlayer(state, victim, tier, tackler.facing, damage);

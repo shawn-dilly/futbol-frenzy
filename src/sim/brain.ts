@@ -1,14 +1,15 @@
-import type { HitType, MatchState, PlayerIntent, PlayerState, Vec } from './types';
+import type { MatchState, PlayerIntent, PlayerState, Vec } from './types';
 import {
-  ANCHOR_SHIFT_X, ARRIVE_DIST, CPU_ENGAGE_RANGE, CPU_HIT_RANGE, ANCHOR_SHIFT_Y, CPU_SHOOT_RANGE, FIELD_H, FIELD_MID_Y, FIELD_W, GK_HOLD_TICKS,
+  ANCHOR_SHIFT_X, ARRIVE_DIST, BRAIN_TAP_TICKS, CPU_ENGAGE_RANGE, ANCHOR_SHIFT_Y, CPU_SHOOT_RANGE, FIELD_H, FIELD_MID_Y, FIELD_W, GK_HOLD_TICKS,
   GK_LINE_X, GOAL_HALF, JOCKEY_DIST, PLAYER_RADIUS, SHOT_Y_MARGIN,
 } from './constants';
 import { goalCenter, neutralIntent, otherTeam } from './setup';
+import { LEVELS } from './levels';
 import { nextRandom } from './rng';
 import { nearestOutfield } from './possession';
 import { add, clamp, dist, norm, scale, sub } from './vec';
 
-export type BrainIntent = PlayerIntent & { kick?: 'pass' | 'shot'; aim?: Vec; hit?: HitType };
+export type BrainIntent = PlayerIntent & { kick?: 'pass' | 'shot'; aim?: Vec };
 
 const PITCH_CENTER_X = FIELD_W / 2;
 
@@ -20,6 +21,19 @@ const move = (p: PlayerState, target: Vec): BrainIntent => {
 /** Like `move`, but stands still once within ARRIVE_DIST of the target. */
 const moveOrHold = (p: PlayerState, target: Vec): BrainIntent =>
   dist(p.pos, target) < ARRIVE_DIST ? move(p, p.pos) : move(p, target);
+
+/**
+ * The HIT button for a brain-driven player this tick, kept in his memory: a hold set by `startHoldTicks` runs
+ * from this tick until `holdHitUntil`. `hitPress` is the first tick of a hold, and a hold never starts on the
+ * tick after one ended, so a tap is always one tick down and at least one tick up.
+ */
+function hitButtons(state: MatchState, p: PlayerState, startHoldTicks: number | null): Pick<PlayerIntent, 'hitPress' | 'hitHeld'> {
+  const mem = state.brain[p.id];
+  if (mem.holdHitUntil > state.tick) return { hitPress: false, hitHeld: true };
+  if (startHoldTicks === null || mem.holdHitUntil >= state.tick) return { hitPress: false, hitHeld: false };
+  mem.holdHitUntil = state.tick + startHoldTicks;
+  return { hitPress: true, hitHeld: true };
+}
 
 function isChaser(state: MatchState, p: PlayerState): boolean {
   if (p.role !== 'out') return false;
@@ -72,8 +86,8 @@ export function brainIntent(state: MatchState, p: PlayerState): BrainIntent {
     const carrier = state.players[ball.owner];
     const gap = dist(p.pos, carrier.pos);
     if (p.hitCooldown === 0 && gap <= CPU_ENGAGE_RANGE) { // a ready chaser stops jockeying and goes in
-      const intent = move(p, carrier.pos);
-      return gap <= CPU_HIT_RANGE ? { ...intent, hit: 'shoulder' } : intent;
+      const wantsHit = gap <= LEVELS[state.config.level[p.team]].hitRange;
+      return { ...move(p, carrier.pos), ...hitButtons(state, p, wantsHit ? BRAIN_TAP_TICKS : null) };
     }
     return moveOrHold(p, jockeyTarget(state, p));
   }

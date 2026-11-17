@@ -3,14 +3,14 @@ import { createMatch, neutralPad } from '../../src/sim/setup';
 import { step } from '../../src/sim/step';
 import { norm, sub } from '../../src/sim/vec';
 import type { MatchState, PadInput } from '../../src/sim/types';
-import { runTicks } from '../helpers';
+import { runTicks, matchConfig } from '../helpers';
 
 const STRIKER = 4, KEEPER_1 = 5, KEEPER_1_SETTLE_TICKS = 30, MAX_SHOT_TICKS = 120;
 const pad = (o: Partial<PadInput>): PadInput => ({ ...neutralPad(), ...o });
 
 /** Team 0 (human) striker holds the ball at `at` in open play; the team-1 keeper settles where its brain puts it. */
 function strikerWithBall(at: { x: number; y: number }): MatchState {
-  const s = createMatch({ seed: 1, halfSeconds: 120, human: [true, false] });
+  const s = createMatch(matchConfig({ human: [true, false] }));
   runTicks(s, 60);
   s.players[STRIKER].pos = { ...at };
   s.ball.owner = STRIKER; s.ball.ownerTicks = 0; s.ball.passTarget = null;

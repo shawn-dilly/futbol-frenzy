@@ -3,12 +3,12 @@ import { createMatch, neutralPad } from '../../src/sim/setup';
 import { pickPassTarget, updatePossession } from '../../src/sim/possession';
 import { len } from '../../src/sim/vec';
 import type { MatchState, PadInput } from '../../src/sim/types';
-import { runTicks } from '../helpers';
+import { runTicks, matchConfig } from '../helpers';
 
 const pad = (o: Partial<PadInput>): PadInput => ({ ...neutralPad(), ...o });
 let s: MatchState;
 beforeEach(() => {
-  s = createMatch({ seed: 1, halfSeconds: 120, human: [true, true] });
+  s = createMatch(matchConfig({ human: [true, true] }));
   runTicks(s, 60);
 });
 

@@ -1,9 +1,9 @@
 import { test, expect } from 'vitest';
 import { createMatch } from '../../src/sim/setup';
 import { moveFreeBall } from '../../src/sim/ball';
-import { runTicks } from '../helpers';
+import { runTicks, matchConfig } from '../helpers';
 
-const cfg = { seed: 1, halfSeconds: 120, human: [true, false] as [boolean, boolean] };
+const cfg = matchConfig({ human: [true, false] });
 const freeBall = () => {
   const s = createMatch(cfg); runTicks(s, 60);
   expect(s.phase).toBe('play'); s.ball.owner = null; return s;
