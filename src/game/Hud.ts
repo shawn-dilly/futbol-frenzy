@@ -47,11 +47,11 @@ export class Hud {
   /** Switches the banner to the full-time result; `tick` is the tick of the whistle. */
   showFullTime(tick: number): void { this.fulltimeTick = tick; }
 
-  sync(state: MatchState): void {
-    if (this.banner && state.tick >= this.banner.untilTick) this.banner = null;
+  sync(state: MatchState, replay = false): void {
+    if (!replay && this.banner && state.tick >= this.banner.untilTick) this.banner = null;
     const lit = turboPips(state.turbo[0]);
     const clock = `${HALF_LABEL[state.half]} ${formatClock(state.clockTicks)}`;
-    const lines = this.fulltimeTick !== null
+    const lines = replay ? [] : this.fulltimeTick !== null
       ? fullTimeLines(state.score, canRestart(state.phase, state.tick, this.fulltimeTick))
       : this.banner ? [this.banner.text] : [];
     const rage = state.rage.map(r => ({ px: rageBarWidth(r, RAGE.maxPx), flashOn: isRageFlashing(r) && blinkOn(state.tick, RAGE_FLASH_TICKS) }));

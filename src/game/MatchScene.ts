@@ -1,4 +1,6 @@
 import Phaser from 'phaser';
+import { drawText } from '../art/pixelFont';
+import { PAL } from '../art/palette';
 import { DEPTH, GOAL_BANNER_TICKS, SCREEN_H, SCREEN_W, canRestart } from './layout';
 import { HALFTIME_PAUSE_TICKS, createMatch, neutralPad, step, type HitType, type HurtTier, type MatchState, type PadInput, type SimEvent } from '../sim';
 import { KeyboardPad, mergePads } from '../input/keyboard';
@@ -30,8 +32,8 @@ export class MatchScene extends Phaser.Scene {
   private replay!: ReplayRecord;
   private playback: { states: MatchState[]; cursor: number } | null = null;
   private readonly playbackStepper = new FixedStepper();
-  private replayLabel?: Phaser.GameObjects.Text;
-  private replayReturn?: Phaser.GameObjects.Text;
+  private replayLabel?: Phaser.GameObjects.Graphics;
+  private replayReturn?: Phaser.GameObjects.Rectangle;
   private view!: MatchView;
   private hud!: Hud;
   private callouts!: CalloutPicker;
@@ -123,7 +125,7 @@ export class MatchScene extends Phaser.Scene {
     this.input.keyboard?.on('keydown', unlock);
     this.events.once('shutdown', () => {
       active = false;
-      this.endReplay();
+      this.disposeReplay();
       this.sfx.dispose();
       this.input.off('pointerdown', restart);
       this.input.keyboard?.off('keydown', restartKey);
@@ -190,13 +192,27 @@ export class MatchScene extends Phaser.Scene {
     this.view.clearTransientEffects();
     this.pendingCraters = [];
     this.flashStartMs = -Infinity;
-    this.replayLabel = this.add.text(16, 16, result.kind === 'no-hit' ? 'REPLAY - NO HIT' : 'REPLAY', { fontSize: '20px', color: '#ffffff', backgroundColor: '#000000' }).setDepth(1000);
-    this.replayReturn = this.add.text(SCREEN_W - 100, 16, 'RETURN', { fontSize: '18px', color: '#ffffff', backgroundColor: '#000000', padding: { x: 8, y: 8 } }).setDepth(1000).setInteractive();
+    this.replayLabel = this.add.graphics().setDepth(1000);
+    const graphics = this.replayLabel;
+    const rect = (x: number, y: number, w: number, h: number, color: string) => {
+      graphics.fillStyle(Phaser.Display.Color.HexStringToColor(color).color).fillRect(x, y, w, h);
+    };
+    rect(8, 20, result.kind === 'no-hit' ? 124 : 60, 20, PAL.ink);
+    drawText(rect, result.kind === 'no-hit' ? 'REPLAY - NO HIT' : 'REPLAY', 12, 25, PAL.wht, 2);
+    rect(SCREEN_W - 76, 20, 68, 24, PAL.ink);
+    drawText(rect, 'RETURN', SCREEN_W - 70, 27, PAL.yel, 2);
+    this.replayReturn = this.add.rectangle(SCREEN_W - 42, 32, 68, 24, 0, 0).setDepth(1001).setInteractive();
     this.replayReturn.on('pointerdown', () => this.endReplay());
     this.syncPresentation();
   }
 
   endReplay(): void {
+    if (!this.playback) return;
+    this.disposeReplay();
+    this.syncPresentation();
+  }
+
+  private disposeReplay(): void {
     if (!this.playback) return;
     this.playback = null;
     this.playbackStepper.reset();
@@ -207,7 +223,6 @@ export class MatchScene extends Phaser.Scene {
     this.pendingCraters = [];
     this.flashStartMs = -Infinity;
     this.clearControls();
-    this.syncPresentation();
   }
 
   isHalftimeGated(): boolean { return this.halftimeGated; }
@@ -227,7 +242,7 @@ export class MatchScene extends Phaser.Scene {
   private syncPresentation(): void {
     const displayed = this.playback?.states[this.playback.cursor] ?? this.state;
     this.view.sync(displayed, this.nowMs);
-    this.hud.sync(displayed);
+    this.hud.sync(displayed, !!this.playback);
     this.calloutBanner.sync(displayed.tick);
     this.flash.setAlpha(flashAlpha(this.nowMs - this.flashStartMs));
     if (this.touch) {

@@ -44,3 +44,17 @@ test('plays a recorded hit without advancing the paused match', async ({ page })
   const after = await page.evaluate(() => ({ state: window.__ff!.state, record: window.__ff!.replay() }));
   expect(after).toEqual(before);
 });
+
+test('restarting during replay creates a fresh match without errors', async ({ page }) => {
+  const errors: string[] = [];
+  page.on('pageerror', e => errors.push(e.message));
+  await page.goto('/?demo=1&seed=3&mute=1&half=20');
+  await page.waitForFunction(() => !!window.__ff?.state.halfHits[0], null, { timeout: 90000 });
+  await page.evaluate(() => {
+    const hook = window.__ff! as typeof window.__ff & { startReplay: (half: 0) => void };
+    hook!.startReplay(0);
+    hook!.launch({ mode: 'demo', mute: true, config: { ...hook!.state.config, seed: 42 } } as MatchLaunch);
+  });
+  await page.waitForFunction(() => window.__ff?.state.config.seed === 42 && window.__ff.state.tick > 0);
+  expect(errors).toEqual([]);
+});
