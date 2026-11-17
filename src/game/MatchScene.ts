@@ -251,7 +251,7 @@ export class MatchScene extends Phaser.Scene {
     panel(196, 28, 112, 76, PAL.yel); rect(197, 29, 110, 11, PAL.yel); text('HIT OF THE HALF', 252, 32, PAL.ink, 1, 'c');
     text(this.state.halfHits[0] ? 'HIT AVAILABLE' : 'NO HIT', 252, 57, PAL.wht, 2, 'c'); text('WATCH REPLAY >', 252, 87, PAL.yel, 1, 'c');
     panel(196, 108, 112, 30, PAL.gry, PAL.dk); text('RESERVES', 252, 113, PAL.wht, 1, 'c'); text(`${this.state.reserves[0]} - ${this.state.reserves[1]}`, 252, 123, PAL.yel, 2, 'c');
-    panel(12, 144, 144, 26, PAL.gry, PAL.dk); text('REPLAY [R]', 84, 152, PAL.wht, 2, 'c');
+    panel(12, 144, 144, 26, PAL.gry, PAL.dk); text('REPLAY R', 84, 152, PAL.wht, 2, 'c');
     panel(164, 144, 144, 26, PAL.wht, PAL.red); text('2ND HALF >', 236, 152, PAL.wht, 2, 'c');
     const button = (x: number, y: number, w: number, h: number, action: () => void) => { const hit = this.add.rectangle(x, y, w, h, 0, 0).setOrigin(0).setDepth(2201).setInteractive(); hit.on('pointerdown', action); this.halftimeUI.push(hit); };
     button(12, 144, 144, 26, () => { if (this.halftimeGated && !this.playback) this.startReplay(0); });

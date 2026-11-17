@@ -74,6 +74,8 @@ test('halftime no-hit replay returns to the frozen gate and pointer continues on
   expect(await page.evaluate(() => ({ state: window.__ff!.state, replay: window.__ff!.replay() }))).toEqual(before);
   expect(await page.evaluate(() => window.__ff!.halftimeGate())).toBe(true);
   await page.keyboard.press('Escape');
+  // Phaser registers newly created interactive objects on its next update.
+  await page.evaluate(() => new Promise<void>(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))));
   await page.mouse.click(472, 314, { clickCount: 2 });
   await page.waitForFunction(() => window.__ff!.state.half === 2, null, { timeout: 30000 });
   expect(await page.evaluate(() => window.__ff!.halftimeGate())).toBe(false);
