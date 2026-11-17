@@ -3,7 +3,7 @@ import {
   ARRIVE_DIST, BIG_HIT_CHARGE_TICKS, BRAIN_BIG_HOLD_EXTRA_TICKS, BRAIN_TAP_TICKS, CHARGE_ABORT_RANGE_FACTOR, TURBO_COST,
 } from './constants';
 import { neutralIntent } from './setup';
-import { LEVELS, type LevelSpec } from './levels';
+import { hitInterval, LEVELS, type LevelSpec } from './levels';
 import { ballSide, roleOf } from './brainRoles';
 import { interceptPoint, planDefence } from './brainDefend';
 import { planCarrier, planSupport } from './brainAttack';
@@ -95,7 +95,7 @@ function replay(state: MatchState, p: PlayerState, mem: BrainMemory): BrainInten
   const action = mem.action;
   mem.action = 'none'; // a stored button is pressed once
   if (action === 'tap' || action === 'chargeBig') {
-    state.defensiveHitAt[p.id] = state.liveTicks + LEVELS[state.config.level[p.team]].defensiveHitIntervalTicks;
+    state.defensiveHitAt[p.id] = state.liveTicks + hitInterval(state.config, p.team);
     startHold(state, mem, action === 'tap' ? BRAIN_TAP_TICKS : BIG_HIT_CHARGE_TICKS + BRAIN_BIG_HOLD_EXTRA_TICKS);
     return { ...intent, hitPress: true, hitHeld: true };
   }

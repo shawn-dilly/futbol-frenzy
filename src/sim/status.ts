@@ -34,7 +34,7 @@ export function standingOrAll(players: PlayerState[]): PlayerState[] {
   return standing.length > 0 ? standing : players;
 }
 
-/** A player of a human team whom the human is not steering right now (the brain drives him, but he never starts a hit). */
+/** A player of a human team whom the human is not steering right now. */
 export function isHumanTeammate(state: MatchState, p: PlayerState): boolean {
   return state.config.human[p.team] && !isHumanControlled(state, p);
 }

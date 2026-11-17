@@ -5,7 +5,7 @@ import { isDown, isHumanControlled, setStatus } from './status';
 import { switchControl } from './possession';
 import { norm, scale } from './vec';
 import { blankMemory, makePlayer } from './setup';
-import { LEVELS } from './levels';
+import { hitInterval } from './levels';
 import { FORMATION } from './constants';
 
 export { isDazed } from './status';
@@ -35,7 +35,7 @@ export function hurtPlayer(state: MatchState, victim: PlayerState, tier: HurtTie
     state.reserves[victim.team]--;
     state.players[victim.id] = makePlayer(victim.team, victim.id % FORMATION.length);
     state.brain[victim.id] = blankMemory();
-    state.defensiveHitAt[victim.id] = state.liveTicks + LEVELS[state.config.level[victim.team]].defensiveHitIntervalTicks;
+    state.defensiveHitAt[victim.id] = state.liveTicks + hitInterval(state.config, victim.team);
     if (state.ball.passTarget === victim.id) state.ball.passTarget = null;
   }
   return variant;

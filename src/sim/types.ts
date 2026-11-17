@@ -5,7 +5,7 @@ export type Level = 'rookie' | 'pro' | 'bruiser' | 'psycho';
 export type HitType = 'shoulder' | 'slide' | 'big';
 export type HurtTier = 'stumble' | 'knockdown' | 'wipeout' | 'overTheTop';
 export type PlayerStatus =
-  | { kind: 'free' } | { kind: 'kicking' } | { kind: 'charging' }
+  | { kind: 'free' } | { kind: 'kicking' } | { kind: 'charging'; teammate?: true }
   | { kind: 'lunging'; hit: HitType }
   | { kind: 'recovering'; hit: HitType; landed: boolean }
   | { kind: 'hurt'; tier: HurtTier; variant: number };

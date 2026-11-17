@@ -67,6 +67,17 @@ describe('defending targets', () => {
     s.players[6].pos = { x: 340, y: 62 }; // exactly 40 away: not farther than 40
     expect(planDefence(s, s.players[6], 'presser', LEVELS.pro).turbo).toBe(false);
   });
+  test('Rookie screens a human carrier between presses and closes inside shooting range', () => {
+    const s = scene({ human: [true, false] });
+    const press = () => planDefence(s, s.players[6], 'presser', LEVELS.rookie);
+    s.liveTicks = 199;
+    expect(press()).toMatchObject({ target: { x: 312, y: 62 }, targetPlayer: null });
+    s.liveTicks++;
+    expect(press().targetPlayer).toBe(4);
+    s.liveTicks = 0;
+    s.players[4].pos.x = 420;
+    expect(press().targetPlayer).toBe(4);
+  });
   test('cover stands JOCKEY_DIST x 2 from the ball on the line to his own goal', () => {
     const s = scene();
     expect(planDefence(s, s.players[8], 'cover', LEVELS.pro)).toMatchObject({ target: { x: 331, y: 62 }, action: 'none' });
@@ -128,7 +139,7 @@ describe('hit choice', () => {
     const s = scene(); s.players[6].pos = { x: 300 + LEVELS.rookie.hitRange, y: 62 };
     expect(press(s, LEVELS.rookie)).toMatchObject({ action: 'tap', turbo: false });
   });
-  test('no hit while the team cooldown holds, out of range, or on a human team', () => {
+  test('carrier tackles respect cooldown and reach, including on a human team', () => {
     const s = scene(); near(s); s.players[6].hitCooldown = 1;
     expect(press(s, LEVELS.pro).action).toBe('none');
     s.players[6].hitCooldown = 0; s.players[6].pos = { x: 300 + LEVELS.pro.hitRange + 0.5, y: 62 };
@@ -136,7 +147,7 @@ describe('hit choice', () => {
     s.players[6].pos = { x: 300 + LEVELS.pro.hitRange, y: 62 };
     expect(press(s, LEVELS.pro).action).toBe('tap');
     s.config.human = [false, true];
-    expect(press(s, LEVELS.pro).action).toBe('none');
+    expect(press(s, LEVELS.pro)).toMatchObject({ action: 'tap', turbo: false });
   });
   describe('lunge heading error', () => {
     const plan = (s: MatchState, level: LevelSpec) => planDefence(s, s.players[6], 'presser', level);

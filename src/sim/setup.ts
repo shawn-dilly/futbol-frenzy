@@ -3,7 +3,7 @@ import {
   FIELD_MID_Y, FIELD_W, FORMATION, KICKER_BEHIND_BALL, KICKOFF_PAUSE_TICKS, MAX_HEALTH, TICK_HZ, TEAM_RESERVES,
 } from './constants';
 import { dist } from './vec';
-import { LEVELS } from './levels';
+import { hitInterval } from './levels';
 import { setStatus } from './status';
 
 const KICKOFF_SPOT: Vec = { x: FIELD_W / 2, y: FIELD_MID_Y };
@@ -56,7 +56,7 @@ export function placeForKickoff(state: MatchState, kicking: TeamId): void {
   }
   state.brain = state.players.map(blankMemory);
   state.liveTicks = 0;
-  state.defensiveHitAt = state.players.map(p => LEVELS[state.config.level[p.team]].defensiveHitIntervalTicks);
+  state.defensiveHitAt = state.players.map(p => state.config.human[p.team] ? 0 : hitInterval(state.config, p.team));
   state.ball = { pos: { ...KICKOFF_SPOT }, vel: { x: 0, y: 0 }, owner: null, ownerTicks: 0, passTarget: null };
 
   const kicker = state.players[kicking * PLAYERS_PER_TEAM + STRIKER_INDEX];

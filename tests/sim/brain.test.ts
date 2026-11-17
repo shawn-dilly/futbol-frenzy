@@ -285,20 +285,13 @@ describe('hitting', () => {
     expect(brainIntent(t.s, t.s.players[6]).hitHeld).toBe(false);
     expect(t.s.brain[6].holdHitUntil).toBe(0);
   });
-  test('a human team brain teammates never press HIT', () => {
-    const s = playing(matchConfig({ seed: 5, human: [true, false] }));
-    const pressesByTeam0: boolean[] = [];
-    for (let t = 0; t < 1500; t++) {
-      if (t % 3 === 0) {
-        const probe = structuredClone(s);
-        for (const p of probe.players) if (p.team === 0 && p.role === 'out' && probe.controlled[0] !== p.id) {
-          const i = brainIntent(probe, p); pressesByTeam0.push(i.hitPress || i.hitHeld);
-        }
-      }
-      step(s, [neutralPad(), neutralPad()]);
-    }
-    expect(pressesByTeam0.length).toBeGreaterThan(1000);
-    expect(pressesByTeam0.some(Boolean)).toBe(false);
+  for (const level of LEVEL_ORDER) test(`a ${level} teammate tackles on the assist interval`, () => {
+    const s = pressScene(matchConfig({ human: [false, true], level: [level, level] }));
+    s.controlled[1] = 9;
+    s.players[6].pos = { x: 306, y: 62 };
+    expect(rethink(s, 6)).toMatchObject({ hitPress: true, turbo: false });
+    expect(s.defensiveHitAt[6]).toBe(s.liveTicks + LEVELS[level].teammateHitIntervalTicks);
+    expect(rethink(s, 6).hitPress).toBe(false);
   });
 });
 

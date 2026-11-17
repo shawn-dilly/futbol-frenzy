@@ -44,14 +44,13 @@ function releasedHit(state: MatchState, p: PlayerState): HitType {
 /** Charge start, release and launch for one player this tick. */
 export function updateAttack(state: MatchState, p: PlayerState, intent: PlayerIntent): void {
   if (p.status.kind === 'charging') {
-    if (state.ball.owner === p.id || isHumanTeammate(state, p)) setStatus(p, { kind: 'free' }, 0); // picked the ball up, or a human's control moved on: no hit
+    if (state.ball.owner === p.id || Boolean(p.status.teammate) !== isHumanTeammate(state, p)) setStatus(p, { kind: 'free' }, 0); // picked the ball up, or a human's control moved on: no hit
     else if (!intent.hitHeld || p.statusTick >= BIG_HIT_MAX_HOLD_TICKS) launch(state, p, releasedHit(state, p), intent);
     return;
   }
   // hitPress is an edge, so a button held through a hurt spell or a kickoff never starts a charge
   if (p.status.kind !== 'free' || p.hitCooldown > 0 || state.ball.owner === p.id) return;
-  if (isHumanTeammate(state, p)) return; // a human's teammates never start a hit
-  if (intent.hitPress) setStatus(p, { kind: 'charging' }, 0);
+  if (intent.hitPress) setStatus(p, isHumanTeammate(state, p) ? { kind: 'charging', teammate: true } : { kind: 'charging' }, 0);
 }
 
 /** The nearest opponent within reach who is not down and was not hurt earlier this tick. */

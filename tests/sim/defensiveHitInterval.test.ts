@@ -18,14 +18,15 @@ describe('defensive hit eligibility', () => {
   for (const team of [0, 1] as const) for (const human of [false, true]) {
     test(`team ${team}, ${human ? 'human' : 'CPU'} carrier: boundary and attempt reset`, () => {
       const { s, defender } = scene(team, human);
-      s.liveTicks = 239; s.tick = 239;
+      const interval = human ? 440 : 240;
+      s.liveTicks = interval - 1; s.tick = interval - 1;
       expect(brainIntent(s, defender).hitPress).toBe(false);
-      s.liveTicks = 240; s.tick = 240; s.brain[defender.id].thinkAt = 240;
+      s.liveTicks = interval; s.tick = interval; s.brain[defender.id].thinkAt = interval;
       expect(brainIntent(s, defender).hitPress).toBe(true);
-      expect(s.defensiveHitAt[defender.id]).toBe(480);
+      expect(s.defensiveHitAt[defender.id]).toBe(2 * interval);
       placeForKickoff(s, 0);
       expect(s.liveTicks).toBe(0);
-      expect(s.defensiveHitAt[defender.id]).toBe(240);
+      expect(s.defensiveHitAt[defender.id]).toBe(interval);
     });
   }
   test('an attempt suppresses repeated attempts until the next eligible decision', () => {

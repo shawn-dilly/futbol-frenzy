@@ -17,6 +17,7 @@ export const DEFAULT_HALF_SECONDS = 120;
 export const GK_HOLD_TICKS = 30, GK_LINE_X = 12;
 export const ANCHOR_SHIFT_X = 0.35, ANCHOR_SHIFT_Y = 0.3;
 export const ARRIVE_DIST = 3; // units: closer than this to a stand-here target means stand still
+export const HUMAN_PRESS_TICKS = 90; // duration of active pursuit between jockey periods
 export const JOCKEY_DIST = 12; // units; the unit COVER_DIST is built from (the cover stands twice this far from the ball)
 export const SHOT_Y_MARGIN = 3; // units kept between a CPU shot's aim point and the post
 export const FORMATION: Vec[] = [ // team 0; team 1 mirrors x -> FIELD_W - x. Index 0 is the keeper.

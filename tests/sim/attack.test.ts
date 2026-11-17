@@ -119,9 +119,12 @@ describe('charging and launching', () => {
     expect(status(s)).toEqual({ kind: 'free' }); expect(s.events.some(e => e.type === 'whiff')).toBe(false);
     runTicks(s, 12); expect(status(s)).toEqual({ kind: 'free' });
   });
-  test('a brain-driven player of a human team never starts a charge', () => {
+  test('taking control of a charging teammate cancels his planned hit', () => {
     const s = playing(); const p = s.players[MATE];
     updateAttack(s, p, { ...neutralIntent(), hitPress: true, hitHeld: true });
+    expect(p.status).toEqual({ kind: 'charging', teammate: true });
+    s.controlled[0] = p.id;
+    updateAttack(s, p, neutralIntent());
     expect(p.status).toEqual({ kind: 'free' });
   });
 });
