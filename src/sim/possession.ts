@@ -1,9 +1,9 @@
 import type { MatchState, PlayerState, TeamId, Vec } from './types';
 import {
   BALL_RADIUS, DRIBBLE_OFFSET, FIELD_H, FIELD_W, KICK_COOLDOWN_TICKS, PASS_CONE_RAD,
-  PASS_SPEED, PICKUP_RADIUS, SHOT_SPEED,
+  PASS_SPEED, PICKUP_MAX_BALL_SPEED, PICKUP_RADIUS, SHOT_SPEED,
 } from './constants';
-import { add, angleBetween, clamp, dist, norm, scale, sub } from './vec';
+import { add, angleBetween, clamp, dist, len, norm, scale, sub } from './vec';
 import { goalCenter } from './setup';
 
 const isZero = (v: Vec) => v.x === 0 && v.y === 0;
@@ -15,8 +15,10 @@ export function tickKickCooldowns(state: MatchState): void {
 
 function nearestPickup(state: MatchState): PlayerState | null {
   let best: PlayerState | null = null, bestDist = Infinity;
+  const ballTooFastForOutfield = len(state.ball.vel) > PICKUP_MAX_BALL_SPEED;
   for (const p of state.players) { // ascending id, so strict < gives ties to the lower id
     const d = dist(p.pos, state.ball.pos);
+    if (p.role === 'out' && ballTooFastForOutfield) continue;
     if (p.kickCooldown === 0 && d <= PICKUP_RADIUS && d < bestDist) { best = p; bestDist = d; }
   }
   return best;

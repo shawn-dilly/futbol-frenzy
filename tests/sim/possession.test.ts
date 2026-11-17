@@ -1,6 +1,6 @@
 import { test, expect, beforeEach } from 'vitest';
 import { createMatch, neutralPad } from '../../src/sim/setup';
-import { pickPassTarget } from '../../src/sim/possession';
+import { pickPassTarget, updatePossession } from '../../src/sim/possession';
 import { len } from '../../src/sim/vec';
 import type { MatchState, PadInput } from '../../src/sim/types';
 import { runTicks } from '../helpers';
@@ -65,4 +65,23 @@ test('equal angles inside the cone go to the nearer teammate', () => {
 });
 test('equal angles with the nearer teammate on the lower id still pick the nearer', () => {
   expect(pickPassTarget(s, s.players[0], { x: 1, y: 0 })).toBe(1);
+});
+
+function freeBallAt(player: number, speed: number): void {
+  const p = s.players[player];
+  s.ball.owner = null; s.ball.passTarget = null;
+  s.ball.pos = { x: p.pos.x + 2, y: p.pos.y }; s.ball.vel = { x: speed, y: 0 };
+  s.players.forEach(o => { o.kickCooldown = 0; });
+}
+test('an outfield player cannot trap a ball moving at shot speed', () => {
+  freeBallAt(9, 220); updatePossession(s);
+  expect(s.ball.owner).toBeNull();
+});
+test('an outfield player can trap a ball moving at pass speed', () => {
+  freeBallAt(9, 150); updatePossession(s);
+  expect(s.ball.owner).toBe(9);
+});
+test('a keeper can trap a ball moving at shot speed', () => {
+  freeBallAt(5, 220); updatePossession(s);
+  expect(s.ball.owner).toBe(5);
 });
