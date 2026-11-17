@@ -182,7 +182,7 @@ export const FORMATION: Vec[] = [ // team 0; team 1 mirrors x → FIELD_W - x. I
 - `placeForKickoff`: every player to their anchor with zero velocity, facing the opponent goal; ball at `{240, 62}` with zero velocity, `ownerTicks 0`, `passTarget null`; the kicking team's last formation player (id 4 or 9) moves to 6 units behind the ball on their own side and becomes `ball.owner`; `controlled[kicking]` is the kicker; `controlled[other]` is that team's outfield player nearest the ball; `phase = 'kickoff'`, `phaseTicks = KICKOFF_PAUSE_TICKS`; pushes `{type:'whistle', what:'kickoff'}`.
 - `createMatch`: `tick 0`, `rng = config.seed`, `half 1`, `clockTicks = halfSeconds * TICK_HZ`, score `[0,0]`, turbo `[1,1]`, `kickoffTeam 0`, then `placeForKickoff(state, 0)`.
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 ```ts
 // tests/sim/setup.test.ts
@@ -216,10 +216,10 @@ test('same seed gives the same sequence, in [0,1)', () => {
 });
 ```
 
-- [ ] **Step 2:** Run `npm test`. Expected: FAIL, modules not found.
-- [ ] **Step 3:** Implement the five files to the interfaces above.
-- [ ] **Step 4:** Run `npm test`. Expected: PASS, including the purity test.
-- [ ] **Step 5:** Commit: `feat(sim): types, constants, vectors, seeded random, match setup`.
+- [x] **Step 2:** Run `npm test`. Expected: FAIL, modules not found.
+- [x] **Step 3:** Implement the five files to the interfaces above.
+- [x] **Step 4:** Run `npm test`. Expected: PASS, including the purity test.
+- [x] **Step 5:** Commit: `feat(sim): types, constants, vectors, seeded random, match setup`.
 
 ---
 
