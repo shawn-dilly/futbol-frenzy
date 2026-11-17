@@ -21,7 +21,7 @@ export function hurtPlayer(state: MatchState, victim: PlayerState, tier: HurtTie
   victim.health = Math.max(1, victim.health - damage);
   if (state.ball.owner === victim.id) {
     state.ball.owner = null; state.ball.ownerTicks = 0; state.ball.passTarget = null;
-    state.ball.vel = scale(norm(dir), LOOSE_BALL_SPEED);
+    state.ball.vel = scale(thrown, LOOSE_BALL_SPEED);
     victim.kickCooldown = Math.max(victim.kickCooldown, spec.downTicks);
   }
   if (isDown(victim) && isHumanControlled(state, victim)) {

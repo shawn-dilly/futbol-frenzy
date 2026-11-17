@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'vitest';
-import { ANIMATIONS, GETUP_TICKS, hurtAnimKey } from '../../src/content/animations';
+import { ANIMATIONS, GETUP_TICKS, hurtAnimKey, type ColorRole, type Px } from '../../src/content/animations';
 import { FRAME_H, FRAME_W, ORIGIN_X, ORIGIN_Y } from '../../src/art/sprites';
 import { HURT, HURT_TIERS, type HitType, type PlayerState, type PlayerStatus } from '../../src/sim';
 import { createMatch } from '../../src/sim/setup';
@@ -12,7 +12,39 @@ const keyFor = (status: PlayerStatus, moving = false): string => {
   return animFor(p, 0).key;
 };
 
+/** Roles that may float apart from the body. */
+const DETACHED_ROLES_ALLOWED: ColorRole[] = ['star'];
+
+/** Number of 8-connected groups among the cells the frame draws, ignoring the allowed detached roles. */
+function bodyPieces(frame: Px[]): number {
+  const cells = new Set<string>();
+  for (const [dx, dy, w, h, role] of frame) {
+    if (DETACHED_ROLES_ALLOWED.includes(role)) continue;
+    for (let i = 0; i < w; i++) for (let j = 0; j < h; j++) cells.add(`${dx + i},${dy + j}`);
+  }
+  let pieces = 0;
+  while (cells.size > 0) {
+    pieces++;
+    const [first] = cells; cells.delete(first);
+    const stack = [first];
+    while (stack.length > 0) {
+      const [x, y] = stack.pop()!.split(',').map(Number);
+      for (let ox = -1; ox <= 1; ox++) for (let oy = -1; oy <= 1; oy++) {
+        const n = `${x + ox},${y + oy}`;
+        if (cells.delete(n)) stack.push(n);
+      }
+    }
+  }
+  return pieces;
+}
+
 describe('animation data', () => {
+  test('every frame is one connected body, with no detached pieces', () => {
+    for (const [key, def] of Object.entries(ANIMATIONS)) {
+      def.frames.forEach((frame, i) => expect(bodyPieces(frame), `${key}_${i}`).toBe(1));
+    }
+  });
+
   test('hurtAnimKey names a tier and variant', () => {
     expect(hurtAnimKey('wipeout', 1)).toBe('hurt_wipeout_1');
   });

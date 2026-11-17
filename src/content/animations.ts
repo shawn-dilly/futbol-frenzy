@@ -13,7 +13,7 @@ export interface AnimDef {
   airFrames?: number;
 }
 
-/** Ticks at the end of a knocked-down or lunging status spent getting back up. */
+/** Ticks at the end of a hurt or recovering status spent getting back up. */
 export const GETUP_TICKS = 12;
 
 export function hurtAnimKey(tier: HurtTier, variant: number): string {
@@ -77,7 +77,7 @@ function lying(o: LyingOptions): Px[] {
 /** Knee pulled up, shin folded back down to the foot, both hands reaching for the shin; for lying on the back. */
 const SHIN_CLUTCH = (kneeLift: number): Px[] => [
   [LYING_X + 11, -5, 3, 2, 'skin'], [LYING_X + 12, -7 + kneeLift, 2, 3, 'skin'],
-  [LYING_X + 14, -8 + kneeLift, 2, 2, 'skin'], [LYING_X + 15, -6 + kneeLift, 2, 3, 'skin'], [LYING_X + 15, -3, 3, 2, 'boot'],
+  [LYING_X + 14, -8 + kneeLift, 2, 2, 'skin'], [LYING_X + 15, -6 + kneeLift, 2, 3, 'skin'], [LYING_X + 15, -3 + kneeLift, 3, 2, 'boot'],
 ];
 const SHIN_CLUTCH_ARMS = (kneeLift: number): Px[] => [
   [LYING_X + 6, -5, 4, 1, 'skin'], [LYING_X + 9, -7 + kneeLift, 4, 1, 'skin'], [LYING_X + 12, -9 + kneeLift, 3, 1, 'skin'],
@@ -88,10 +88,9 @@ const rockingOnBack = (dx: number, headLift: number, kneeLift: number): Px[] =>
 const ROCK_SHIFT = 2;
 
 /** Arm pieces for a body lying on its back, head-left frame. */
-const ARM_FLUNG_BEHIND_HEAD: Px[] = [[LYING_X - 3, -3, 3, 1, 'skin']];
+const ARM_FLUNG_BEHIND_HEAD: Px[] = [[LYING_X - 2, -3, 3, 1, 'skin']];
 const ARM_PROPPED: Px[] = [[LYING_X + 5, -2, 2, 1, 'skin']];
 const ARMS_SPREAD_ON_BACK: Px[] = [[LYING_X + 6, -5, 4, 1, 'skin'], ...ARM_FLUNG_BEHIND_HEAD];
-const ARMS_TRAILING: Px[] = [[LYING_X - 2, -3, 3, 1, 'skin']];
 
 const ARM_FWD: R[] = [[4, -9, 1, 2], [5, -10, 1, 2]];
 const ARM_BACK: R[] = [[-4, -9, 1, 2], [-5, -8, 1, 2]];
@@ -138,7 +137,7 @@ function sitting(bob: number, starAngle: number | null): Px[] {
     ...px('skin', [[SIT_X + 5, -3, 5, 2]]), ...px('boot', [[SIT_X + 10, -4, 2, 3]]),
     [SIT_X + 1, -4, 5, 3, 'shorts'], [SIT_X, -9, 6, 5, 'jersey'], [SIT_X, -7, 6, 1, 'trim'],
     [SIT_X + 0, -14 + bob, 5, 2, 'hair'], [SIT_X, -12 + bob, 5, 3, 'skin'], [SIT_X + 4, -11 + bob, 1, 1, 'eye'],
-    [SIT_X - 2, -6, 2, 1, 'skin'], [SIT_X - 3, -4, 1, 2, 'skin'],
+    [SIT_X - 2, -6, 2, 1, 'skin'], [SIT_X - 3, -5, 1, 3, 'skin'],
     [SIT_X + 4, -7, 2, 1, 'skin'],
   ];
   if (starAngle === null) return body;
@@ -168,8 +167,10 @@ const flailingLegs = (a: number, b: number): Px[] => [
   [LYING_X + 12, -3 + a, 4, 1, 'skin'], [LYING_X + 16, -3 + a, 2, 1, 'boot'],
   [LYING_X + 12, -3 + b, 4, 1, 'skin'], [LYING_X + 16, -3 + b, 2, 1, 'boot'],
 ];
-const ARMS_FLAILING_UP_DOWN: Px[] = [[LYING_X - 3, -6, 3, 1, 'skin'], [LYING_X - 3, -1, 3, 1, 'skin']];
-const ARMS_FLAILING_DOWN_UP: Px[] = [[LYING_X - 3, -1, 3, 1, 'skin'], [LYING_X - 3, -6, 3, 1, 'skin']];
+/** One arm raised diagonally, one low. Joined to the head so nothing floats. */
+const ARMS_FLAILING_A: Px[] = [[LYING_X - 1, -5, 1, 2, 'skin'], [LYING_X - 3, -6, 2, 1, 'skin'], [LYING_X - 3, -1, 3, 1, 'skin']];
+/** One arm straight up, one low and out. */
+const ARMS_FLAILING_B: Px[] = [[LYING_X - 1, -6, 1, 3, 'skin'], [LYING_X - 3, -2, 3, 1, 'skin']];
 const ARMS_ON_KNEES: R[] = [[3, -6, 2, 1], [-4, -6, 2, 1]];
 /** Hunched forward on bent legs, as when charging or just getting up. */
 const CROUCHED: Px[] = [
@@ -233,9 +234,9 @@ export const ANIMATIONS: Record<string, AnimDef> = {
   lunge_shoulder: {
     ticksPerFrame: 4, loop: false,
     frames: [
-      [...px('skin', [[-4, -4, 3, 1], [-2, -2, 3, 1]]), ...px('boot', [[-7, -4, 3, 1], [-1, -1, 3, 1]]),
+      [...px('skin', [[-3, -3, 3, 1], [-2, -2, 3, 1]]), ...px('boot', [[-6, -3, 3, 1], [-1, -1, 3, 1]]),
         ...bodyAt(3, 2), ...px('skin', [[7, -8, 2, 2]])],
-      [...px('skin', [[-5, -4, 4, 1], [-2, -2, 3, 1]]), ...px('boot', [[-9, -4, 4, 1], [-1, -1, 3, 1]]),
+      [...px('skin', [[-3, -3, 5, 1], [0, -2, 2, 1]]), ...px('boot', [[-7, -3, 4, 1], [0, -1, 3, 1]]),
         ...bodyAt(5, 3), ...px('skin', [[9, -7, 2, 2]])],
     ],
   },
@@ -257,7 +258,7 @@ export const ANIMATIONS: Record<string, AnimDef> = {
     ticksPerFrame: 7, loop: false,
     frames: [
       // launching off both feet
-      [...px('skin', [[-3, -4, 3, 2], [-6, -2, 3, 2]]), ...px('boot', [[-9, -1, 3, 1], [-6, -5, 3, 1]]),
+      [...px('skin', [[-2, -4, 3, 2], [-4, -3, 2, 2], [-6, -2, 2, 2], [2, -2, 2, 1]]), ...px('boot', [[-9, -1, 3, 1], [2, -1, 3, 1]]),
         ...bodyAt(4, 1), ...px('skin', [[8, -9, 3, 1], [8, -7, 3, 1]])],
       // full-length dive, arms out front
       lying({ faceUp: false, headRight: true, y: -8,
@@ -268,8 +269,8 @@ export const ANIMATIONS: Record<string, AnimDef> = {
     ticksPerFrame: 6, loop: false,
     frames: [
       // overbalanced, arms wheeling
-      [...px('skin', [[-4, -3, 2, 2], [1, -3, 2, 2]]), ...px('boot', [[-4, -1, 3, 1], [1, -1, 3, 1]]),
-        ...bodyAt(2, 1), ...px('skin', [[6, -12, 1, 3], [-4, -10, 1, 3]])],
+      [...px('skin', [[-2, -3, 2, 2], [1, -3, 2, 2]]), ...px('boot', [[-4, -1, 3, 1], [1, -1, 3, 1]]),
+        ...bodyAt(2, 1), ...px('skin', [[6, -12, 1, 3], [-2, -10, 1, 3]])],
       // hunched, catching their breath
       standing(1, STAND_LEGS, STAND_BOOTS, ARMS_ON_KNEES),
     ],
@@ -299,13 +300,13 @@ export const ANIMATIONS: Record<string, AnimDef> = {
     frames: [
       // hopping on the left foot, the other held up
       [...px('skin', [[-2, -3, 2, 2], [1, -5, 3, 1]]), ...px('boot', [[-2, -1, 3, 1], [4, -6, 2, 2]]),
-        ...bodyAt(-1, 0), ...px('skin', [[-6, -12, 1, 3], [3, -11, 1, 3]])],
+        ...bodyAt(-1, 0), ...px('skin', [[-5, -12, 1, 3], [3, -11, 1, 3]])],
       [...px('skin', [[-2, -4, 2, 2], [1, -6, 3, 1]]), ...px('boot', [[-2, -2, 3, 1], [4, -7, 2, 2]]),
-        ...bodyAt(-1, -1), ...px('skin', [[-6, -13, 1, 3], [3, -12, 1, 3]])],
+        ...bodyAt(-1, -1), ...px('skin', [[-5, -13, 1, 3], [3, -12, 1, 3]])],
       [...px('skin', [[-2, -3, 2, 2], [1, -5, 3, 1]]), ...px('boot', [[-2, -1, 3, 1], [4, -6, 2, 2]]),
-        ...bodyAt(-1, 0), ...px('skin', [[-6, -10, 1, 3], [3, -13, 1, 3]])],
+        ...bodyAt(-1, 0), ...px('skin', [[-5, -10, 1, 3], [3, -13, 1, 3]])],
       [...px('skin', [[-2, -4, 2, 2], [1, -6, 3, 1]]), ...px('boot', [[-2, -2, 3, 1], [4, -7, 2, 2]]),
-        ...bodyAt(-1, -1), ...px('skin', [[-6, -11, 1, 3], [3, -10, 1, 3]])],
+        ...bodyAt(-1, -1), ...px('skin', [[-5, -11, 1, 3], [3, -10, 1, 3]])],
     ],
   },
   hurt_stumble_1: {
@@ -313,9 +314,9 @@ export const ANIMATIONS: Record<string, AnimDef> = {
     frames: [
       // arms windmilling: up/down, forward/back, down/up, back/forward
       standing(0, [[-4, -3, 2, 2], [3, -3, 2, 2]], [[-5, -1, 3, 1], [3, -1, 3, 1]], [[4, -13, 1, 3], [-4, -8, 1, 3]]),
-      standing(0, [[-3, -3, 2, 2], [2, -3, 2, 2]], STAND_BOOTS, [[5, -10, 3, 1], [-7, -9, 3, 1]]),
+      standing(0, [[-3, -3, 2, 2], [2, -3, 2, 2]], STAND_BOOTS, [[4, -10, 3, 1], [-6, -9, 3, 1]]),
       standing(1, [[-4, -3, 2, 2], [3, -3, 2, 2]], [[-5, -1, 3, 1], [3, -1, 3, 1]], [[4, -7, 1, 3], [-4, -13, 1, 3]]),
-      standing(0, [[-3, -3, 2, 2], [2, -3, 2, 2]], STAND_BOOTS, [[-8, -10, 3, 1], [5, -9, 3, 1]]),
+      standing(0, [[-3, -3, 2, 2], [2, -3, 2, 2]], STAND_BOOTS, [[-6, -10, 3, 1], [4, -9, 3, 1]]),
     ],
   },
 
@@ -324,7 +325,7 @@ export const ANIMATIONS: Record<string, AnimDef> = {
     ticksPerFrame: 5, loop: false,
     frames: [
       // pitching forward
-      [...px('skin', [[-4, -3, 2, 2], [0, -3, 2, 2]]), ...px('boot', [[-5, -1, 3, 1], [0, -1, 3, 1]]),
+      [...px('skin', [[-2, -3, 2, 2], [0, -3, 2, 2]]), ...px('boot', [[-4, -1, 3, 1], [0, -1, 3, 1]]),
         ...bodyAt(2, 1), ...px('skin', [[6, -9, 3, 1]])],
       // body angled down, legs trailing up behind
       [...px('skin', [[-1, -4, 3, 2], [-3, -6, 3, 2]]), ...px('boot', [[-6, -8, 3, 2], [-5, -4, 3, 2]]),
@@ -340,10 +341,10 @@ export const ANIMATIONS: Record<string, AnimDef> = {
     frames: [
       // leaning back, arms up
       [...px('skin', [[-3, -3, 2, 2], [2, -3, 2, 2]]), ...px('boot', [[-3, -1, 2, 1], [2, -1, 3, 1]]),
-        ...bodyAt(-2, 0), ...px('skin', [[-7, -13, 1, 3], [2, -13, 1, 3]])],
+        ...bodyAt(-2, 0), ...px('skin', [[-6, -13, 1, 3], [2, -13, 1, 3]])],
       // falling over backwards, feet kicking up
       [...px('skin', [[-1, -3, 3, 2], [1, -5, 3, 2]]), ...px('boot', [[4, -7, 3, 2], [3, -4, 3, 2]]),
-        ...bodyAt(-5, 3), ...px('skin', [[-9, -12, 1, 3]])],
+        ...bodyAt(-5, 3), ...px('skin', [[-8, -10, 1, 3]])],
       // slam: bounce
       lying({ faceUp: true, headLift: -1, footLift: -2 }),
       // flat on the back
@@ -377,9 +378,9 @@ export const ANIMATIONS: Record<string, AnimDef> = {
     frames: [
       // flat superman-style flight, face down, limbs flailing
       lying({ faceUp: false, headRight: true, reach: true, legs: flailingLegs(-2, 1) }),
-      lying({ faceUp: false, headRight: true, arms: ARMS_FLAILING_UP_DOWN, legs: flailingLegs(1, -2) }),
+      lying({ faceUp: false, headRight: true, arms: ARMS_FLAILING_A, legs: flailingLegs(1, -2) }),
       lying({ faceUp: false, headRight: true, reach: true, legs: flailingLegs(-1, 2) }),
-      lying({ faceUp: false, headRight: true, arms: ARMS_FLAILING_DOWN_UP, legs: flailingLegs(2, -1) }),
+      lying({ faceUp: false, headRight: true, arms: ARMS_FLAILING_B, legs: flailingLegs(2, -1) }),
       // lands: bounce, then crumpled
       lying({ faceUp: false, headRight: true, footLift: -2, reach: true }),
       crumpled(),
@@ -390,7 +391,7 @@ export const ANIMATIONS: Record<string, AnimDef> = {
     frames: [
       // thrown up and back
       [...px('skin', [[-3, -5, 2, 2], [2, -5, 2, 2]]), ...px('boot', [[-4, -3, 3, 1], [2, -3, 3, 1]]),
-        ...bodyAt(-2, -2), ...px('skin', [[-8, -14, 1, 3], [2, -14, 1, 3]])],
+        ...bodyAt(-2, -2), ...px('skin', [[-6, -14, 1, 3], [2, -14, 1, 3]])],
       AIRBORNE_SIDEWAYS,
       AIRBORNE_INVERTED,
       AIRBORNE_SIDEWAYS_REVERSED,
