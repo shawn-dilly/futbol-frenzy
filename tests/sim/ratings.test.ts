@@ -18,7 +18,7 @@ describe('team ratings', () => {
   for (const team of [0, 1] as const) for (const human of [true, false]) {
     it(`applies movement, kicks and late hits for team ${team}, human ${human}`, () => {
       const measure = (n: number) => {
-        const c = config(); c.human[team] = human; c.ratings = [rating(n), rating(n)];
+        const c = config(); c.human[team] = human; c.ratings = team === 0 ? [rating(n), rating(1 - n)] : [rating(1 - n), rating(n)];
         const s = createMatch(c); const p = s.players[team * 5 + 1];
         applyMovement(s, p, { ...neutralIntent(), moveX: 1 }); const speed = p.vel.x;
         s.ball.owner = p.id; kick(s, p, 'shot', { x: 1, y: 0 }); const shot = s.ball.vel.x;
@@ -31,6 +31,29 @@ describe('team ratings', () => {
       expect(measure(1)).toEqual({ speed: 66, shot: 242.00000000000003, damage: 14.3 });
     });
   }
+  it('attributes power and late-hit dirty ratings to the tackler', () => {
+    const damage = (power: number, dirty: number, onBall: boolean) => {
+      const c = config(); c.ratings = [{ ...rating(0.5), power, dirty }, rating(1)];
+      const s = createMatch(c), p = s.players[1], victim = s.players[6];
+      p.status = { kind: 'lunging', hit: 'shoulder' }; p.pos = { x: 200, y: 60 }; victim.pos = { ...p.pos };
+      s.ball.owner = onBall ? victim.id : null;
+      resolveContacts(s);
+      const hit = s.events.find(e => e.type === 'hit');
+      return hit?.type === 'hit' ? hit.damage : 0;
+    };
+    expect(damage(1, 0.5, false)).toBeGreaterThan(damage(0, 0.5, false));
+    expect(damage(0.5, 1, false)).toBeGreaterThan(damage(0.5, 0, false));
+    expect(damage(0.5, 1, true)).toBe(damage(0.5, 0, true));
+  });
+  it('scales pass velocity using the passing team skill', () => {
+    const speed = (skill: number) => {
+      const c = config(); c.ratings = [{ ...rating(0.5), skill }, rating(1 - skill)];
+      const s = createMatch(c), p = s.players[1]; s.ball.owner = p.id;
+      kick(s, p, 'pass', { x: 1, y: 0 });
+      return Math.hypot(s.ball.vel.x, s.ball.vel.y);
+    };
+    expect(speed(0)).toBeCloseTo(135); expect(speed(1)).toBeCloseTo(165);
+  });
   it('remains deterministic with ratings', () => {
     const c = config(); c.ratings = [rating(0), rating(1)];
     const a = createMatch(c), b = createMatch(c);

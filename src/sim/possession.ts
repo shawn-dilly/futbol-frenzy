@@ -63,6 +63,7 @@ export function pickPassTarget(state: MatchState, passer: PlayerState, aim: Vec)
   return (best ?? nearest).id;
 }
 
+/** Skill scales both shot and pass velocity from 90% to 110%. */
 export function kick(state: MatchState, p: PlayerState, kind: 'pass' | 'shot', aim: Vec): void {
   const ball = state.ball;
   if (ball.owner !== p.id) return;
