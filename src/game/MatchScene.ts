@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { GOAL_BANNER_TICKS } from './layout';
+import { GOAL_BANNER_TICKS, canRestart } from './layout';
 import { HALFTIME_PAUSE_TICKS, createMatch, neutralPad, step, type MatchState, type PadInput, type SimEvent } from '../sim';
 import { KeyboardPad, mergePads } from '../input/keyboard';
 import { TouchControls } from '../input/TouchControls';
@@ -22,6 +22,8 @@ export class MatchScene extends Phaser.Scene {
   private keys!: KeyboardPad;
   private readonly stepper = new FixedStepper();
   private seed = 0;
+  /** Sim tick of the full-time whistle, null until it blows. */
+  private fulltimeTick: number | null = null;
   /** One instance for the scene's lifetime so a restart keeps the unlocked audio context. */
   private readonly sfx = new Sfx();
 
@@ -32,6 +34,7 @@ export class MatchScene extends Phaser.Scene {
   }
 
   create(): void {
+    this.fulltimeTick = null;
     const params = parseMatchParams(window.location.search);
     this.sfx.muted = params.mute;
     this.state = createMatch({ seed: this.seed, halfSeconds: params.halfSeconds, human: [!params.demo, false] });
@@ -45,7 +48,9 @@ export class MatchScene extends Phaser.Scene {
     this.hud.sync(this.state);
 
     // Only a fresh press restarts: a key already held at full time keeps auto-repeating keydown, which must not count.
-    const restart = () => { if (this.state.phase === 'fulltime') this.scene.restart({ seed: this.seed + 1 }); };
+    const restart = () => {
+      if (canRestart(this.state.phase, this.state.tick, this.fulltimeTick)) this.scene.restart({ seed: this.seed + 1 });
+    };
     this.input.on('pointerdown', restart);
     this.input.keyboard?.on('keydown', (e: KeyboardEvent) => { if (!e.repeat) restart(); });
     // Browsers block audio until a gesture: the first press unlocks it (idempotent, so listening to every press is harmless).
@@ -87,7 +92,10 @@ export class MatchScene extends Phaser.Scene {
       if (sound) this.sfx.play(sound);
       if (e.type === 'goal') this.hud.showBanner('GOAL!', GOAL_BANNER_TICKS, this.state.tick);
       else if (e.type === 'whistle' && e.what === 'halftime') this.hud.showBanner('HALF TIME', HALFTIME_PAUSE_TICKS, this.state.tick);
-      else if (e.type === 'whistle' && e.what === 'fulltime') this.hud.showBanner('FULL TIME', Infinity, this.state.tick);
+      else if (e.type === 'whistle' && e.what === 'fulltime') {
+        this.fulltimeTick = this.state.tick;
+        this.hud.showFullTime(this.state.tick);
+      }
     }
   }
 }

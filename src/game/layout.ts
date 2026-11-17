@@ -1,4 +1,4 @@
-import { TICK_HZ, TURBO_COST, type Vec } from '../sim';
+import { TICK_HZ, TURBO_COST, type Phase, type Vec } from '../sim';
 
 export const SCREEN_W = 320;
 export const SCREEN_H = 180;
@@ -45,4 +45,21 @@ export function turboPips(meter: number): number {
 export function nextFlip(prevFlip: boolean, facingX: number): boolean {
   if (facingX < 0) return true;
   return facingX > 0 ? false : prevFlip;
+}
+
+export const TEAM_NAMES = ['RHINOS', 'VIPERS'] as const;
+
+/** Ticks after the full-time whistle during which a press does not restart the match. */
+export const FULLTIME_RESTART_DELAY_TICKS = 120;
+
+/** Whether a press restarts the match: only at full time, once the delay since the whistle has passed. */
+export function canRestart(phase: Phase, tick: number, fulltimeTick: number | null): boolean {
+  return phase === 'fulltime' && fulltimeTick !== null && tick - fulltimeTick >= FULLTIME_RESTART_DELAY_TICKS;
+}
+
+/** Banner lines at full time: title, result, and the restart hint once a press would restart. */
+export function fullTimeLines(score: readonly [number, number], restartAllowed: boolean): string[] {
+  const lines = ['FULL TIME', `${TEAM_NAMES[0]} ${score[0]} - ${score[1]} ${TEAM_NAMES[1]}`];
+  if (restartAllowed) lines.push('TAP TO PLAY AGAIN');
+  return lines;
 }
