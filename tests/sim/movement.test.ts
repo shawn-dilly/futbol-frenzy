@@ -45,3 +45,18 @@ test('players stay on the pitch', () => {
   runTicks(s, 600, [pad({ moveX: -1, moveY: -1 }), neutralPad()]);
   expect(s.players[4].pos).toEqual({ x: 4, y: 4 });
 });
+test('holding turbo after a burst does nothing; a fresh press starts a new burst', () => {
+  const s = playing();
+  const held = [pad({ moveX: 1, turbo: true }), neutralPad()] as [PadInput, PadInput];
+  runTicks(s, 90, held);
+  expect(s.players[4].turboTicks).toBe(0);
+  const meter = s.turbo[0];
+  runTicks(s, 30, held);
+  expect(s.players[4].turboTicks).toBe(0);
+  expect(s.turbo[0]).toBeGreaterThan(meter);
+  runTicks(s, 1, [pad({ moveX: 1 }), neutralPad()]);
+  const before = s.turbo[0];
+  runTicks(s, 1, held);
+  expect(s.players[4].turboTicks).toBe(89);
+  expect(before - s.turbo[0]).toBeCloseTo(1 / 3 - 1 / 720, 5);
+});
