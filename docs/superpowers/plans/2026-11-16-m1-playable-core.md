@@ -608,7 +608,7 @@ export function atlasLayout(): { key: string; x: number; y: number }[];         
 - The kick has wind-up, strike (leg extended forward), and follow-through.
 - `drawPlayerFrame` never draws outside the frame box.
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 ```ts
 // tests/art/pixelFont.test.ts
@@ -643,10 +643,10 @@ test('atlas layout has one unique slot per kit, anim, and frame', () => {
 });
 ```
 
-- [ ] **Step 2:** Run `npm test`. Expected: FAIL.
-- [ ] **Step 3:** Implement the three files.
-- [ ] **Step 4:** Run `npm test`. Expected: PASS.
-- [ ] **Step 5:** Commit: `feat(art): palette, pixel font, code-drawn player sprites`.
+- [x] **Step 2:** Run `npm test`. Expected: FAIL.
+- [x] **Step 3:** Implement the three files.
+- [x] **Step 4:** Run `npm test`. Expected: PASS.
+- [x] **Step 5:** Commit: `feat(art): palette, pixel font, code-drawn player sprites`.
 
 ---
 
