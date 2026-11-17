@@ -54,6 +54,7 @@ function applyActions(state: MatchState, intents: BrainIntent[]): void {
 }
 
 function stepPlay(state: MatchState, inputs: [PadInput, PadInput]): TeamId | null {
+  state.liveTicks += 1;
   tickKickCooldowns(state);
   for (const p of state.players) { p.hitCooldown = Math.max(0, p.hitCooldown - 1); tickStatus(p); }
   const intents = state.players.map(p => intentFor(state, p, inputs));

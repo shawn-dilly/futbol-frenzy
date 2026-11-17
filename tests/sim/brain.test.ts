@@ -204,6 +204,7 @@ describe('think cadence', () => {
 describe('hitting', () => {
   const pressed = (level: 'rookie' | 'pro' | 'bruiser' | 'psycho', dx: number) => {
     const s = pressScene(matchConfig({ human: [false, false], level: [level, level] }));
+    s.liveTicks = 240; s.tick = 240;
     s.players[6].pos = { x: 300 + dx, y: 62 };
     return { s, i: rethink(s, 6) };
   };

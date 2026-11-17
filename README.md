@@ -2,7 +2,7 @@
 
 Arcade 5-a-side soccer for Android with a retro 8-bit look and no referee. Built with TypeScript, Phaser 4 and Vite, wrapped for Android with Capacitor 8. All art is drawn in code and all sound is synthesised.
 
-**Status:** milestones 1 and 2 are built: move, pass, shoot and score, plus hits, rage, hurt animations and announcer callouts, against a basic computer side. A smarter opponent is milestone 3. See [`docs/ROADMAP.md`](docs/ROADMAP.md).
+**Status:** milestones 1 and 2 are built: move, pass, shoot and score, plus hits, rage, hurt animations and announcer callouts, against a basic computer side. Milestone 3 is complete on its branch pending merge, with four computer difficulty levels. See [`docs/ROADMAP.md`](docs/ROADMAP.md).
 
 ## Run it
 
@@ -23,7 +23,7 @@ npm run dev      # http://localhost:5173
 
 **Hits.** A hit launches when you release HIT. A quick tap is a shoulder charge. A tap while a turbo burst is active is a slide tackle. Hold for about half a second (30 ticks) and release for a big hit; it costs a turbo segment, and on screen the HIT button fills and turns yellow when a big hit is ready. The ball carrier cannot hit. Players who are lunging, recovering or hurt cannot pick up the ball, and a flattened player is thrown in the direction of the hit. Hits fill the rage meters under the scores, and low health leaves a player Dazed.
 
-On a phone or a touch screen the stick and buttons appear on screen. URL options: `?demo=1` (computer v computer), `?seed=N`, `?half=SECONDS`, `?mute=1`.
+On a phone or a touch screen the stick and buttons appear on screen. URL options: `?demo=1` (computer v computer), `?seed=N`, `?half=SECONDS`, `?mute=1`, `?level=rookie|pro|bruiser|psycho` (VIPERS computer level, default pro), and `?level2=rookie|pro|bruiser|psycho` (RHINOS level in demo mode; defaults to `level`).
 
 ## Check it
 

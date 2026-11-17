@@ -2,7 +2,7 @@ import Phaser from 'phaser';
 import { canvasRect } from '../art/canvasRect';
 import { PAL } from '../art/palette';
 import { drawShadowedText, drawText } from '../art/pixelFont';
-import type { MatchState } from '../sim';
+import { LEVELS, type MatchState } from '../sim';
 import {
   DEPTH, HUD_BAR_H, RAGE_FLASH_TICKS, SCREEN_H, SCREEN_W, TEAM_NAMES, TURBO_PIPS, blinkOn, canRestart, formatClock, fullTimeLines, isRageFlashing, rageBarWidth, turboPips,
 } from './layout';
@@ -55,13 +55,14 @@ export class Hud {
       ? fullTimeLines(state.score, canRestart(state.phase, state.tick, this.fulltimeTick))
       : this.banner ? [this.banner.text] : [];
     const rage = state.rage.map(r => ({ px: rageBarWidth(r, RAGE.maxPx), flashOn: isRageFlashing(r) && blinkOn(state.tick, RAGE_FLASH_TICKS) }));
-    const key = [state.score[0], state.score[1], clock, lit, lines.join('/'), rage.map(r => `${r.px}${r.flashOn ? 'f' : ''}`).join(',')].join('|');
+    const level = LEVELS[state.config.level[1]].label.toUpperCase();
+    const key = [level, state.score[0], state.score[1], clock, lit, lines.join('/'), rage.map(r => `${r.px}${r.flashOn ? 'f' : ''}`).join(',')].join('|');
     if (key === this.lastKey) return;
     this.lastKey = key;
-    this.draw(state.score, clock, lit, lines, rage);
+    this.draw(state.score, clock, lit, lines, rage, level);
   }
 
-  private draw(score: [number, number], clock: string, lit: number, bannerLines: string[], rage: { px: number; flashOn: boolean }[]): void {
+  private draw(score: [number, number], clock: string, lit: number, bannerLines: string[], rage: { px: number; flashOn: boolean }[], level: string): void {
     const ctx = this.texture.context;
     ctx.clearRect(0, 0, SCREEN_W, SCREEN_H);
     const rect = canvasRect(ctx);
@@ -83,6 +84,7 @@ export class Hud {
       drawShadowedText(rect, RAGE.label, labelX, RAGE.y, PAL.wht, 1, team === 0 ? 'l' : 'r');
       rect(team === 0 ? x + RAGE.frame : x + RAGE.frame + RAGE.maxPx - r.px, RAGE.y + RAGE.frame, r.px, RAGE.h, r.flashOn ? RAGE_FLASH : RAGE_FILL);
     });
+    drawShadowedText(rect, level, SCREEN_W / 2, HUD_BAR_H + 2, PAL.wht, 1, 'c');
     const pipsW = PIP.count * PIP.w + (PIP.count - 1) * PIP.gap;
     for (let i = 0; i < PIP.count; i++) {
       rect((SCREEN_W - pipsW) / 2 + i * (PIP.w + PIP.gap), PIP.y, PIP.w, PIP.h, i < lit ? PAL.org : PIP_UNLIT);

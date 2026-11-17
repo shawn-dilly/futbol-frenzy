@@ -127,6 +127,6 @@ describe('keeperSpeedFactor', () => {
     for (const id of [0, 5]) { s.players[id].status = { kind: 'free' }; s.players[id].health = 100; applyMovement(s, s.players[id], { ...neutralIntent(), moveY: 1 }); }
     expect(s.players[0].vel.y).toBeCloseTo(GK_SPEED * LEVELS.pro.keeperSpeedFactor, 9);
     expect(s.players[5].vel.y).toBeCloseTo(GK_SPEED * LEVELS.rookie.keeperSpeedFactor, 9);
-    expect(s.players[5].vel.y).toBeCloseTo(34, 9);
+    expect(s.players[5].vel.y).toBeCloseTo(56, 9);
   });
 });

@@ -1,6 +1,6 @@
 import type { MatchState, PlayerIntent, PlayerState, Vec } from './types';
 import {
-  CHARGE_MOVE_FACTOR, DAZED_SPEED_FACTOR, FIELD_H, FIELD_W, GK_SPEED, HITS, KNOCK_DECAY, KNOCK_MIN_SPEED, PLAYER_RADIUS, RUN_SPEED, TICK_HZ,
+  CATCHUP_GOAL_GAP, CATCHUP_SPEED_FACTOR, CATCHUP_TURBO_REFILL_FACTOR, CHARGE_MOVE_FACTOR, DAZED_SPEED_FACTOR, FIELD_H, FIELD_W, GK_SPEED, HITS, KNOCK_DECAY, KNOCK_MIN_SPEED, PLAYER_RADIUS, RUN_SPEED, TICK_HZ,
   TURBO_BURST_TICKS, TURBO_COST, TURBO_REFILL_PER_TICK, TURBO_SPEED,
 } from './constants';
 import { LEVELS } from './levels';
@@ -13,10 +13,14 @@ function startTurboIfPressed(state: MatchState, p: PlayerState, intent: PlayerIn
   p.turboTicks = TURBO_BURST_TICKS;
 }
 
+function trailing(state: MatchState, team: 0 | 1): boolean {
+  return state.score[1 - team] - state.score[team] >= CATCHUP_GOAL_GAP;
+}
+
 /** Units per second a player runs at on his own: turbo, Dazed and charging all change it. */
 function ownSpeed(state: MatchState, p: PlayerState): number {
   const base = p.role === 'gk' ? GK_SPEED * LEVELS[state.config.level[p.team]].keeperSpeedFactor : p.turboTicks > 0 ? TURBO_SPEED : RUN_SPEED;
-  return base * (isDazed(p) ? DAZED_SPEED_FACTOR : 1) * (p.status.kind === 'charging' ? CHARGE_MOVE_FACTOR : 1);
+  return base * (trailing(state, p.team) ? CATCHUP_SPEED_FACTOR : 1) * (isDazed(p) ? DAZED_SPEED_FACTOR : 1) * (p.status.kind === 'charging' ? CHARGE_MOVE_FACTOR : 1);
 }
 
 /** The nearest point to `v` where a player can stand. */
@@ -52,6 +56,6 @@ export function applyMovement(state: MatchState, p: PlayerState, intent: PlayerI
 }
 
 export function updateTurboMeters(state: MatchState): void {
-  state.turbo[0] = Math.min(1, state.turbo[0] + TURBO_REFILL_PER_TICK);
-  state.turbo[1] = Math.min(1, state.turbo[1] + TURBO_REFILL_PER_TICK);
+  state.turbo[0] = Math.min(1, state.turbo[0] + TURBO_REFILL_PER_TICK * (trailing(state, 0) ? CATCHUP_TURBO_REFILL_FACTOR : 1));
+  state.turbo[1] = Math.min(1, state.turbo[1] + TURBO_REFILL_PER_TICK * (trailing(state, 1) ? CATCHUP_TURBO_REFILL_FACTOR : 1));
 }

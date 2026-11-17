@@ -10,9 +10,10 @@ function collectErrors(page: Page): string[] {
 
 test('a CPU-v-CPU match runs, players move, no errors', async ({ page }) => {
   const errors = collectErrors(page);
-  await page.goto('/?demo=1&seed=1&mute=1&half=20');
+  await page.goto('/?demo=1&seed=1&mute=1&half=20&level=psycho&level2=rookie');
   await page.waitForFunction(() => (window as any).__ff?.state.tick >= 900, null, { timeout: 30_000 });
   const s = await page.evaluate(() => (window as any).__ff.state);
+  expect(s.config.level).toEqual(['rookie', 'psycho']);
   expect(s.phase === 'play' || s.phase === 'goal' || s.phase === 'kickoff').toBe(true);
   const moved = s.players.filter((p: any) => Math.hypot(p.pos.x - p.anchor.x, p.pos.y - p.anchor.y) > 5).length;
   expect(moved).toBeGreaterThanOrEqual(4);
@@ -24,7 +25,7 @@ test('a CPU-v-CPU match runs, players move, no errors', async ({ page }) => {
 
 test('a human can run with the arrow keys and pass with J, no errors', async ({ page }) => {
   const errors = collectErrors(page);
-  await page.goto('/?seed=1&mute=1&half=20');
+  await page.goto('/?seed=1&mute=1&half=20&level=rookie');
   await page.waitForFunction(() => (window as any).__ff?.state.phase === 'play', null, { timeout: 30_000 });
   const { id, startX, startTick } = await page.evaluate(() => {
     const st = (window as any).__ff.state;

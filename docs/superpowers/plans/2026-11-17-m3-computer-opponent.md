@@ -176,11 +176,35 @@ Rules:
 
 **Files:** Modify `src/sim/movement.ts`, `constants.ts`, `levels.ts`; create `tests/sim/balance.test.ts`, `tests/sim/catchup.test.ts`; modify `src/game/Hud.ts`, `e2e/demo.spec.ts`, `README.md`, `CLAUDE.md`, `docs/ROADMAP.md`.
 
-- [ ] **Step 1:** Catch-up: `CATCHUP_GOAL_GAP = 2`, `CATCHUP_SPEED_FACTOR = 1.06`, `CATCHUP_TURBO_REFILL_FACTOR = 1.5`, applied to every player and the turbo meter of a side trailing by `CATCHUP_GOAL_GAP` or more, human or computer. Exact-value tests at gaps 1, 2 and 3 for both teams.
-- [ ] **Step 2:** `tests/sim/balance.test.ts` — a measurement harness (pure helper `playMatch(config)` returning hits by tier, goals, shots, ticks at rage ≥ 80, Dazed count) and these bands, all CPU v CPU, 2 × 120 s:
+- [x] **Step 1:** Catch-up: `CATCHUP_GOAL_GAP = 2`, `CATCHUP_SPEED_FACTOR = 1.06`, `CATCHUP_TURBO_REFILL_FACTOR = 1.5`, applied to every player and the turbo meter of a side trailing by `CATCHUP_GOAL_GAP` or more, human or computer. Exact-value tests at gaps 1, 2 and 3 for both teams.
+- [x] **Step 2:** `tests/sim/balance.test.ts` — a measurement harness (pure helper `playMatch(config)` returning hits by tier, goals, shots, ticks at rage ≥ 80, Dazed count) and these bands, all CPU v CPU, 2 × 120 s:
   - Mirror matches, seeds 1–10, per level, averages: goals per match rookie 1–5, pro 2–7, bruiser 2–8, psycho 3–10; at most 3 of 10 matches end 0–0. Hits per match rookie 8–25, pro 15–40, bruiser 30–70, psycho 45–110, strictly increasing along `LEVEL_ORDER`. Each team at rage ≥ 80 for under 60% of play on average.
   - Psycho v rookie, seeds 1–10 (alternate which team is which): psycho wins at least 7. Pro v rookie: pro loses at most 3.
   - A scripted naive human (takes the ball, runs at goal, never passes or hits) against each level, seeds 1–3: median possession at least 240 ticks against rookie and at most 150 against psycho.
   Tune `LEVELS` values (and, if the brain cannot reach a band by values alone, say exactly which rule is the obstacle) until the bands hold. Keep the suite's total run time under 60 s; if needed, mark the balance file to run in its own Vitest project or with fewer seeds and say so. Print one compact table of the measured numbers in the test output only when an env var asks for it; put the final table in the report and in `docs/ROADMAP.md`.
-- [ ] **Step 3:** The HUD shows the computer's level label (from `LEVELS[...].label`) small, under the VIPERS name or beside the clock, without overlapping the rage meters; screenshot at two levels and look. E2E: `?demo=1&level=psycho&level2=rookie` reaches full time; `?level=rookie` human test still passes; any e2e waits that depended on the old brain are re-derived, not just lengthened.
-- [ ] **Step 4:** Docs: README (levels and the URL options), CLAUDE.md (brain structure: memory, think cadence, one table, acts only through intents), `docs/ROADMAP.md` (M3 status; remove finished carry-overs; record the measured table; list what is left for M4). Full check plus `npm run e2e`; commit `feat(sim): catch-up boost and balance bands for four levels; docs for M3`.
+- [x] **Step 3:** The HUD shows the computer's level label (from `LEVELS[...].label`) small, under the VIPERS name or beside the clock, without overlapping the rage meters; screenshot at two levels and look. E2E: `?demo=1&level=psycho&level2=rookie` reaches full time; `?level=rookie` human test still passes; any e2e waits that depended on the old brain are re-derived, not just lengthened.
+- [x] **Step 4:** Docs: README (levels and the URL options), CLAUDE.md (brain structure: memory, think cadence, one table, acts only through intents), `docs/ROADMAP.md` (M3 status; remove finished carry-overs; record the measured table; list what is left for M4). Full check plus `npm run e2e`; commit `feat(sim): catch-up boost and balance bands for four levels; docs for M3`.
+
+Task 4 measurement (seeds 1–10, verified mirror means):
+
+| Level | Goals | Hits |
+| --- | ---: | ---: |
+| Rookie | 4.4 | 20.9 |
+| Pro | 6.9 | 37.2 |
+| Bruiser | 2.3 | 64.1 |
+| Psycho | 4.8 | 104.5 |
+
+All required mirror bands pass, with no 0–0 matches and rage occupancy below 60% for both teams. Psycho and pro each beat rookie 10/10. Held-out seeds 11–20 give pro 7.8 goals, above the diagnostic ceiling of 7; this is not an acceptance requirement. Rookie keeper speed factor 1.4 versus psycho 1.1 is a tuning tradeoff; player feel remains unverified. Shot and keeper sensitivity probes are optional future tuning.
+
+Possession counts only live ticks; episodes split on owner or control changes and phase endings are censored. Pooled medians exclude censored episodes:
+
+| Level | Seeds 1–3 median | Completed / censored | Seeds 4–6 median | Completed / censored |
+|---|---:|---:|---:|---:|
+| Rookie | 241 | 3 / 0 | 241 | 3 / 0 |
+| Pro | 30 | 66 / 2 | 44 | 81 / 3 |
+| Bruiser | 72 | 141 / 3 | 62.5 | 130 / 1 |
+| Psycho | 14 | 183 / 1 | 14 | 203 / 1 |
+
+Rookie's three completed episodes per group limit broader gameplay conclusions. Independent verification passed 499 unit tests (10.47 seconds), typecheck, build and four e2e tests; fresh rookie, psycho and full-time screenshots showed no new visual issues. Physical-phone controls and audio remain unverified. M3 is done on the branch pending merge.
+
+Defensive hit eligibility uses a per-level live-tick interval separate from reaction cadence. Rookie is eligible at live tick 240 or later on its next normal decision; an attempted tap or big-hit initiation resets the interval, and kickoff resets it. Knockdowns clear brain memory but preserve the timer. The same rule applies to either team and carrier type.

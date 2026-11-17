@@ -26,6 +26,8 @@ Three layers. Each depends only on the ones above it in this list.
 2. `src/art/`, `src/input/`, `src/audio/`, `src/game/` — presentation. Reads sim state, turns touches into `PadInput`, turns sim events into sound and effects. Never mutates match state.
 3. `android/` — generated Capacitor wrapper. Game logic never goes here.
 
+The computer brain keeps per-player memory in match state and thinks on a level-dependent cadence. Difficulty settings live in the `LEVELS` table. The brain acts through player intents and the same input and attack paths as human players.
+
 ## Code standards
 
 - **Clean interfaces.** Each file has one responsibility and a small exported surface. Other files use only what is exported through the plan's Interfaces blocks; `src/sim/index.ts` is the sim's public face. Presentation code never reaches into sim internals.

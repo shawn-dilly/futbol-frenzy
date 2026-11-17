@@ -25,11 +25,11 @@ test('reaction and team cooldown shrink, positioning grows, along the order', ()
 test('every level may shoulder-charge', () => {
   for (const level of LEVEL_ORDER) expect(LEVELS[level].hitTypes).toContain('shoulder');
 });
-test('starting values of the table', () => {
+test('selected values of the table', () => {
   expect(LEVELS.rookie.reactionTicks).toBe(24);
   expect(LEVELS.psycho.hitTypes).toEqual(['shoulder', 'slide', 'big']);
   expect(LEVELS.pro.hitTypes).toEqual(['shoulder', 'slide']);
-  expect(LEVELS.pro.teamHitCooldownTicks).toBe(420);
+  expect(LEVELS.pro.teamHitCooldownTicks).toBe(750);
 });
 test('createMatch gives all ten players blank memory, and a kickoff resets it', () => {
   const s = createMatch(matchConfig());

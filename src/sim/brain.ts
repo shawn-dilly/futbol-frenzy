@@ -95,6 +95,7 @@ function replay(state: MatchState, p: PlayerState, mem: BrainMemory): BrainInten
   const action = mem.action;
   mem.action = 'none'; // a stored button is pressed once
   if (action === 'tap' || action === 'chargeBig') {
+    state.defensiveHitAt[p.id] = state.liveTicks + LEVELS[state.config.level[p.team]].defensiveHitIntervalTicks;
     startHold(state, mem, action === 'tap' ? BRAIN_TAP_TICKS : BIG_HIT_CHARGE_TICKS + BRAIN_BIG_HOLD_EXTRA_TICKS);
     return { ...intent, hitPress: true, hitHeld: true };
   }

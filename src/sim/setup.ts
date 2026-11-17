@@ -3,6 +3,7 @@ import {
   FIELD_MID_Y, FIELD_W, FORMATION, KICKER_BEHIND_BALL, KICKOFF_PAUSE_TICKS, MAX_HEALTH, TICK_HZ,
 } from './constants';
 import { dist } from './vec';
+import { LEVELS } from './levels';
 import { setStatus } from './status';
 
 const KICKOFF_SPOT: Vec = { x: FIELD_W / 2, y: FIELD_MID_Y };
@@ -54,6 +55,8 @@ export function placeForKickoff(state: MatchState, kicking: TeamId): void {
     setStatus(p, { kind: 'free' }, 0);
   }
   state.brain = state.players.map(blankMemory);
+  state.liveTicks = 0;
+  state.defensiveHitAt = state.players.map(p => LEVELS[state.config.level[p.team]].defensiveHitIntervalTicks);
   state.ball = { pos: { ...KICKOFF_SPOT }, vel: { x: 0, y: 0 }, owner: null, ownerTicks: 0, passTarget: null };
 
   const kicker = state.players[kicking * PLAYERS_PER_TEAM + STRIKER_INDEX];
@@ -85,7 +88,7 @@ export function createMatch(config: MatchConfig): MatchState {
     phase: 'kickoff', phaseTicks: 0, half: 1, clockTicks: config.halfSeconds * TICK_HZ,
     score: [0, 0], kickoffTeam: 0, rage: [0, 0], lastHitTick: [0, 0],
     players, ball: { pos: { ...KICKOFF_SPOT }, vel: { x: 0, y: 0 }, owner: null, ownerTicks: 0, passTarget: null },
-    brain: players.map(blankMemory), controlled: [0, 0], turbo: [1, 1],
+    brain: players.map(blankMemory), liveTicks: 0, defensiveHitAt: [], controlled: [0, 0], turbo: [1, 1],
     prevInput: [neutralPad(), neutralPad()], events: [],
   };
   placeForKickoff(state, 0);

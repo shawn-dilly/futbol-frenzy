@@ -37,7 +37,7 @@ export function shiftedAnchor(state: MatchState, p: PlayerState): Vec {
 }
 
 /** Whether this player may start a hit of his own: a computer team's player whose (team-wide) cooldown is over. */
-const mayHit = (state: MatchState, p: PlayerState): boolean => !state.config.human[p.team] && p.hitCooldown === 0;
+const mayHit = (state: MatchState, p: PlayerState): boolean => !state.config.human[p.team] && p.hitCooldown === 0 && state.liveTicks >= state.defensiveHitAt[p.id];
 
 /**
  * The plan for going in on `target` if he is within hitRange, else null. The hit is big (charged) against a slow

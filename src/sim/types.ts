@@ -49,6 +49,8 @@ export interface MatchState {
   rage: [number, number]; lastHitTick: [number, number] /* tick the team last landed a hit */;
   players: PlayerState[]; ball: BallState;
   brain: BrainMemory[];
+  liveTicks: number; // live ticks since kickoff
+  defensiveHitAt: number[]; // earliest live tick for each player
   controlled: [number, number]; turbo: [number, number];
   prevInput: [PadInput, PadInput]; events: SimEvent[];
 }

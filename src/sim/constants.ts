@@ -62,3 +62,5 @@ export const SUPPORT_GOAL_MARGIN = 30; // units: channel runners stay this far s
 export const SUPPORT_CHANNEL_Y: [number, number] = [28, 96]; // the two wide lanes runners take (the lower y first)
 export const LANE_SHIFT = 12; // units: a supporter with a blocked lane from the carrier slides this far in y, away from the blocker
 export const GK_CLAIM_DIST = 30; // units from his goal inside which a keeper leaves his line for a free ball when he is nearest
+
+export const CATCHUP_GOAL_GAP = 2, CATCHUP_SPEED_FACTOR = 1.06, CATCHUP_TURBO_REFILL_FACTOR = 1.5;
