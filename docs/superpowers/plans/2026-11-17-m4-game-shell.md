@@ -61,10 +61,10 @@ Task 6 implementation checks passed with 554 unit tests, typecheck, production b
 
 ### 7. Milestone verification and delivery
 - [x] Record full-suite results, normal/demo/replay/Cup coverage, screenshot observations and device limitations in the plan and roadmap.
-- [ ] Independent Sol reviews the whole milestone diff from M3 `2ded47f` through the candidate, including project standards, test evidence and screenshots. Resolve findings and obtain approval.
-- [ ] After approval, finalize plan and roadmap, commit, push `m4-game-shell` to origin, verify the remote branch and hash against the local commit and report both.
+- [x] Independent Sol reviews the whole milestone diff from M3 `2ded47f` through the candidate, including project standards, test evidence and screenshots. Resolve findings and obtain approval.
+- [x] After approval, finalize plan and roadmap, commit, push `m4-game-shell` to origin, verify the remote branch and hash against the local commit and report both.
 
-Task 6 independent Sol review approved `90e3d94` with no findings. On that commit Sol independently passed 554 unit tests, typecheck, production build and all 25 Playwright tests. Task 7 uses those results because the candidate changes only this plan and the roadmap. GPT-6.2 Astra prepared the candidate. Whole-milestone Sol signoff and verified push are pending.
+Task 6 independent Sol review approved `90e3d94` with no findings. On that commit Sol independently passed 554 unit tests, typecheck, production build and all 25 Playwright tests. GPT-6.2 Astra prepared the initial documentation candidate at `1043cc9`.
 
 **Whole-milestone review corrections after `1043cc9`.** Astra reproduced both Sol findings in Chromium. The normal friendly setup selected First to 5, but the playing HUD failed a pixel comparison against the target label. In the seed 8 Psycho/Psycho match with 20-second halves, the selected hit at tick 1123 consumed a reserve and playback displayed zero wipeout frames for the outgoing victim.
 
@@ -76,13 +76,13 @@ Astra inspected `artifacts/first-to-five.png` at 640×360 and `artifacts/lethal-
 
 **Keyboard correction after Sol review of `5d33d9f`.** Sol observed eleven shell updates from three rapid key presses. Phaser's keyboard manager appends each native event to a frame queue and immediately asks the scene plugins to process the whole queue. Their duplicate check remembers only the preceding entry. This allowed a single Enter to change the team after opening setup and a single Escape to exit the result screen after closing replay. Shell and match commands now listen to native keydown and unregister on scene shutdown. Gameplay movement and button polling retain their existing Phaser key handling.
 
-Two browser regressions dispatch distinct keydown/keyup pairs synchronously. On the parent commit, Enter → ArrowUp → Enter launched with Comets/Rhinos in place of Rhinos/Vipers, and Escape → Enter from fulltime replay failed to start the rematch. Astra passed all 554 unit tests, typecheck, production build and all 29 Playwright tests. The original friendly flow, both same-frame regressions and the audio-context restart test each passed six additional runs. The audio test reached fulltime and observed two contexts created and one closed in all seven runs. The demo advances through halftime automatically, and audio unlock does not gate simulation progress. The earlier timeout remains unexplained. Final Sol re-review is pending.
+Two browser regressions dispatch distinct keydown/keyup pairs synchronously. On the parent commit, Enter → ArrowUp → Enter launched with Comets/Rhinos in place of Rhinos/Vipers, and Escape → Enter from fulltime replay failed to start the rematch. Astra passed all 554 unit tests, typecheck, production build and all 29 Playwright tests. The original friendly flow, both same-frame regressions and the audio-context restart test each passed six additional runs. The audio test reached fulltime and observed two contexts created and one closed in all seven runs. The demo advances through halftime automatically, and audio unlock does not gate simulation progress. The earlier timeout remains unexplained.
 
 **Scene handoff correction after Sol review of `42b229d`.** The shell now locks input at kickoff before it builds a config or starts a Cup session. Match restart requests from fulltime input, results and the launch hook share the scene's leaving flag. Each scene clears its flag on entry.
 
 Four Chromium regressions send fresh native inputs synchronously and record the launch supplied to each actual match initialization. On `42b229d`, the friendly burst initialized three matches and changed Rhinos/Vipers to Vipers/Vipers. A Cup pointer click followed by Enter initialized runs 1 and 2. Both demo and direct fulltime bursts initialized seed 18 three times. With the fix, consecutive shell entries accept a fresh kickoff with the original teams and settings, mixed pointer/keyboard Cup starts consume one run ID each, and consecutive fulltime restarts advance to seeds 18 and 19 once each.
 
-Implementation checks passed for 554 unit tests, typecheck, production build and all 33 browser tests. The four handoff regressions also passed three consecutive runs each. Sol 6.2 re-review is pending.
+Implementation checks passed for 554 unit tests, typecheck, production build and all 33 browser tests. The four handoff regressions also passed three consecutive runs each. GPT-6.2 Sol independently approved M4 at `ad4a2dc` after all 554 unit tests, 33 Chromium tests, typecheck and the production build passed. Mixed keyboard and pointer probes confirmed one launch per kickoff and one seed increment per restart.
 
 | M4 requirement | Candidate evidence |
 |---|---|

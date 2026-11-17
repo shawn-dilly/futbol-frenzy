@@ -7,7 +7,7 @@ Status values: not started, in progress, done. Task-level progress is the checkb
 | M1 | Playable core: move, pass, shoot, score against a basic computer side; browser and Android | `superpowers/plans/2026-11-16-m1-playable-core.md` | done (merged to `main`); real-phone check outstanding |
 | M2 | Hits, rage, tiered hurt animations, rotating callouts | `superpowers/plans/2026-11-17-m2-hits-rage-callouts.md` | done (merged to `main`); real-phone check and a listen to the sounds outstanding |
 | M3 | Computer opponent with four difficulty levels | `superpowers/plans/2026-11-17-m3-computer-opponent.md` | done on branch `m3-computer-opponent`; pending merge |
-| M4 | Game shell: title, setup, teams, stats, substitutions, Cup Run | `superpowers/plans/2026-11-17-m4-game-shell.md` | in progress on `m4-game-shell`; local candidate, final Sol review and verified push pending |
+| M4 | Game shell: title, setup, teams, stats, substitutions, Cup Run | `superpowers/plans/2026-11-17-m4-game-shell.md` | done on branch `m4-game-shell`; pending merge |
 | M5 | Android release: signed build, icon, vibration, settings | not written yet | not started |
 | V2 | Online two-player | not written yet | not started |
 
@@ -15,9 +15,9 @@ Status values: not started, in progress, done. Task-level progress is the checkb
 
 - Players regenerate health slowly during play (0.5 per second, `HEALTH_REGEN_PER_TICK`); the design heals only at halftime. Added because every outfielder otherwise ended a match on 1 health.
 
-## M4 candidate verification
+## M4 verification
 
-Task 6 received independent Sol approval at `90e3d94`. All 554 unit tests, typecheck, production build and 25 browser tests passed on that commit. The candidate adds documentation only. Coverage includes normal title/setup and friendly results, direct human play, CPU demo, isolated hit replay, six rated teams, substitutions and the five-opponent Cup ladder.
+GPT-6.2 Sol approved M4 at `ad4a2dc` after independently passing 554 unit tests, 33 Chromium tests, typecheck and the production build. Coverage includes normal title/setup and friendly results, direct human play, CPU demo, isolated hit replay, six rated teams, substitutions and the five-opponent Cup ladder.
 
 Sol verified a live Cup draw/retry and checked duplicate taps and advancement. Cup win/loss tests script the final scores. Result screens were inspected at 640×360 and use a textual hit card. Physical Android touch, audio and suspend/resume remain unverified, as does human balance across selectable teams.
 
