@@ -59,7 +59,8 @@ export class ShellScene extends Phaser.Scene {
       config = cupMatchConfig(this.cup);
       matchId = this.cup.matchId;
     }
-    this.currentMatchLaunch = { config, mode: this.mode, matchId, mute: params.mute };
+    this.currentMatchLaunch = { config, mode: this.mode, matchId, mute: params.mute,
+      teamNames: [TEAMS[this.selection.team].name, this.cup ? this.cup.opponents[this.cup.rung].name : TEAMS[this.selection.opponent].name] };
     this.scene.start('match', this.currentMatchLaunch);
   }
   private render(): void {

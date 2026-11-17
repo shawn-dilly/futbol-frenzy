@@ -59,3 +59,22 @@ for (const query of ['match=1', 'demo=1&match=1']) {
     expect(result.gate).toBe(false);
   });
 }
+
+test('halftime no-hit replay returns to the frozen gate and pointer continues once', async ({ page }) => {
+  await page.setViewportSize({ width: 640, height: 360 });
+  await page.goto('/?match=1&mute=1');
+  await page.waitForFunction(() => !!window.__ff);
+  await page.evaluate(() => window.__ff!.launch({ mode: 'cup', matchId: 'gate', mute: true, teamNames: ['HOME', 'AWAY'], config: { seed: 1, halfSeconds: 1, human: [true, true], level: ['rookie', 'rookie'] } }));
+  await page.waitForFunction(() => window.__ff?.halftimeGate(), null, { timeout: 30000 });
+  const before = await page.evaluate(() => structuredClone({ state: window.__ff!.state, replay: window.__ff!.replay() }));
+  expect(before.state.halfHits[0]).toBeNull();
+  await page.screenshot({ path: 'artifacts/halftime.png' });
+  await page.keyboard.press('r');
+  await page.waitForTimeout(300);
+  expect(await page.evaluate(() => ({ state: window.__ff!.state, replay: window.__ff!.replay() }))).toEqual(before);
+  expect(await page.evaluate(() => window.__ff!.halftimeGate())).toBe(true);
+  await page.keyboard.press('Escape');
+  await page.mouse.click(472, 314, { clickCount: 2 });
+  await page.waitForFunction(() => window.__ff!.state.half === 2, null, { timeout: 30000 });
+  expect(await page.evaluate(() => window.__ff!.halftimeGate())).toBe(false);
+});

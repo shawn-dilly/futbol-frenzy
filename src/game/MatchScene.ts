@@ -56,6 +56,7 @@ export class MatchScene extends Phaser.Scene {
   private seed = 0;
   private launch!: MatchLaunch;
   private halftimeGated = false;
+  private halftimeUI: Phaser.GameObjects.GameObject[] = [];
   /** Sim tick of the full-time whistle, null until it blows. */
   private fulltimeTick: number | null = null;
   /** Audio resources are released on each shutdown. */
@@ -115,7 +116,7 @@ export class MatchScene extends Phaser.Scene {
       if (!this.playback && canRestart(this.state.phase, this.state.tick, this.fulltimeTick)) this.scene.restart({ ...this.launch, config: { ...this.launch.config, seed: this.seed + 1 } });
     };
     this.input.on('pointerdown', restart);
-    const restartKey = (e: KeyboardEvent) => { if (e.key === 'Escape' && this.playback) { this.endReplay(); return; } if (!e.repeat) restart(); };
+    const restartKey = (e: KeyboardEvent) => { if (this.halftimeGated && !this.playback && !e.repeat) { if (e.key === 'Enter' || e.key === ' ') this.continueHalftime(); else if (e.key.toLowerCase() === 'r') this.startReplay(0); return; } if (e.key === 'Escape' && this.playback) { this.endReplay(); return; } if (!e.repeat) restart(); };
     this.input.keyboard?.on('keydown', restartKey);
     // Browsers block audio until a gesture: the first press unlocks it (idempotent, so listening to every press is harmless).
     const unlock = () => this.sfx.unlock();
@@ -126,6 +127,7 @@ export class MatchScene extends Phaser.Scene {
     this.events.once('shutdown', () => {
       active = false;
       this.disposeReplay();
+      this.hideHalftime();
       this.sfx.dispose();
       this.input.off('pointerdown', restart);
       this.input.keyboard?.off('keydown', restartKey);
@@ -170,6 +172,7 @@ export class MatchScene extends Phaser.Scene {
         this.halftimeGated = true;
         this.freezeTicks = 0;
         this.clearControls();
+        this.showHalftime();
         break;
       }
       if (this.freezeTicks > 0) {
@@ -184,6 +187,7 @@ export class MatchScene extends Phaser.Scene {
 
   startReplay(half: 0 | 1): void {
     this.endReplay();
+    this.hideHalftime();
     const result = reconstructReplay(this.replay, this.state.halfHits[half], 60, 60);
     this.playback = { states: result.kind === 'window' ? result.states : [], cursor: 0 };
     this.clearControls();
@@ -192,7 +196,7 @@ export class MatchScene extends Phaser.Scene {
     this.view.clearTransientEffects();
     this.pendingCraters = [];
     this.flashStartMs = -Infinity;
-    this.replayLabel = this.add.graphics().setDepth(1000);
+    this.replayLabel = this.add.graphics().setDepth(2200);
     const graphics = this.replayLabel;
     const rect = (x: number, y: number, w: number, h: number, color: string) => {
       graphics.fillStyle(Phaser.Display.Color.HexStringToColor(color).color).fillRect(x, y, w, h);
@@ -201,7 +205,7 @@ export class MatchScene extends Phaser.Scene {
     drawText(rect, result.kind === 'no-hit' ? 'REPLAY - NO HIT' : 'REPLAY', 12, 25, PAL.wht, 2);
     rect(SCREEN_W - 76, 20, 68, 24, PAL.ink);
     drawText(rect, 'RETURN', SCREEN_W - 70, 27, PAL.yel, 2);
-    this.replayReturn = this.add.rectangle(SCREEN_W - 42, 32, 68, 24, 0, 0).setDepth(1001).setInteractive();
+    this.replayReturn = this.add.rectangle(SCREEN_W - 42, 32, 68, 24, 0, 0).setDepth(2201).setInteractive();
     this.replayReturn.on('pointerdown', () => this.endReplay());
     this.syncPresentation();
   }
@@ -209,6 +213,7 @@ export class MatchScene extends Phaser.Scene {
   endReplay(): void {
     if (!this.playback) return;
     this.disposeReplay();
+    if (this.halftimeGated) this.showHalftime();
     this.syncPresentation();
   }
 
@@ -227,7 +232,32 @@ export class MatchScene extends Phaser.Scene {
 
   isHalftimeGated(): boolean { return this.halftimeGated; }
 
-  continueHalftime(): void { this.halftimeGated = false; this.clearControls(); }
+  continueHalftime(): void { if (!this.halftimeGated || this.playback) return; this.halftimeGated = false; this.hideHalftime(); this.clearControls(); }
+
+  private hideHalftime(): void { this.halftimeUI.forEach(item => item.destroy()); this.halftimeUI = []; }
+
+  private showHalftime(): void {
+    this.hideHalftime();
+    const g = this.add.graphics().setDepth(2200); this.halftimeUI.push(g);
+    const rect = (x: number, y: number, w: number, h: number, color: string) => { g.fillStyle(Phaser.Display.Color.HexStringToColor(color).color).fillRect(x, y, w, h); };
+    const text = (s: string, x: number, y: number, color: string = PAL.wht, scale = 1, align: 'l' | 'c' | 'r' = 'l') => drawText(rect, s, x, y, color, scale, align);
+    const panel = (x: number, y: number, w: number, h: number, border: string, fill: string = PAL.ink) => { rect(x, y, w, h, border); rect(x + 1, y + 1, w - 2, h - 2, fill); };
+    rect(0, 0, 320, 180, PAL.navy);
+    text('HALF TIME', 160, 6, PAL.yel, 3, 'c');
+    panel(12, 28, 176, 22, PAL.gry); text(this.launch.teamNames?.[0] ?? 'HOME', 20, 36, PAL.wht, 1); text(`${this.state.score[0]} - ${this.state.score[1]}`, 100, 33, PAL.yel, 2, 'c'); text(this.launch.teamNames?.[1] ?? 'AWAY', 180, 36, PAL.wht, 1, 'r');
+    panel(12, 54, 176, 84, PAL.gry);
+    const rows = [['SHOTS', 'shots'], ['BIG HITS', 'bigHits'], ['KOS', 'kos'], ['STEALS', 'steals']] as const;
+    rows.forEach(([label, key], i) => { const y = 60 + i * 17; text(String(this.state.stats[0][key]), 24, y, PAL.wht, 2); text(label, 100, y + 2, PAL.gry, 1, 'c'); text(String(this.state.stats[1][key]), 176, y, PAL.wht, 2, 'r'); });
+    panel(196, 28, 112, 76, PAL.yel); rect(197, 29, 110, 11, PAL.yel); text('HIT OF THE HALF', 252, 32, PAL.ink, 1, 'c');
+    text(this.state.halfHits[0] ? 'HIT AVAILABLE' : 'NO HIT', 252, 57, PAL.wht, 2, 'c'); text('WATCH REPLAY >', 252, 87, PAL.yel, 1, 'c');
+    panel(196, 108, 112, 30, PAL.gry, PAL.dk); text('RESERVES', 252, 113, PAL.wht, 1, 'c'); text(`${this.state.reserves[0]} - ${this.state.reserves[1]}`, 252, 123, PAL.yel, 2, 'c');
+    panel(12, 144, 144, 26, PAL.gry, PAL.dk); text('REPLAY [R]', 84, 152, PAL.wht, 2, 'c');
+    panel(164, 144, 144, 26, PAL.wht, PAL.red); text('2ND HALF >', 236, 152, PAL.wht, 2, 'c');
+    const button = (x: number, y: number, w: number, h: number, action: () => void) => { const hit = this.add.rectangle(x, y, w, h, 0, 0).setOrigin(0).setDepth(2201).setInteractive(); hit.on('pointerdown', action); this.halftimeUI.push(hit); };
+    button(12, 144, 144, 26, () => { if (this.halftimeGated && !this.playback) this.startReplay(0); });
+    button(196, 40, 112, 64, () => { if (this.halftimeGated && !this.playback) this.startReplay(0); });
+    button(164, 144, 144, 26, () => this.continueHalftime());
+  }
 
   pause(): void { this.paused = true; this.clearControls(); }
 

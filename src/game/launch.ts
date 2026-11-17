@@ -6,6 +6,7 @@ export interface MatchLaunch {
   mode: 'demo' | 'direct' | 'friendly' | 'cup';
   matchId: string | null;
   mute: boolean;
+  teamNames?: [string, string];
 }
 
 export function launchFromSearch(search: string): MatchLaunch {
