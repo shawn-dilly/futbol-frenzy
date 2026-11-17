@@ -24,3 +24,23 @@ test('live steps are recorded and reconstruct the scene', async ({ page }) => {
   expect(replay.kind).toBe('window');
   if (replay.kind === 'window') expect(replay.states[0]).toEqual(state);
 });
+
+test('plays a recorded hit without advancing the paused match', async ({ page }) => {
+  await page.goto('/?demo=1&seed=3&mute=1&half=60');
+  await page.waitForFunction(() => !!window.__ff?.state.halfHits[0], null, { timeout: 90000 });
+  const before = await page.evaluate(() => {
+    const hook = window.__ff!;
+    hook.pause();
+    const state = structuredClone(hook.state);
+    const record = hook.replay();
+    (hook as unknown as { startReplay: (half: 0) => void }).startReplay(0);
+    return { state, record };
+  });
+  const tick = await page.evaluate(() => (window.__ff as unknown as { replayTick: () => number }).replayTick());
+  await page.waitForFunction((first) => (window.__ff as unknown as { replayTick: () => number }).replayTick() > first, tick);
+  await page.screenshot({ path: 'artifacts/replay-playback.png' });
+  await page.keyboard.press('Escape');
+  await page.waitForTimeout(300);
+  const after = await page.evaluate(() => ({ state: window.__ff!.state, record: window.__ff!.replay() }));
+  expect(after).toEqual(before);
+});

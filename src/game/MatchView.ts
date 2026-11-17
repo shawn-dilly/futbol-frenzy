@@ -87,6 +87,15 @@ export class MatchView {
     this.craters.length = 0;
   }
 
+  clearTransientEffects(): void {
+    this.clearCraters();
+    this.bursts.forEach(b => b.stars.forEach(star => star.destroy()));
+    this.bursts.length = 0;
+    this.outgoing.forEach(({ view }) => { view.sprite.destroy(); view.shadow.destroy(); view.dazed.forEach(d => d.destroy()); });
+    this.outgoing.length = 0;
+    this.shaking = null;
+  }
+
   addOutgoing(player: PlayerState, start: number): void {
     this.outgoing.push({ player, start, view: this.createPlayerView(player) });
   }

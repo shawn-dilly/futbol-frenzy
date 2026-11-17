@@ -13,14 +13,14 @@ import { bigHitReady, chargeFill, chargeJustStarted } from './indicators';
 import { MatchView } from './MatchView';
 import { FixedStepper } from './loop';
 import { launchFromSearch, type MatchLaunch } from './launch';
-import { createReplayRecord, recordReplayInput, type ReplayRecord } from './replay';
+import { createReplayRecord, recordReplayInput, reconstructReplay, type ReplayRecord } from './replay';
 import { outgoingAt } from './outgoing';
 import { Sfx, sfxForEvent } from '../audio/sfx';
 
 declare global {
   interface Window {
     /** Dev/test hooks: `showCallout` shows the callout a hit of that tier and type would; `calloutText` is what the banner shows now ('' if nothing). */
-    __ff?: { state: MatchState; showCallout: (tier: HurtTier, hit: HitType) => void; calloutText: () => string; replay: () => ReplayRecord; pause: () => void; resume: () => void; halftimeGate: () => boolean; continueHalftime: () => void; launch: (launch: MatchLaunch) => void }
+    __ff?: { state: MatchState; showCallout: (tier: HurtTier, hit: HitType) => void; calloutText: () => string; replay: () => ReplayRecord; startReplay: (half: 0 | 1) => void; endReplay: () => void; replayTick: () => number | null; pause: () => void; resume: () => void; halftimeGate: () => boolean; continueHalftime: () => void; launch: (launch: MatchLaunch) => void }
   }
 }
 
@@ -28,6 +28,10 @@ declare global {
 export class MatchScene extends Phaser.Scene {
   private state!: MatchState;
   private replay!: ReplayRecord;
+  private playback: { states: MatchState[]; cursor: number } | null = null;
+  private readonly playbackStepper = new FixedStepper();
+  private replayLabel?: Phaser.GameObjects.Text;
+  private replayReturn?: Phaser.GameObjects.Text;
   private view!: MatchView;
   private hud!: Hud;
   private callouts!: CalloutPicker;
@@ -65,6 +69,7 @@ export class MatchScene extends Phaser.Scene {
   }
 
   create(): void {
+    this.playback = null;
     this.paused = false;
     this.halftimeGated = false;
     this.hidden = document.hidden;
@@ -84,6 +89,9 @@ export class MatchScene extends Phaser.Scene {
       pause: () => { if (active) this.pause(); },
       resume: () => { if (active) this.resume(); },
       replay: () => structuredClone(this.replay),
+      startReplay: (half) => { if (active) this.startReplay(half); },
+      endReplay: () => { if (active) this.endReplay(); },
+      replayTick: () => this.playback?.states[this.playback.cursor]?.tick ?? null,
       launch: (launch) => { if (active) this.scene.restart(launch); },
       halftimeGate: () => this.isHalftimeGated(),
       continueHalftime: () => { if (active) this.continueHalftime(); },
@@ -102,10 +110,10 @@ export class MatchScene extends Phaser.Scene {
 
     // Only a fresh press restarts: a key already held at full time keeps auto-repeating keydown, which must not count.
     const restart = () => {
-      if (canRestart(this.state.phase, this.state.tick, this.fulltimeTick)) this.scene.restart({ ...this.launch, config: { ...this.launch.config, seed: this.seed + 1 } });
+      if (!this.playback && canRestart(this.state.phase, this.state.tick, this.fulltimeTick)) this.scene.restart({ ...this.launch, config: { ...this.launch.config, seed: this.seed + 1 } });
     };
     this.input.on('pointerdown', restart);
-    const restartKey = (e: KeyboardEvent) => { if (!e.repeat) restart(); };
+    const restartKey = (e: KeyboardEvent) => { if (e.key === 'Escape' && this.playback) { this.endReplay(); return; } if (!e.repeat) restart(); };
     this.input.keyboard?.on('keydown', restartKey);
     // Browsers block audio until a gesture: the first press unlocks it (idempotent, so listening to every press is harmless).
     const unlock = () => this.sfx.unlock();
@@ -115,6 +123,7 @@ export class MatchScene extends Phaser.Scene {
     this.input.keyboard?.on('keydown', unlock);
     this.events.once('shutdown', () => {
       active = false;
+      this.endReplay();
       this.sfx.dispose();
       this.input.off('pointerdown', restart);
       this.input.keyboard?.off('keydown', restartKey);
@@ -132,6 +141,18 @@ export class MatchScene extends Phaser.Scene {
 
   update(time: number, delta: number): void {
     this.nowMs = time;
+    if (this.playback) {
+      if (!this.hidden) {
+        const steps = this.playbackStepper.advance(delta);
+        for (let i = 0; i < steps && this.playback.cursor < this.playback.states.length - 1; i++) {
+          this.playback.cursor++;
+          const snapshot = this.playback.states[this.playback.cursor];
+          for (const event of snapshot.events) if (event.type === 'hit') this.view.addStarBurst({ ...(event.impact?.pos ?? snapshot.players[event.victim].pos) }, time);
+        }
+        this.syncPresentation();
+      }
+      return;
+    }
     if (this.paused || this.hidden || this.halftimeGated) return;
     const steps = this.stepper.advance(delta);
     for (let i = 0; i < steps; i++) {
@@ -159,6 +180,36 @@ export class MatchScene extends Phaser.Scene {
     this.syncPresentation();
   }
 
+  startReplay(half: 0 | 1): void {
+    this.endReplay();
+    const result = reconstructReplay(this.replay, this.state.halfHits[half], 60, 60);
+    this.playback = { states: result.kind === 'window' ? result.states : [], cursor: 0 };
+    this.clearControls();
+    this.playbackStepper.reset();
+    this.calloutBanner.clear();
+    this.view.clearTransientEffects();
+    this.pendingCraters = [];
+    this.flashStartMs = -Infinity;
+    this.replayLabel = this.add.text(16, 16, result.kind === 'no-hit' ? 'REPLAY - NO HIT' : 'REPLAY', { fontSize: '20px', color: '#ffffff', backgroundColor: '#000000' }).setDepth(1000);
+    this.replayReturn = this.add.text(SCREEN_W - 100, 16, 'RETURN', { fontSize: '18px', color: '#ffffff', backgroundColor: '#000000', padding: { x: 8, y: 8 } }).setDepth(1000).setInteractive();
+    this.replayReturn.on('pointerdown', () => this.endReplay());
+    this.syncPresentation();
+  }
+
+  endReplay(): void {
+    if (!this.playback) return;
+    this.playback = null;
+    this.playbackStepper.reset();
+    this.replayLabel?.destroy(); this.replayLabel = undefined;
+    this.replayReturn?.destroy(); this.replayReturn = undefined;
+    this.calloutBanner?.clear();
+    this.view?.clearTransientEffects();
+    this.pendingCraters = [];
+    this.flashStartMs = -Infinity;
+    this.clearControls();
+    this.syncPresentation();
+  }
+
   isHalftimeGated(): boolean { return this.halftimeGated; }
 
   continueHalftime(): void { this.halftimeGated = false; this.clearControls(); }
@@ -174,9 +225,10 @@ export class MatchScene extends Phaser.Scene {
   }
 
   private syncPresentation(): void {
-    this.view.sync(this.state, this.nowMs);
-    this.hud.sync(this.state);
-    this.calloutBanner.sync(this.state.tick);
+    const displayed = this.playback?.states[this.playback.cursor] ?? this.state;
+    this.view.sync(displayed, this.nowMs);
+    this.hud.sync(displayed);
+    this.calloutBanner.sync(displayed.tick);
     this.flash.setAlpha(flashAlpha(this.nowMs - this.flashStartMs));
     if (this.touch) {
       const me = this.state.players[this.state.controlled[0]];
