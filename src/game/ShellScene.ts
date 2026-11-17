@@ -5,7 +5,7 @@ import { drawText } from '../art/pixelFont';
 import { PAL } from '../art/palette';
 import { TEAMS } from '../content/teams';
 import { LEVEL_ORDER, type Level } from '../sim';
-import { cupMatchConfig, startCup, type CupSession } from './cupSession';
+import { consumeResult, retryCup, quitCup, cupMatchConfig, startCup, type CupSession } from './cupSession';
 import { parseMatchParams } from './params';
 import { setupConfig, type MatchLength, type SetupSelection } from './setupSelection';
 import type { MatchLaunch } from './launch';
@@ -29,6 +29,7 @@ export class ShellScene extends Phaser.Scene {
     this.render();
   }
   private onKey(event: KeyboardEvent): void {
+    if (event.repeat && (event.key === 'Enter' || event.key === ' ')) return;
     if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Enter', ' ', 'Escape', 'Tab'].includes(event.key)) event.preventDefault();
     const targets = this.screen === 'title' ? [0, 1] : this.mode === 'cup' ? [0, 2, 3, 4, 5] : [0, 1, 2, 3, 4, 5];
     const position = targets.indexOf(this.focus);
@@ -63,6 +64,28 @@ export class ShellScene extends Phaser.Scene {
       teamNames: [TEAMS[this.selection.team].name, this.cup ? this.cup.opponents[this.cup.rung].name : TEAMS[this.selection.opponent].name] };
     this.scene.start('match', this.currentMatchLaunch);
   }
+  settleCupResult(id: string | null, [home, away]: readonly [number, number]): CupSession['status'] {
+    if (!id || !this.cup || this.currentMatchLaunch?.matchId !== id) return 'quit';
+    this.cup = consumeResult(this.cup, id, home === away ? 'draw' : home > away ? 'win' : 'loss');
+    return this.cup.status;
+  }
+
+  nextCupMatch(id: string | null): MatchLaunch | null {
+    if (!id || !this.cup || this.currentMatchLaunch?.matchId !== id || !this.cup.consumedIds.includes(id)) return null;
+    if (this.cup.status === 'ended') this.cup = retryCup(this.cup);
+    if (this.cup.status !== 'active') return null;
+    this.currentMatchLaunch = { ...this.currentMatchLaunch, config: cupMatchConfig(this.cup), matchId: this.cup.matchId,
+      teamNames: [this.cup.selectedTeam.name, this.cup.opponents[this.cup.rung].name] };
+    return this.currentMatchLaunch;
+  }
+
+  returnToTitle(): void {
+    if (this.cup) this.cup = quitCup(this.cup);
+    this.currentMatchLaunch = null;
+    this.screen = 'title';
+    this.focus = 0;
+  }
+
   private render(): void {
     this.children.removeAll(true);
     const g = this.add.graphics();

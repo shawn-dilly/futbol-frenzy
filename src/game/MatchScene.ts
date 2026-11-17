@@ -16,13 +16,15 @@ import { MatchView } from './MatchView';
 import { FixedStepper } from './loop';
 import { launchFromSearch, type MatchLaunch } from './launch';
 import { createReplayRecord, recordReplayInput, reconstructReplay, type ReplayRecord } from './replay';
+import type { ShellScene } from './ShellScene';
+import { resultScreen } from './resultScreen';
 import { outgoingAt } from './outgoing';
 import { Sfx, sfxForEvent } from '../audio/sfx';
 
 declare global {
   interface Window {
     /** Dev/test hooks: `showCallout` shows the callout a hit of that tier and type would; `calloutText` is what the banner shows now ('' if nothing). */
-    __ff?: { state: MatchState; showCallout: (tier: HurtTier, hit: HitType) => void; calloutText: () => string; replay: () => ReplayRecord; startReplay: (half: 0 | 1) => void; endReplay: () => void; replayTick: () => number | null; pause: () => void; resume: () => void; halftimeGate: () => boolean; continueHalftime: () => void; launch: (launch: MatchLaunch) => void }
+    __ff?: { state: MatchState; showCallout: (tier: HurtTier, hit: HitType) => void; calloutText: () => string; replay: () => ReplayRecord; startReplay: (half: 0 | 1) => void; endReplay: () => void; replayTick: () => number | null; pause: () => void; resume: () => void; halftimeGate: () => boolean; continueHalftime: () => void; launch: (launch?: MatchLaunch) => void }
   }
 }
 
@@ -56,7 +58,9 @@ export class MatchScene extends Phaser.Scene {
   private seed = 0;
   private launch!: MatchLaunch;
   private halftimeGated = false;
-  private halftimeUI: Phaser.GameObjects.GameObject[] = [];
+  private result: ReturnType<typeof resultScreen> | null = null;
+  private leaving = false;
+  private summaryUI: Phaser.GameObjects.GameObject[] = [];
   /** Sim tick of the full-time whistle, null until it blows. */
   private fulltimeTick: number | null = null;
   /** Audio resources are released on each shutdown. */
@@ -73,6 +77,8 @@ export class MatchScene extends Phaser.Scene {
 
   create(): void {
     this.playback = null;
+    this.result = null;
+    this.leaving = false;
     this.paused = false;
     this.halftimeGated = false;
     this.hidden = document.hidden;
@@ -95,7 +101,7 @@ export class MatchScene extends Phaser.Scene {
       startReplay: (half) => { if (active) this.startReplay(half); },
       endReplay: () => { if (active) this.endReplay(); },
       replayTick: () => this.playback?.states[this.playback.cursor]?.tick ?? null,
-      launch: (launch) => { if (active) this.scene.restart(launch); },
+      launch: (launch = this.launch) => { if (active) this.scene.restart(launch); },
       halftimeGate: () => this.isHalftimeGated(),
       continueHalftime: () => { if (active) this.continueHalftime(); },
       showCallout: (tier, hit) => { if (!active) return; const c = this.callouts.pick(tier, hit); if (c) this.calloutBanner.show(c.text, tier, this.state.tick); },
@@ -103,7 +109,7 @@ export class MatchScene extends Phaser.Scene {
     };
     window.__ff = hook;
     this.view = new MatchView(this, seededRandom(this.seed ^ EFFECT_SEED_SALT));
-    this.hud = new Hud(this);
+    this.hud = new Hud(this, this.launch.teamNames);
     this.calloutBanner = new CalloutBanner(this);
     this.flash = this.add.rectangle(0, 0, SCREEN_W, SCREEN_H, 0xffffff).setOrigin(0, 0).setDepth(DEPTH.flash).setAlpha(0);
     this.keys = new KeyboardPad(this);
@@ -113,10 +119,22 @@ export class MatchScene extends Phaser.Scene {
 
     // Only a fresh press restarts: a key already held at full time keeps auto-repeating keydown, which must not count.
     const restart = () => {
-      if (!this.playback && canRestart(this.state.phase, this.state.tick, this.fulltimeTick)) this.scene.restart({ ...this.launch, config: { ...this.launch.config, seed: this.seed + 1 } });
+      if (!this.result && !this.playback && canRestart(this.state.phase, this.state.tick, this.fulltimeTick)) this.scene.restart({ ...this.launch, config: { ...this.launch.config, seed: this.seed + 1 } });
     };
     this.input.on('pointerdown', restart);
-    const restartKey = (e: KeyboardEvent) => { if (this.halftimeGated && !this.playback && !e.repeat) { if (e.key === 'Enter' || e.key === ' ') this.continueHalftime(); else if (e.key.toLowerCase() === 'r') this.startReplay(0); return; } if (e.key === 'Escape' && this.playback) { this.endReplay(); return; } if (!e.repeat) restart(); };
+    const restartKey = (e: KeyboardEvent) => {
+      if (e.repeat || this.leaving) return;
+      if (this.playback) {
+        if (e.key === 'Escape') this.endReplay();
+      } else if (this.result || this.halftimeGated) {
+        if (e.key.toLowerCase() === 'r') this.startReplay(this.result ? 1 : 0);
+        else if (this.result && e.key === 'Escape') this.leaveResult(true);
+        else if (e.key === 'Enter' || e.key === ' ') {
+          if (this.result) this.leaveResult(!this.result.action);
+          else this.continueHalftime();
+        }
+      } else restart();
+    };
     this.input.keyboard?.on('keydown', restartKey);
     // Browsers block audio until a gesture: the first press unlocks it (idempotent, so listening to every press is harmless).
     const unlock = () => this.sfx.unlock();
@@ -127,7 +145,7 @@ export class MatchScene extends Phaser.Scene {
     this.events.once('shutdown', () => {
       active = false;
       this.disposeReplay();
-      this.hideHalftime();
+      this.hideSummary();
       this.sfx.dispose();
       this.input.off('pointerdown', restart);
       this.input.keyboard?.off('keydown', restartKey);
@@ -157,22 +175,28 @@ export class MatchScene extends Phaser.Scene {
       }
       return;
     }
-    if (this.paused || this.hidden || this.halftimeGated) return;
+    if (this.paused || this.hidden || this.result || this.halftimeGated) return;
     const steps = this.stepper.advance(delta);
     for (let i = 0; i < steps; i++) {
       const inputs = this.readPads();
       recordReplayInput(this.replay, inputs);
       const previousPhase = this.state.phase;
       step(this.state, inputs);
-      const gate = previousPhase !== 'halftime' && this.state.phase === 'halftime' && (this.launch.mode === 'friendly' || this.launch.mode === 'cup');
+      const shellMatch = this.launch.mode === 'friendly' || this.launch.mode === 'cup';
       this.handleEvents(this.state.events);
       this.landCraters();
       this.playChargeSound();
-      if (gate) {
+      if (shellMatch && this.state.phase === 'fulltime') {
+        this.result = resultScreen(this.launch.mode === 'cup' ? this.shell.settleCupResult(this.launch.matchId, this.state.score) : null);
+        this.clearControls();
+        this.showSummary();
+        break;
+      }
+      if (shellMatch && previousPhase !== 'halftime' && this.state.phase === 'halftime') {
         this.halftimeGated = true;
         this.freezeTicks = 0;
         this.clearControls();
-        this.showHalftime();
+        this.showSummary();
         break;
       }
       if (this.freezeTicks > 0) {
@@ -187,7 +211,7 @@ export class MatchScene extends Phaser.Scene {
 
   startReplay(half: 0 | 1): void {
     this.endReplay();
-    this.hideHalftime();
+    this.hideSummary();
     const result = reconstructReplay(this.replay, this.state.halfHits[half], 60, 60);
     this.playback = { states: result.kind === 'window' ? result.states : [], cursor: 0 };
     this.clearControls();
@@ -213,7 +237,7 @@ export class MatchScene extends Phaser.Scene {
   endReplay(): void {
     if (!this.playback) return;
     this.disposeReplay();
-    if (this.halftimeGated) this.showHalftime();
+    if (this.halftimeGated || this.result) this.showSummary();
     this.syncPresentation();
   }
 
@@ -232,31 +256,60 @@ export class MatchScene extends Phaser.Scene {
 
   isHalftimeGated(): boolean { return this.halftimeGated; }
 
-  continueHalftime(): void { if (!this.halftimeGated || this.playback) return; this.halftimeGated = false; this.hideHalftime(); this.clearControls(); }
+  continueHalftime(): void { if (!this.halftimeGated || this.playback) return; this.halftimeGated = false; this.hideSummary(); this.clearControls(); }
 
-  private hideHalftime(): void { this.halftimeUI.forEach(item => item.destroy()); this.halftimeUI = []; }
+  private hideSummary(): void { this.summaryUI.forEach(item => item.destroy()); this.summaryUI = []; }
 
-  private showHalftime(): void {
-    this.hideHalftime();
-    const g = this.add.graphics().setDepth(2200); this.halftimeUI.push(g);
+  private get shell(): ShellScene { return this.scene.get('shell') as ShellScene; }
+
+  private leaveResult(title: boolean): void {
+    if (!this.result || this.playback || this.leaving) return;
+    this.leaving = true;
+    if (title) {
+      this.shell.returnToTitle();
+      this.scene.start('shell');
+      return;
+    }
+    const next = this.launch.mode === 'cup' ? this.shell.nextCupMatch(this.launch.matchId) :
+      { ...this.launch, config: { ...this.launch.config, seed: this.seed + 1 } };
+    if (next) this.scene.restart(next);
+    else this.leaving = false;
+  }
+
+  private showSummary(): void {
+    this.hideSummary();
+    const g = this.add.graphics().setDepth(2200); this.summaryUI.push(g);
     const rect = (x: number, y: number, w: number, h: number, color: string) => { g.fillStyle(Phaser.Display.Color.HexStringToColor(color).color).fillRect(x, y, w, h); };
     const text = (s: string, x: number, y: number, color: string = PAL.wht, scale = 1, align: 'l' | 'c' | 'r' = 'l') => drawText(rect, s, x, y, color, scale, align);
     const panel = (x: number, y: number, w: number, h: number, border: string, fill: string = PAL.ink) => { rect(x, y, w, h, border); rect(x + 1, y + 1, w - 2, h - 2, fill); };
     rect(0, 0, 320, 180, PAL.navy);
-    text('HALF TIME', 160, 6, PAL.yel, 3, 'c');
+    text(this.result?.title ?? 'HALF TIME', 160, 6, PAL.yel, 3, 'c');
     panel(12, 28, 176, 22, PAL.gry); text(this.launch.teamNames?.[0] ?? 'HOME', 20, 36, PAL.wht, 1); text(`${this.state.score[0]} - ${this.state.score[1]}`, 100, 33, PAL.yel, 2, 'c'); text(this.launch.teamNames?.[1] ?? 'AWAY', 180, 36, PAL.wht, 1, 'r');
     panel(12, 54, 176, 84, PAL.gry);
     const rows = [['SHOTS', 'shots'], ['BIG HITS', 'bigHits'], ['KOS', 'kos'], ['STEALS', 'steals']] as const;
     rows.forEach(([label, key], i) => { const y = 60 + i * 17; text(String(this.state.stats[0][key]), 24, y, PAL.wht, 2); text(label, 100, y + 2, PAL.gry, 1, 'c'); text(String(this.state.stats[1][key]), 176, y, PAL.wht, 2, 'r'); });
-    panel(196, 28, 112, 76, PAL.yel); rect(197, 29, 110, 11, PAL.yel); text('HIT OF THE HALF', 252, 32, PAL.ink, 1, 'c');
-    text(this.state.halfHits[0] ? 'HIT AVAILABLE' : 'NO HIT', 252, 57, PAL.wht, 2, 'c'); text('WATCH REPLAY >', 252, 87, PAL.yel, 1, 'c');
+    panel(196, 28, 112, 76, PAL.yel); rect(197, 29, 110, 11, PAL.yel); text(this.result ? '2ND HALF HIT' : 'HIT OF THE HALF', 252, 32, PAL.ink, 1, 'c');
+    text(this.state.halfHits[this.result ? 1 : 0] ? 'HIT AVAILABLE' : 'NO HIT', 252, 57, PAL.wht, 2, 'c'); text('WATCH REPLAY >', 252, 87, PAL.yel, 1, 'c');
     panel(196, 108, 112, 30, PAL.gry, PAL.dk); text('RESERVES', 252, 113, PAL.wht, 1, 'c'); text(`${this.state.reserves[0]} - ${this.state.reserves[1]}`, 252, 123, PAL.yel, 2, 'c');
-    panel(12, 144, 144, 26, PAL.gry, PAL.dk); text('REPLAY R', 84, 152, PAL.wht, 2, 'c');
-    panel(164, 144, 144, 26, PAL.wht, PAL.red); text('2ND HALF >', 236, 152, PAL.wht, 2, 'c');
-    const button = (x: number, y: number, w: number, h: number, action: () => void) => { const hit = this.add.rectangle(x, y, w, h, 0, 0).setOrigin(0).setDepth(2201).setInteractive(); hit.on('pointerdown', action); this.halftimeUI.push(hit); };
-    button(12, 144, 144, 26, () => { if (this.halftimeGated && !this.playback) this.startReplay(0); });
-    button(196, 40, 112, 64, () => { if (this.halftimeGated && !this.playback) this.startReplay(0); });
-    button(164, 144, 144, 26, () => this.continueHalftime());
+    const button = (x: number, y: number, w: number, h: number, action: () => void) => { const hit = this.add.rectangle(x, y, w, h, 0, 0).setOrigin(0).setDepth(2201).setInteractive(); hit.on('pointerdown', action); this.summaryUI.push(hit); };
+    const replay = () => this.startReplay(this.result ? 1 : 0);
+    button(196, 40, 112, 64, replay);
+    const footer = (x: number, w: number, label: string, action: () => void, primary = false) => {
+      panel(x, 144, w, 26, primary ? PAL.wht : PAL.gry, primary ? PAL.red : PAL.dk);
+      text(label, x + w / 2, 152, PAL.wht, 2, 'c');
+      button(x, 144, w, 26, action);
+    };
+    if (this.result && !this.result.action) {
+      footer(12, 144, 'REPLAY R', replay);
+      footer(164, 144, 'TITLE ESC', () => this.leaveResult(true), true);
+    } else if (this.result?.action) {
+      footer(12, 88, 'REPLAY R', replay);
+      footer(106, 94, 'TITLE ESC', () => this.leaveResult(true));
+      footer(206, 102, this.result.action, () => this.leaveResult(false), true);
+    } else {
+      footer(12, 144, 'REPLAY R', replay);
+      footer(164, 144, '2ND HALF >', () => this.continueHalftime(), true);
+    }
   }
 
   pause(): void { this.paused = true; this.clearControls(); }

@@ -31,7 +31,7 @@ export class Hud {
   private banner: { text: string; untilTick: number } | null = null;
   private fulltimeTick: number | null = null;
 
-  constructor(scene: Phaser.Scene) {
+  constructor(scene: Phaser.Scene, private readonly teamNames: readonly [string, string] = TEAM_NAMES) {
     const tex = scene.textures.createCanvas(HUD_KEY, SCREEN_W, SCREEN_H);
     if (!tex) throw new Error('hud texture could not be created');
     this.texture = tex;
@@ -68,11 +68,11 @@ export class Hud {
     const rect = canvasRect(ctx);
     rect(0, 0, SCREEN_W, HUD_BAR_H, PAL.ink);
     rect(LEFT.badgeX, BADGE.y, BADGE.size, BADGE.size, PAL.red);
-    drawText(rect, TEAM_NAMES[0], LEFT.nameX, TEXT_Y, PAL.wht);
+    drawText(rect, this.teamNames[0], LEFT.nameX, TEXT_Y, PAL.wht);
     drawText(rect, String(score[0]), LEFT.scoreX, TEXT_Y, PAL.yel);
     drawText(rect, clock, SCREEN_W / 2, TEXT_Y, PAL.wht, 1, 'c');
     drawText(rect, String(score[1]), RIGHT.scoreX, TEXT_Y, PAL.yel);
-    drawText(rect, TEAM_NAMES[1], RIGHT.nameRightX, TEXT_Y, PAL.wht, 1, 'r');
+    drawText(rect, this.teamNames[1], RIGHT.nameRightX, TEXT_Y, PAL.wht, 1, 'r');
     rect(RIGHT.badgeX, BADGE.y, BADGE.size, BADGE.size, PAL.blue);
     rage.forEach((r, team) => {
       const frameW = RAGE.maxPx + 2 * RAGE.frame;

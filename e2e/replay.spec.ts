@@ -3,11 +3,7 @@ import { reconstructReplay, type ReplayRecord } from '../src/game/replay';
 import type { MatchState } from '../src/sim';
 import type { MatchLaunch } from '../src/game/launch';
 
-declare global {
-  interface Window {
-    __ff?: { state: MatchState; replay: () => ReplayRecord; pause: () => void; resume: () => void; launch: (launch: MatchLaunch) => void; halftimeGate: () => boolean; continueHalftime: () => void };
-  }
-}
+import type {} from '../src/game/MatchScene';
 
 test('live steps are recorded and reconstruct the scene', async ({ page }) => {
   await page.goto('/?match=1&seed=3&mute=1&half=20');
