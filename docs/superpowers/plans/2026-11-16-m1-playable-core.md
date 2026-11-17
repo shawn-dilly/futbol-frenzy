@@ -461,7 +461,7 @@ test('a carried ball pushed against the goal line does not score or leave the pi
   - `'fulltime'`: terminal. `step` still clears events and advances `tick`, nothing else changes.
   - The clock only runs during `'play'`.
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 ```ts
 // tests/sim/flow.test.ts
@@ -494,10 +494,10 @@ test('events are cleared every tick', () => {
 });
 ```
 
-- [ ] **Step 2:** Run `npm test`. Expected: FAIL.
-- [ ] **Step 3:** Implement `flow.ts`; wire it into `step`.
-- [ ] **Step 4:** Run `npm test`. Expected: PASS.
-- [ ] **Step 5:** Commit: `feat(sim): goals, clock, halves, full time`.
+- [x] **Step 2:** Run `npm test`. Expected: FAIL.
+- [x] **Step 3:** Implement `flow.ts`; wire it into `step`.
+- [x] **Step 4:** Run `npm test`. Expected: PASS.
+- [x] **Step 5:** Commit: `feat(sim): goals, clock, halves, full time`.
 
 ---
 
