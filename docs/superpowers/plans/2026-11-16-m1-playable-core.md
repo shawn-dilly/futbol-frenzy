@@ -521,7 +521,7 @@ A deliberately simple brain so the match is playable. M3 replaces `brainIntent`;
   5. Everyone else: move toward `anchor + ((ball.x - 240) * ANCHOR_SHIFT_X, (ball.y - FIELD_MID_Y) * ANCHOR_SHIFT_Y)`, clamped to the pitch. In rules 2 and 5, a player within 3 units of the target stands still.
 - Move vectors are unit length or zero. The brain never uses turbo in M1.
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 ```ts
 // tests/sim/brain.test.ts
@@ -561,10 +561,10 @@ test('two CPU-v-CPU matches with the same seed are identical; a full match finis
 });
 ```
 
-- [ ] **Step 2:** Run `npm test`. Expected: FAIL.
-- [ ] **Step 3:** Implement `brain.ts`; wire it into `step`.
-- [ ] **Step 4:** Run `npm test`. Expected: PASS. Then print the score of the determinism match once (temporary `console.log`), confirm the match is not stuck (the ball changed owner at least a few times), and remove the log.
-- [ ] **Step 5:** Commit: `feat(sim): placeholder computer brain, determinism test`.
+- [x] **Step 2:** Run `npm test`. Expected: FAIL.
+- [x] **Step 3:** Implement `brain.ts`; wire it into `step`.
+- [x] **Step 4:** Run `npm test`. Expected: PASS. Then print the score of the determinism match once (temporary `console.log`), confirm the match is not stuck (the ball changed owner at least a few times), and remove the log.
+- [x] **Step 5:** Commit: `feat(sim): placeholder computer brain, determinism test`.
 
 ---
 

@@ -28,6 +28,21 @@ describe('match flow', () => {
     const snap = JSON.stringify({ ...s, tick: 0, events: [] }); runTicks(s, 100);
     expect(JSON.stringify({ ...s, tick: 0, events: [] })).toBe(snap);
   });
+  test('the tick that ends each half emits its whistle', () => {
+    const s = createMatch(short);
+    runTicks(s, 60 + 119); expect(s.events).toEqual([]);
+    runTicks(s, 1); expect(s.events).toContainEqual({ type: 'whistle', what: 'halftime' });
+    runTicks(s, 180 + 60 + 119); runTicks(s, 1);
+    expect(s.events).toContainEqual({ type: 'whistle', what: 'fulltime' });
+  });
+  test('a goal for team 1 scores for team 1, then team 0 kicks off', () => {
+    const s = createMatch(cfg); runTicks(s, 60);
+    s.ball.owner = null; s.ball.pos = { x: 2, y: 62 }; s.ball.vel = { x: -220, y: 0 };
+    runTicks(s, 1);
+    expect(s.score).toEqual([0, 1]); expect(s.events).toContainEqual({ type: 'goal', team: 1 });
+    runTicks(s, 120);
+    expect(s.phase).toBe('kickoff'); expect(s.ball.owner).toBe(4);
+  });
   test('events are cleared every tick', () => {
     const s = createMatch(cfg); expect(s.events.length).toBe(1);
     runTicks(s, 1); expect(s.events).toEqual([]);
