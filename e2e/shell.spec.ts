@@ -46,3 +46,21 @@ test('setup direction targets fit at 640 by 360', async ({ page }) => {
   await page.waitForFunction(() => !!window.__ff);
   expect(await page.evaluate(() => window.__ff!.state.config)).toMatchObject({ seed: 42, halfSeconds: 120, level: ['pro', 'pro'] });
 });
+
+test('Cup starts against the first other team', async ({ page }) => {
+  await page.goto('/?seed=19&mute=1');
+  await page.waitForSelector('canvas');
+  await page.waitForTimeout(500);
+  await page.keyboard.press('ArrowDown');
+  await page.waitForTimeout(60);
+  await page.keyboard.press('Enter');
+  await page.waitForTimeout(60);
+  await page.keyboard.press('ArrowUp');
+  await page.waitForTimeout(60);
+  await page.keyboard.press('Enter');
+  await page.waitForFunction(() => !!window.__ff);
+  expect(await page.evaluate(() => window.__ff!.state.config)).toMatchObject({ seed: 19, ratings: [
+    { speed: 0.4, power: 0.8, skill: 0.5, dirty: 0.6 },
+    { speed: 0.8, power: 0.4, skill: 0.6, dirty: 0.5 },
+  ] });
+});
