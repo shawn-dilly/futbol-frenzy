@@ -6,8 +6,8 @@ export const FRAME_W = 24;
 export const FRAME_H = 20;
 /** Feet centre inside a frame; poses below are offsets from it, facing right. */
 const KIT_COUNT = KITS.length;
-const ORIGIN_X = 12;
-const ORIGIN_Y = 18;
+export const ORIGIN_X = 12;
+export const ORIGIN_Y = 18;
 
 export const ANIMS: Record<AnimName, { frames: number; ticksPerFrame: number; loop: boolean }> = {
   idle: { frames: 2, ticksPerFrame: 30, loop: true },
@@ -34,7 +34,7 @@ const ARM_BACK: R[] = [[-4, -9, 1, 2], [-5, -8, 1, 2]];
 const ARM_HANG: R[] = [[-4, -9, 1, 3], [4, -9, 1, 3]];
 const ARM_FWD_HANG: R[] = [[4, -8, 1, 3]];
 
-const POSES: Record<AnimName, Pose[]> = {
+export const POSES: Record<AnimName, Pose[]> = {
   idle: [
     { bob: 0, legs: [[-3, -3, 2, 2], [2, -3, 2, 2]], boots: [[-3, -1, 2, 1], [2, -1, 3, 1]], arms: ARM_HANG },
     { bob: 1, legs: [[-3, -2, 2, 1], [2, -2, 2, 1]], boots: [[-3, -1, 2, 1], [2, -1, 3, 1]], arms: ARM_HANG },
@@ -55,9 +55,9 @@ const POSES: Record<AnimName, Pose[]> = {
     // 4 down
     { bob: 1, legs: [[2, -2, 2, 1], [-4, -2, 2, 1]], boots: [[2, -1, 3, 1], [-5, -1, 2, 1]],
       arms: [[4, -9, 1, 2], [5, -10, 1, 2], [-4, -9, 1, 2], [-5, -8, 1, 2]] },
-    // 5 passing: leading knee swinging through in front
-    { bob: 0, legs: [[-1, -3, 2, 2], [2, -3, 2, 1], [3, -2, 2, 1]], boots: [[-1, -1, 3, 1], [5, -2, 2, 1]],
-      arms: ARM_HANG },
+    // 5 passing: frame 2 on the other leg (support leg mirrored about the body centre, trailing foot still behind), arms swapped
+    { bob: 0, legs: [[0, -3, 2, 2], [-4, -3, 2, 1], [-5, -2, 2, 1]], boots: [[-1, -1, 3, 1], [-7, -2, 2, 1]],
+      arms: [[-4, -8, 1, 3], [4, -10, 1, 3]] },
   ],
   kick: [
     // 0 wind-up: kicking foot cocked high behind

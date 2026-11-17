@@ -1,13 +1,9 @@
 import Phaser from 'phaser';
+import { BootScene } from './BootScene';
+import { MatchScene } from './MatchScene';
 
 const LOGICAL_WIDTH_PX = 320;
 const LOGICAL_HEIGHT_PX = 180;
-
-class EmptyScene extends Phaser.Scene {
-  constructor() {
-    super('empty');
-  }
-}
 
 new Phaser.Game({
   type: Phaser.AUTO,
@@ -20,5 +16,5 @@ new Phaser.Game({
     mode: Phaser.Scale.FIT,
     autoCenter: Phaser.Scale.CENTER_BOTH,
   },
-  scene: [EmptyScene],
+  scene: [BootScene, MatchScene],
 });

@@ -681,7 +681,7 @@ export class Hud { constructor(scene: Phaser.Scene); sync(state: MatchState): vo
 - `Hud` draws the 11-pixel top bar from the mockup: "RHINOS" and its score on the left in red, "VIPERS" and its score on the right in blue, and `1ST M:SS` / `2ND M:SS` centred; three turbo pips bottom-centre for team 0, a pip lit when the meter covers it. It draws with `drawText` into one canvas texture and redraws only when the displayed values change.
 - `MatchScene.update(time, delta)`: `n = stepper.advance(delta)`; for each of `n`: read input (neutral pad until Task 10), `step`, then handle `state.events` (banner "GOAL!" for 90 ticks on `goal`; "HALF TIME" and "FULL TIME" on those whistles). Then `view.sync` and `hud.sync` once. On `document.visibilitychange` to hidden, reset the stepper's accumulator. At `'fulltime'`, a tap or key press restarts with `seed + 1`.
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 ```ts
 // tests/game/loop.test.ts
@@ -704,11 +704,11 @@ test('clock text', () => {
 
 If importing `MatchView.ts` or `Hud.ts` in node fails because Phaser touches `window` at import, move `cameraTarget`, `worldToScreen`, `FIELD_TOP`, and `formatClock` into `src/game/layout.ts` and import from there in both the classes and the tests.
 
-- [ ] **Step 2:** Run `npm test`. Expected: FAIL.
-- [ ] **Step 3:** Implement the five files.
-- [ ] **Step 4:** Run `npm test` and `npm run build`. Expected: both pass.
-- [ ] **Step 5:** Run `npm run dev`, open `http://localhost:5173/?demo=1`. Confirm by looking: ten animated players, the camera follows the ball, the score and clock change, a "GOAL!" banner appears on a goal, the layout matches the Live match mockup. Take a screenshot and compare it side by side with `mockups.html`; fix differences in proportions or colour.
-- [ ] **Step 6:** Commit: `feat(game): match scene, fixed-step loop, pitch view, HUD`.
+- [x] **Step 2:** Run `npm test`. Expected: FAIL.
+- [x] **Step 3:** Implement the five files.
+- [x] **Step 4:** Run `npm test` and `npm run build`. Expected: both pass.
+- [x] **Step 5:** Run `npm run dev`, open `http://localhost:5173/?demo=1`. Confirm by looking: ten animated players, the camera follows the ball, the score and clock change, a "GOAL!" banner appears on a goal, the layout matches the Live match mockup. Take a screenshot and compare it side by side with `mockups.html`; fix differences in proportions or colour.
+- [x] **Step 6:** Commit: `feat(game): match scene, fixed-step loop, pitch view, HUD`.
 
 ---
 
