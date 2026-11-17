@@ -29,8 +29,19 @@ function advancePlay(state: MatchState, scored: TeamId | null): void {
   }
 }
 
+/** Play has stopped: nobody keeps the velocity they had, so nobody animates as running. */
+function stopPlayers(state: MatchState): void {
+  for (const p of state.players) p.vel = { x: 0, y: 0 };
+}
+
 /** Called once at the end of every tick; `scored` is moveFreeBall's result (null outside 'play'). */
 export function advanceFlow(state: MatchState, scored: TeamId | null): void {
+  const wasPlaying = state.phase === 'play';
+  runPhase(state, scored);
+  if (wasPlaying && state.phase !== 'play') stopPlayers(state);
+}
+
+function runPhase(state: MatchState, scored: TeamId | null): void {
   switch (state.phase) {
     case 'kickoff':
       if (pauseElapsed(state)) state.phase = 'play';

@@ -1,5 +1,5 @@
 import type { PlayerState, PlayerStatus } from './types';
-import { HURT } from './constants';
+import { HURT_TIERS } from './constants';
 
 /** Enters `status` for `ticks` ticks (0 = open-ended). */
 export function setStatus(p: PlayerState, status: PlayerStatus, ticks: number): void {
@@ -20,5 +20,5 @@ export function canAct(p: PlayerState): boolean {
 
 /** Hurt with tier knockdown or worse: lying on the ground. */
 export function isDown(p: PlayerState): boolean {
-  return p.status.kind === 'hurt' && HURT[p.status.tier].minDamage >= HURT.knockdown.minDamage;
+  return p.status.kind === 'hurt' && HURT_TIERS.indexOf(p.status.tier) >= HURT_TIERS.indexOf('knockdown');
 }

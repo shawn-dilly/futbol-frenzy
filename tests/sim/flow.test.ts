@@ -1,5 +1,8 @@
 import { describe, expect, test } from 'vitest';
+import type { PadInput } from '../../src/sim/types';
 import { createMatch } from '../../src/sim/setup';
+import { neutralPad } from '../../src/sim/setup';
+import { animFor } from '../../src/game/playerAnim';
 import { runTicks } from '../helpers';
 
 const cfg = { seed: 1, halfSeconds: 120, human: [true, false] as [boolean, boolean] };
@@ -46,5 +49,36 @@ describe('match flow', () => {
   test('events are cleared every tick', () => {
     const s = createMatch(cfg); expect(s.events.length).toBe(1);
     runTicks(s, 1); expect(s.events).toEqual([]);
+  });
+
+  describe('players stop when play stops', () => {
+    const moving: [PadInput, PadInput] = [{ ...neutralPad(), moveX: 1 }, neutralPad()];
+    const running = () => { // every player moving: team 0 human runs right, the rest follow the brain
+      const s = createMatch(cfg); runTicks(s, 60);
+      runTicks(s, 5, moving);
+      expect(s.players.some(p => p.vel.x !== 0 || p.vel.y !== 0)).toBe(true);
+      return s;
+    };
+    const expectStopped = (s: ReturnType<typeof createMatch>) => {
+      for (const p of s.players) {
+        expect(p.vel, `player ${p.id}`).toEqual({ x: 0, y: 0 });
+        expect(animFor(p, s.tick), `player ${p.id}`).toEqual({ key: 'idle', tick: s.tick });
+      }
+    };
+    test('goal', () => {
+      const s = running();
+      s.ball.owner = null; s.ball.pos = { x: 478, y: 62 }; s.ball.vel = { x: 220, y: 0 };
+      runTicks(s, 1); expect(s.phase).toBe('goal'); expectStopped(s);
+      runTicks(s, 30); expectStopped(s);
+    });
+    test('halftime', () => {
+      const s = running(); s.clockTicks = 1;
+      runTicks(s, 1, moving); expect(s.phase).toBe('halftime'); expectStopped(s);
+    });
+    test('fulltime', () => {
+      const s = running(); s.half = 2; s.clockTicks = 1;
+      runTicks(s, 1, moving); expect(s.phase).toBe('fulltime'); expectStopped(s);
+      runTicks(s, 30); expectStopped(s);
+    });
   });
 });

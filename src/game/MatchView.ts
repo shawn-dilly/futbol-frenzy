@@ -18,8 +18,8 @@ const FLIP_OFFSET_PX = 1;
 const MARKER = { w: 3, h: 2, above: 20, color: Phaser.Display.Color.HexStringToColor(PAL.yel).color }; // px above the feet
 const GOALKEEPER_KIT_OFFSET = 2;
 
-/** Until Task 6 draws the new frames, a key the atlas lacks shows idle. */
-const drawable = (key: string): AnimName => (key in ANIMS ? (key as AnimName) : 'idle');
+/** Until Task 5 draws the new frames, a key the atlas lacks shows idle. */
+const drawable = (key: string): AnimName => (Object.hasOwn(ANIMS, key) ? (key as AnimName) : 'idle');
 
 interface PlayerView { sprite: Phaser.GameObjects.Image; shadow: Phaser.GameObjects.Rectangle; flip: boolean }
 

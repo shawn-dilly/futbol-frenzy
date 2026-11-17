@@ -27,3 +27,11 @@ test('step moves a free ball by its velocity', () => {
   expect(s.ball.pos.x).toBeCloseTo(301, 5);
   expect(s.ball.vel.x).toBeCloseTo(60 * 0.985, 5);
 });
+test('hitPress is true only on the tick HIT goes down; hitHeld follows the button', () => {
+  const down = padToIntent(pad({ hit: true }), pad({}));
+  expect([down.hitPress, down.hitHeld]).toEqual([true, true]);
+  const held = padToIntent(pad({ hit: true }), pad({ hit: true }));
+  expect([held.hitPress, held.hitHeld]).toEqual([false, true]);
+  const up = padToIntent(pad({}), pad({ hit: true }));
+  expect([up.hitPress, up.hitHeld]).toEqual([false, false]);
+});

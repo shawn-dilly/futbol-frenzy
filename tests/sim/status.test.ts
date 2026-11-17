@@ -2,9 +2,10 @@ import { test, expect } from 'vitest';
 import { createMatch } from '../../src/sim/setup';
 import { canAct, isDown, setStatus, tickStatus } from '../../src/sim/status';
 import { HURT_TIERS } from '../../src/sim/constants';
-import type { PlayerState, PlayerStatus } from '../../src/sim/types';
+import type { HitType, PlayerState, PlayerStatus } from '../../src/sim/types';
 
 const cfg = { seed: 1, halfSeconds: 120, human: [true, false] as [boolean, boolean] };
+const HITS: HitType[] = ['shoulder', 'slide', 'big'];
 const player = (): PlayerState => createMatch(cfg).players[4];
 
 test('setStatus sets the status and resets the counter and length', () => {
@@ -17,7 +18,7 @@ test('tickStatus returns to free exactly on tick statusTicks', () => {
   tickStatus(p); tickStatus(p);
   expect([p.status.kind, p.statusTick]).toEqual(['kicking', 2]);
   tickStatus(p);
-  expect(p.status).toEqual({ kind: 'free' });
+  expect([p.status, p.statusTick, p.statusTicks]).toEqual([{ kind: 'free' }, 0, 0]);
 });
 test('a free player ticks without changing kind', () => {
   const p = player(); tickStatus(p);
@@ -31,9 +32,12 @@ test('an open-ended status never ends by itself', () => {
 test('canAct is true for free, kicking and charging only', () => {
   const kinds: [PlayerStatus, boolean][] = [
     [{ kind: 'free' }, true], [{ kind: 'kicking' }, true], [{ kind: 'charging' }, true],
-    [{ kind: 'lunging', hit: 'big' }, false], [{ kind: 'recovering', hit: 'slide', landed: false }, false],
-    [{ kind: 'hurt', tier: 'stumble', variant: 0 }, false],
   ];
+  for (const hit of HITS) {
+    kinds.push([{ kind: 'lunging', hit }, false]);
+    for (const landed of [true, false]) kinds.push([{ kind: 'recovering', hit, landed }, false]);
+  }
+  for (const tier of HURT_TIERS) kinds.push([{ kind: 'hurt', tier, variant: 0 }, false]);
   for (const [status, expected] of kinds) { const p = player(); p.status = status; expect(canAct(p), status.kind).toBe(expected); }
 });
 test('isDown is true for hurt with tier knockdown or worse only', () => {
