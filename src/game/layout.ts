@@ -30,6 +30,9 @@ export const PITCH_TEX_ORIGIN_X = -CAMERA_MIN_X;
 /** Ticks the GOAL! banner stays up. */
 export const GOAL_BANNER_TICKS = 90;
 
+/** Draw order, back to front: pitch, shadows, ball (plus its y), marker, touch controls, then the HUD layer with banners. */
+export const DEPTH = { pitch: -100, shadow: -50, ball: 0.1, marker: 1000, controls: 1500, hud: 2000 } as const;
+
 export const TURBO_PIPS = 3;
 
 /** How many turbo pips (0..TURBO_PIPS) a meter value lights; a pip is lit once the meter covers it. */

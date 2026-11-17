@@ -1,5 +1,5 @@
 import { expect, test } from 'vitest';
-import { cameraTarget, formatClock, nextFlip, turboPips, worldToScreen } from '../../src/game/layout';
+import { DEPTH, cameraTarget, formatClock, nextFlip, turboPips, worldToScreen } from '../../src/game/layout';
 
 test('camera follows the ball and stops at both ends', () => {
   expect(cameraTarget(240)).toBe(80); expect(cameraTarget(0)).toBe(-16); expect(cameraTarget(480)).toBe(176);
@@ -15,4 +15,9 @@ test('flip follows horizontal facing and keeps the last flip on vertical moves',
 });
 test('turbo pips lit by the meter', () => {
   expect([0, 0.33, 1 / 3, 0.5, 2 / 3, 1].map(turboPips)).toEqual([0, 0, 1, 1, 2, 3]);
+});
+test('draw order: pitch, shadow, ball, marker, controls, HUD', () => {
+  const d = DEPTH;
+  expect([d.pitch, d.shadow, d.ball, d.marker, d.controls, d.hud]).toEqual([...[d.pitch, d.shadow, d.ball, d.marker, d.controls, d.hud]].sort((a, b) => a - b));
+  expect(d.controls).toBeLessThan(d.hud);
 });

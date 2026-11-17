@@ -3,10 +3,9 @@ import { canvasRect } from '../art/canvasRect';
 import { PAL } from '../art/palette';
 import { drawText } from '../art/pixelFont';
 import type { MatchState } from '../sim';
-import { SCREEN_H, SCREEN_W, TURBO_PIPS, formatClock, turboPips } from './layout';
+import { DEPTH, SCREEN_H, SCREEN_W, TURBO_PIPS, formatClock, turboPips } from './layout';
 
 const HUD_KEY = 'hud';
-const DEPTH_HUD = 2000;
 const BAR_H = 11;
 const BADGE = { y: 2, size: 7 }, TEXT_Y = 3;
 const LEFT = { badgeX: 4, nameX: 14, scoreX: 46 };
@@ -26,7 +25,7 @@ export class Hud {
     const tex = scene.textures.createCanvas(HUD_KEY, SCREEN_W, SCREEN_H);
     if (!tex) throw new Error('hud texture could not be created');
     this.texture = tex;
-    scene.add.image(0, 0, HUD_KEY).setOrigin(0, 0).setDepth(DEPTH_HUD);
+    scene.add.image(0, 0, HUD_KEY).setOrigin(0, 0).setDepth(DEPTH.hud);
     scene.events.once('shutdown', () => scene.textures.remove(HUD_KEY));
   }
 

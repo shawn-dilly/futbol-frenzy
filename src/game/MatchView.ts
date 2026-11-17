@@ -4,7 +4,7 @@ import { PAL } from '../art/palette';
 import { ORIGIN_X, ORIGIN_Y, frameIndex, frameKey } from '../art/sprites';
 import type { MatchState, PlayerState, TeamId } from '../sim';
 import { ATLAS_KEY, BALL_KEY, BALL_PX } from './BootScene';
-import { PITCH_TEX_ORIGIN_X, PITCH_TEX_W, SCREEN_H, cameraTarget, nextFlip, worldToScreen } from './layout';
+import { DEPTH, PITCH_TEX_ORIGIN_X, PITCH_TEX_W, SCREEN_H, cameraTarget, nextFlip, worldToScreen } from './layout';
 import { drawPitch } from './pitchArt';
 
 const PITCH_KEY = 'pitch';
@@ -15,7 +15,6 @@ const BALL_CENTER_PX = Math.floor(BALL_PX / 2); // sprite columns left of the ba
 /** Body centre is column ORIGIN_X, but flipX mirrors about x = ORIGIN_X; shift a flipped sprite right to keep the body still. */
 const FLIP_OFFSET_PX = 1;
 const MARKER = { w: 3, h: 2, above: 20, color: Phaser.Display.Color.HexStringToColor(PAL.yel).color }; // px above the feet
-const DEPTH = { pitch: -100, shadow: -50, ball: 0.1, marker: 1000 };
 const GOALKEEPER_KIT_OFFSET = 2;
 
 interface PlayerView { sprite: Phaser.GameObjects.Image; shadow: Phaser.GameObjects.Rectangle; flip: boolean }
