@@ -78,6 +78,12 @@ Astra inspected `artifacts/first-to-five.png` at 640×360 and `artifacts/lethal-
 
 Two browser regressions dispatch distinct keydown/keyup pairs synchronously. On the parent commit, Enter → ArrowUp → Enter launched with Comets/Rhinos in place of Rhinos/Vipers, and Escape → Enter from fulltime replay failed to start the rematch. Astra passed all 554 unit tests, typecheck, production build and all 29 Playwright tests. The original friendly flow, both same-frame regressions and the audio-context restart test each passed six additional runs. The audio test reached fulltime and observed two contexts created and one closed in all seven runs. The demo advances through halftime automatically, and audio unlock does not gate simulation progress. The earlier timeout remains unexplained. Final Sol re-review is pending.
 
+**Scene handoff correction after Sol review of `42b229d`.** The shell now locks input at kickoff before it builds a config or starts a Cup session. Match restart requests from fulltime input, results and the launch hook share the scene's leaving flag. Each scene clears its flag on entry.
+
+Four Chromium regressions send fresh native inputs synchronously and record the launch supplied to each actual match initialization. On `42b229d`, the friendly burst initialized three matches and changed Rhinos/Vipers to Vipers/Vipers. A Cup pointer click followed by Enter initialized runs 1 and 2. Both demo and direct fulltime bursts initialized seed 18 three times. With the fix, consecutive shell entries accept a fresh kickoff with the original teams and settings, mixed pointer/keyboard Cup starts consume one run ID each, and consecutive fulltime restarts advance to seeds 18 and 19 once each.
+
+Implementation checks passed for 554 unit tests, typecheck, production build and all 33 browser tests. The four handoff regressions also passed three consecutive runs each. Sol 6.2 re-review is pending.
+
 | M4 requirement | Candidate evidence |
 |---|---|
 | Normal launch and setup | Shell browser tests cover title, back, settings selection, keyboard kickoff and Cup pointer navigation. Task 5 checked all 72 team/length/difficulty combinations. Six teams use four effective ratings and contrasting side-based kits. |

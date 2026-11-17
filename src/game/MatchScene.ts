@@ -102,7 +102,7 @@ export class MatchScene extends Phaser.Scene {
       startReplay: (half) => { if (active) this.startReplay(half); },
       endReplay: () => { if (active) this.endReplay(); },
       replayTick: () => this.playback?.states[this.playback.cursor]?.tick ?? null,
-      launch: (launch = this.launch) => { if (active) this.scene.restart(launch); },
+      launch: (launch = this.launch) => { if (active) this.restartMatch(launch); },
       halftimeGate: () => this.isHalftimeGated(),
       continueHalftime: () => { if (active) this.continueHalftime(); },
       showCallout: (tier, hit) => { if (!active) return; const c = this.callouts.pick(tier, hit); if (c) this.calloutBanner.show(c.text, tier, this.state.tick); },
@@ -120,7 +120,7 @@ export class MatchScene extends Phaser.Scene {
 
     // Only a fresh press restarts: a key already held at full time keeps auto-repeating keydown, which must not count.
     const restart = () => {
-      if (!this.result && !this.playback && canRestart(this.state.phase, this.state.tick, this.fulltimeTick)) this.scene.restart({ ...this.launch, config: { ...this.launch.config, seed: this.seed + 1 } });
+      if (!this.result && !this.playback && canRestart(this.state.phase, this.state.tick, this.fulltimeTick)) this.restartMatch({ ...this.launch, config: { ...this.launch.config, seed: this.seed + 1 } });
     };
     this.input.on('pointerdown', restart);
     const restartKey = (e: KeyboardEvent) => {
@@ -265,18 +265,23 @@ export class MatchScene extends Phaser.Scene {
 
   private get shell(): ShellScene { return this.scene.get('shell') as ShellScene; }
 
+  private restartMatch(launch: MatchLaunch): void {
+    if (this.leaving) return;
+    this.leaving = true;
+    this.scene.restart(launch);
+  }
+
   private leaveResult(title: boolean): void {
     if (!this.result || this.playback || this.leaving) return;
-    this.leaving = true;
     if (title) {
+      this.leaving = true;
       this.shell.returnToTitle();
       this.scene.start('shell');
       return;
     }
     const next = this.launch.mode === 'cup' ? this.shell.nextCupMatch(this.launch.matchId) :
       { ...this.launch, config: { ...this.launch.config, seed: this.seed + 1 } };
-    if (next) this.scene.restart(next);
-    else this.leaving = false;
+    if (next) this.restartMatch(next);
   }
 
   private showSummary(): void {

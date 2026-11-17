@@ -21,9 +21,11 @@ export class ShellScene extends Phaser.Scene {
   private screen: 'title' | 'setup' = 'title';
   private selection: SetupSelection = { team: 0, opponent: 1, level: 'pro', length: 'short' };
   private focus = 0;
+  private leaving = false;
   constructor() { super('shell'); }
 
   create(): void {
+    this.leaving = false;
     // Menu commands follow native presses. Phaser can re-emit queued events within a frame.
     const onKey = (event: KeyboardEvent) => this.onKey(event);
     window.addEventListener('keydown', onKey);
@@ -31,6 +33,7 @@ export class ShellScene extends Phaser.Scene {
     this.render();
   }
   private onKey(event: KeyboardEvent): void {
+    if (this.leaving) return;
     if (event.repeat && (event.key === 'Enter' || event.key === ' ')) return;
     if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Enter', ' ', 'Escape', 'Tab'].includes(event.key)) event.preventDefault();
     const targets = this.screen === 'title' ? [0, 1] : this.mode === 'cup' ? [0, 2, 3, 4, 5] : [0, 1, 2, 3, 4, 5];
@@ -53,6 +56,8 @@ export class ShellScene extends Phaser.Scene {
     if (index === 5) this.startMatch();
   }
   private startMatch(): void {
+    if (this.leaving) return;
+    this.leaving = true;
     const params = parseMatchParams(window.location.search);
     let config = setupConfig(this.selection, params.seed);
     let matchId: string | null = null;
@@ -89,6 +94,7 @@ export class ShellScene extends Phaser.Scene {
   }
 
   private render(): void {
+    if (this.leaving) return;
     this.children.removeAll(true);
     const g = this.add.graphics();
     const rect = (x: number, y: number, w: number, h: number, color: string) => { g.fillStyle(Phaser.Display.Color.HexStringToColor(color).color); g.fillRect(x, y, w, h); };
@@ -97,7 +103,12 @@ export class ShellScene extends Phaser.Scene {
     const button = (index: number, x: number, y: number, w: number, h: number, label: string, color: string = PAL.dk) => {
       rect(x, y, w, h, index === this.focus ? PAL.yel : PAL.gry); rect(x + 1, y + 1, w - 2, h - 2, color);
       text(label, x + w / 2, y + Math.floor((h - 5) / 2), PAL.wht, 1, 'c');
-      this.add.zone(x, y, w, h).setOrigin(0).setInteractive().on('pointerdown', (p: Phaser.Input.Pointer) => { this.focus = index; this.activate(index, p.x < x + w / 2 ? -1 : 1); this.render(); });
+      this.add.zone(x, y, w, h).setOrigin(0).setInteractive().on('pointerdown', (p: Phaser.Input.Pointer) => {
+        if (this.leaving) return;
+        this.focus = index;
+        this.activate(index, p.x < x + w / 2 ? -1 : 1);
+        this.render();
+      });
     };
     if (this.screen === 'title') {
       for (let i = 0; i < 60; i++) rect((i * 73) % 320, (i * 37) % 90, 1, 1, PAL.gry);
