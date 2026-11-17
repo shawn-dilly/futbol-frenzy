@@ -15,32 +15,31 @@ export function padToIntent(pad: PadInput, prev: PadInput): PlayerIntent {
   };
 }
 
+const isHumanControlled = (state: MatchState, p: PlayerState): boolean =>
+  state.config.human[p.team] && state.controlled[p.team] === p.id;
+
 /** The one place a player's intent is decided: the pad for a human team's controlled player, the brain for everyone else. */
 function intentFor(state: MatchState, p: PlayerState, inputs: [PadInput, PadInput]): BrainIntent {
-  const human = state.config.human[p.team] && state.controlled[p.team] === p.id;
-  return human ? padToIntent(inputs[p.team], state.prevInput[p.team]) : brainIntent(state, p);
+  return isHumanControlled(state, p) ? padToIntent(inputs[p.team], state.prevInput[p.team]) : brainIntent(state, p);
 }
 
-/** The kick a player asks for this tick, if any. A human pass without the ball switches control instead. */
-function requestedKick(state: MatchState, p: PlayerState, intent: BrainIntent): { kind: 'pass' | 'shot'; aim: Vec } | null {
-  if (!(state.config.human[p.team] && state.controlled[p.team] === p.id)) {
+/** The kick a player asks for this tick, if any (a human pass without the ball is not a kick). */
+function kickRequest(state: MatchState, p: PlayerState, intent: BrainIntent): { kind: 'pass' | 'shot'; aim: Vec } | null {
+  if (!isHumanControlled(state, p)) {
     return intent.kick ? { kind: intent.kick, aim: intent.aim ?? { x: 0, y: 0 } } : null;
   }
-  const hasBall = state.ball.owner === p.id;
+  if (state.ball.owner !== p.id) return null;
   const moveDir = { x: intent.moveX, y: intent.moveY };
-  if (intent.pass) {
-    if (hasBall) return { kind: 'pass', aim: moveDir };
-    switchControl(state, p.team);
-    return null;
-  }
-  return intent.shoot && hasBall ? { kind: 'shot', aim: moveDir } : null;
+  if (intent.pass) return { kind: 'pass', aim: moveDir };
+  return intent.shoot ? { kind: 'shot', aim: moveDir } : null;
 }
 
-/** Kicks and control switching, from this tick's intents. */
+/** Kicks (human and brain, one path) and human control switching, from this tick's intents. */
 function applyActions(state: MatchState, intents: BrainIntent[]): void {
   for (const p of state.players) {
-    const req = requestedKick(state, p, intents[p.id]);
+    const req = kickRequest(state, p, intents[p.id]);
     if (req) kick(state, p, req.kind, req.aim);
+    else if (isHumanControlled(state, p) && intents[p.id].pass && state.ball.owner !== p.id) switchControl(state, p.team);
   }
 }
 

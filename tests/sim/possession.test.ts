@@ -85,3 +85,7 @@ test('a keeper can trap a ball moving at shot speed', () => {
   freeBallAt(5, 220); updatePossession(s);
   expect(s.ball.owner).toBe(5);
 });
+test('the pickup speed limit is inclusive: 170 is trapped, 171 is not', () => {
+  freeBallAt(9, 170); updatePossession(s); expect(s.ball.owner).toBe(9);
+  freeBallAt(9, 171); updatePossession(s); expect(s.ball.owner).toBeNull();
+});

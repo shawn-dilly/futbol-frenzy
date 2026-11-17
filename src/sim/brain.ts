@@ -1,7 +1,7 @@
 import type { MatchState, PlayerIntent, PlayerState, Vec } from './types';
 import {
-  ANCHOR_SHIFT_X, ANCHOR_SHIFT_Y, CPU_SHOOT_RANGE, FIELD_H, FIELD_MID_Y, FIELD_W, GK_HOLD_TICKS,
-  GK_LINE_X, GOAL_HALF, PLAYER_RADIUS,
+  ANCHOR_SHIFT_X, ARRIVE_DIST, ANCHOR_SHIFT_Y, CPU_SHOOT_RANGE, FIELD_H, FIELD_MID_Y, FIELD_W, GK_HOLD_TICKS,
+  GK_LINE_X, GOAL_HALF, PLAYER_RADIUS, SHOT_Y_MARGIN,
 } from './constants';
 import { goalCenter } from './setup';
 import { nextRandom } from './rng';
@@ -9,8 +9,6 @@ import { clamp, dist, norm, sub } from './vec';
 
 export type BrainIntent = PlayerIntent & { kick?: 'pass' | 'shot'; aim?: Vec };
 
-const ARRIVE_DIST = 3; // units: closer than this to a stand-here target means stand still
-const SHOT_Y_MARGIN = 3; // units kept between the aim point and the post
 const PITCH_CENTER_X = FIELD_W / 2;
 
 const move = (p: PlayerState, target: Vec): BrainIntent => {

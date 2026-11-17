@@ -164,15 +164,20 @@ export const TICK_HZ = 60;
 export const FIELD_W = 480, FIELD_H = 124, FIELD_MID_Y = 62, GOAL_HALF = 16;
 export const PLAYER_RADIUS = 4, BALL_RADIUS = 2;
 export const RUN_SPEED = 60, TURBO_SPEED = 92;
+export const GK_SPEED = 40; // units/s, keepers are slower than outfield players
 export const TURBO_BURST_TICKS = 90, TURBO_COST = 1 / 3, TURBO_REFILL_PER_TICK = 1 / (12 * 60);
 export const PASS_SPEED = 150, SHOT_SPEED = 220;
 export const BALL_FRICTION = 0.985, BALL_STOP_SPEED = 4, WALL_RESTITUTION = 0.7;
 export const PICKUP_RADIUS = 6, KICK_COOLDOWN_TICKS = 15, DRIBBLE_OFFSET = 7, KICK_ANIM_TICKS = 12;
+export const PICKUP_MAX_BALL_SPEED = 170; // units/s; outfield players cannot trap a faster ball
 export const PASS_CONE_RAD = Math.PI / 3;
 export const KICKOFF_PAUSE_TICKS = 60, GOAL_PAUSE_TICKS = 120, HALFTIME_PAUSE_TICKS = 180;
+export const KICKER_BEHIND_BALL = 6; // units behind the ball on the kicker's own side at kickoff
 export const DEFAULT_HALF_SECONDS = 120;
-export const CPU_SHOOT_RANGE = 120, GK_HOLD_TICKS = 30, GK_LINE_X = 12;
-export const ANCHOR_SHIFT_X = 0.6, ANCHOR_SHIFT_Y = 0.3;
+export const CPU_SHOOT_RANGE = 90, GK_HOLD_TICKS = 30, GK_LINE_X = 12;
+export const ANCHOR_SHIFT_X = 0.35, ANCHOR_SHIFT_Y = 0.3;
+export const ARRIVE_DIST = 3; // units: closer than this to a stand-here target means stand still
+export const SHOT_Y_MARGIN = 3; // units kept between a CPU shot's aim point and the post
 export const FORMATION: Vec[] = [ // team 0; team 1 mirrors x → FIELD_W - x. Index 0 is the keeper.
   { x: 12, y: 62 }, { x: 100, y: 62 }, { x: 160, y: 28 }, { x: 160, y: 96 }, { x: 220, y: 62 },
 ];
@@ -520,6 +525,7 @@ A deliberately simple brain so the match is playable. M3 replaces `brainIntent`;
   4. Chaser: if the player's team does not own the ball and this player is the team's outfield player nearest the ball (on a human team, the controlled player counts as the chaser, so no teammate chases), move toward the ball.
   5. Everyone else: move toward `anchor + ((ball.x - 240) * ANCHOR_SHIFT_X, (ball.y - FIELD_MID_Y) * ANCHOR_SHIFT_Y)`, clamped to the pitch. In rules 2 and 5, a player within 3 units of the target stands still.
 - Move vectors are unit length or zero. The brain never uses turbo in M1.
+- Outfield players cannot pick up a ball faster than PICKUP_MAX_BALL_SPEED; keepers can. Keepers move at GK_SPEED.
 
 - [x] **Step 1: Write the failing tests**
 
@@ -532,7 +538,7 @@ test('keeper tracks the ball inside the goal mouth only', () => {
   s.players[0].pos = { x: 12, y: 46 };
   const j = brainIntent(s, s.players[0]); expect(Math.hypot(j.moveX, j.moveY)).toBe(0);
 });
-test('carrier heads for goal and shoots inside 120 units', () => {
+test('carrier heads for goal and shoots inside CPU_SHOOT_RANGE', () => {
   const s = createMatch(cpu); runTicks(s, 60);
   expect(brainIntent(s, s.players[4]).moveX).toBeGreaterThan(0.9);
   s.players[4].pos = { x: 400, y: 62 };

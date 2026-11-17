@@ -60,3 +60,11 @@ test('holding turbo after a burst does nothing; a fresh press starts a new burst
   expect(s.players[4].turboTicks).toBe(89);
   expect(before - s.turbo[0]).toBeCloseTo(1 / 3 - 1 / 720, 5);
 });
+test('keepers run at 40 units per second, outfield players at 60', () => {
+  const s = playing(); s.controlled[0] = 0; const y0 = s.players[0].pos.y;
+  runTicks(s, 60, [pad({ moveY: 1, turbo: true }), neutralPad()]);
+  expect(s.players[0].pos.y - y0).toBeCloseTo(40, 1);
+  const o = playing(); const x0 = o.players[4].pos.x;
+  runTicks(o, 60, [pad({ moveX: 1 }), neutralPad()]);
+  expect(o.players[4].pos.x - x0).toBeCloseTo(60, 1);
+});
