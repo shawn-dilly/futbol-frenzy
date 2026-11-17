@@ -60,3 +60,10 @@ test('an owned ball is left alone', () => {
   s.ball.owner = 4; s.ball.vel = { x: 100, y: 0 }; const p = { ...s.ball.pos };
   expect(moveFreeBall(s)).toBeNull(); expect(s.ball.pos).toEqual(p);
 });
+test('a ball already beyond an end line is put back on the line with no goal and no NaN', () => {
+  const s = freeBall();
+  s.ball.pos = { x: 481.3, y: 62 }; s.ball.vel = { x: 0, y: 0 };
+  expect(moveFreeBall(s)).toBeNull();
+  expect(s.ball.pos.x).toBeLessThanOrEqual(480);
+  for (const v of [s.ball.pos.x, s.ball.pos.y, s.ball.vel.x, s.ball.vel.y]) expect(Number.isNaN(v)).toBe(false);
+});

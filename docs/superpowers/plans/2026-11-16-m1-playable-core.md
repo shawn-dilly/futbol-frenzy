@@ -384,7 +384,7 @@ export function switchControl(state: MatchState, team: TeamId): void;
 - `switchControl`: `controlled[team]` becomes that team's outfield player nearest the ball.
 - `step` changes: for a human team's controlled player, `intent.pass` with the ball calls `kick(..., 'pass', moveDir)`; `intent.pass` without the ball calls `switchControl`; `intent.shoot` with the ball calls `kick(..., 'shot', moveDir)`. Order within a `'play'` tick: intents → kicks → movement → `updatePossession` → `moveFreeBall`.
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 ```ts
 // tests/sim/possession.test.ts — state in 'play' via createMatch + 60 ticks; player 4 owns the ball
@@ -438,10 +438,10 @@ test('a carried ball pushed against the goal line does not score or leave the pi
 });
 ```
 
-- [ ] **Step 2:** Run `npm test`. Expected: FAIL.
-- [ ] **Step 3:** Implement `possession.ts` and the `step` changes.
-- [ ] **Step 4:** Run `npm test`. Expected: PASS.
-- [ ] **Step 5:** Commit: `feat(sim): possession, dribbling, pass, shoot, control switching`.
+- [x] **Step 2:** Run `npm test`. Expected: FAIL.
+- [x] **Step 3:** Implement `possession.ts` and the `step` changes.
+- [x] **Step 4:** Run `npm test`. Expected: PASS.
+- [x] **Step 5:** Commit: `feat(sim): possession, dribbling, pass, shoot, control switching`.
 
 ---
 

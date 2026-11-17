@@ -18,13 +18,16 @@ export function moveFreeBall(state: MatchState): TeamId | null {
 
   if (ball.pos.x < 0 || ball.pos.x > FIELD_W) {
     const lineX = ball.pos.x < 0 ? 0 : FIELD_W;
-    const t = (lineX - prev.x) / (ball.pos.x - prev.x);
-    const crossY = prev.y + t * (ball.pos.y - prev.y);
-    if (Math.abs(crossY - FIELD_MID_Y) <= GOAL_HALF) {
-      ball.vel = { x: 0, y: 0 };
-      return lineX === 0 ? 1 : 0;
+    const crossedFromPitch = lineX === 0 ? prev.x >= 0 : prev.x <= FIELD_W;
+    if (crossedFromPitch) {
+      const t = (lineX - prev.x) / (ball.pos.x - prev.x);
+      const crossY = prev.y + t * (ball.pos.y - prev.y);
+      if (Math.abs(crossY - FIELD_MID_Y) <= GOAL_HALF) {
+        ball.vel = { x: 0, y: 0 };
+        return lineX === 0 ? 1 : 0;
+      }
     }
-    ball.pos.x = 2 * lineX - ball.pos.x;
+    ball.pos.x = crossedFromPitch ? 2 * lineX - ball.pos.x : lineX;
     ball.vel.x *= -WALL_RESTITUTION;
     state.events.push({ type: 'bounce' });
   }
