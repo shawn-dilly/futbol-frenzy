@@ -1,5 +1,5 @@
 import type { PlayerState, PlayerStatus } from './types';
-import { HURT_TIERS } from './constants';
+import { DAZED_HEALTH, HURT_TIERS } from './constants';
 
 /** Enters `status` for `ticks` ticks (0 = open-ended). */
 export function setStatus(p: PlayerState, status: PlayerStatus, ticks: number): void {
@@ -21,4 +21,15 @@ export function canAct(p: PlayerState): boolean {
 /** Hurt with tier knockdown or worse: lying on the ground. */
 export function isDown(p: PlayerState): boolean {
   return p.status.kind === 'hurt' && HURT_TIERS.indexOf(p.status.tier) >= HURT_TIERS.indexOf('knockdown');
+}
+
+/** Badly hurt (health under DAZED_HEALTH): slower, and may fumble a pass. */
+export function isDazed(p: PlayerState): boolean {
+  return p.health < DAZED_HEALTH;
+}
+
+/** The players who are not down; if every one is down, all of them (callers always need someone to pick). */
+export function standingOrAll(players: PlayerState[]): PlayerState[] {
+  const standing = players.filter(p => !isDown(p));
+  return standing.length > 0 ? standing : players;
 }

@@ -1,11 +1,12 @@
 import type { MatchState, PlayerState, TeamId, Vec } from './types';
 import {
   BALL_RADIUS, DRIBBLE_OFFSET, FIELD_H, FIELD_W, KICK_ANIM_TICKS, KICK_COOLDOWN_TICKS, PASS_CONE_RAD,
-  PASS_SPEED, PICKUP_MAX_BALL_SPEED, PICKUP_RADIUS, SHOT_SPEED,
+  PASS_SPEED, PICKUP_MAX_BALL_SPEED, DAZED_FUMBLE_CHANCE, FUMBLE_COOLDOWN_TICKS, PICKUP_RADIUS, SHOT_SPEED,
 } from './constants';
 import { add, angleBetween, clamp, dist, len, norm, scale, sub } from './vec';
 import { goalCenter } from './setup';
-import { setStatus } from './status';
+import { nextRandom } from './rng';
+import { isDazed, isDown, setStatus, standingOrAll } from './status';
 
 const isZero = (v: Vec) => v.x === 0 && v.y === 0;
 
@@ -19,7 +20,7 @@ function nearestPickup(state: MatchState): PlayerState | null {
   const ballTooFastForOutfield = len(state.ball.vel) > PICKUP_MAX_BALL_SPEED;
   for (const p of state.players) { // ascending id, so strict < gives ties to the lower id
     const d = dist(p.pos, state.ball.pos);
-    if (p.role === 'out' && ballTooFastForOutfield) continue;
+    if (isDown(p) || (p.role === 'out' && ballTooFastForOutfield)) continue;
     if (p.kickCooldown === 0 && d <= PICKUP_RADIUS && d < bestDist) { best = p; bestDist = d; }
   }
   return best;
@@ -31,6 +32,10 @@ export function updatePossession(state: MatchState): void {
   if (ball.owner === null) {
     const taker = nearestPickup(state);
     if (!taker) return;
+    if (ball.passTarget === taker.id && isDazed(taker) && nextRandom(state) < DAZED_FUMBLE_CHANCE) {
+      taker.kickCooldown = FUMBLE_COOLDOWN_TICKS; // misses the trap; the ball runs on
+      return;
+    }
     ball.owner = taker.id; ball.ownerTicks = 0; ball.vel = { x: 0, y: 0 }; ball.passTarget = null;
     state.controlled[taker.team] = taker.id;
   } else {
@@ -46,7 +51,7 @@ export function updatePossession(state: MatchState): void {
 
 /** Teammate id: smallest angle to `aim` within the pass cone, else the nearest teammate. */
 export function pickPassTarget(state: MatchState, passer: PlayerState, aim: Vec): number {
-  const mates = state.players.filter(p => p.team === passer.team && p.id !== passer.id);
+  const mates = standingOrAll(state.players.filter(p => p.team === passer.team && p.id !== passer.id));
   const nearest = mates.reduce((a, b) => (dist(b.pos, passer.pos) < dist(a.pos, passer.pos) ? b : a));
   if (isZero(aim)) return nearest.id;
   let best: PlayerState | null = null, bestAngle = PASS_CONE_RAD;
@@ -79,12 +84,18 @@ export function kick(state: MatchState, p: PlayerState, kind: 'pass' | 'shot', a
   state.events.push({ type: 'kick', kind, player: p.id });
 }
 
-/** Control goes to the team's outfield player nearest the ball. */
-export function switchControl(state: MatchState, team: TeamId): void {
-  let best = state.controlled[team], bestDist = Infinity;
-  for (const p of state.players) {
+/** The team's outfield player nearest the ball, preferring standing players (ties to the lower id). */
+export function nearestOutfield(state: MatchState, team: TeamId): number {
+  const candidates = standingOrAll(state.players.filter(p => p.team === team && p.role === 'out'));
+  let best = candidates[0].id, bestDist = Infinity;
+  for (const p of candidates) {
     const d = dist(p.pos, state.ball.pos);
-    if (p.team === team && p.role === 'out' && d < bestDist) { best = p.id; bestDist = d; }
+    if (d < bestDist) { best = p.id; bestDist = d; }
   }
-  state.controlled[team] = best;
+  return best;
+}
+
+/** Control goes to the team's nearest standing outfield player to the ball. */
+export function switchControl(state: MatchState, team: TeamId): void {
+  state.controlled[team] = nearestOutfield(state, team);
 }

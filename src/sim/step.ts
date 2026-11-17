@@ -3,7 +3,8 @@ import { applyMovement, updateTurboMeters } from './movement';
 import { moveFreeBall } from './ball';
 import { advanceFlow } from './flow';
 import { brainIntent, type BrainIntent } from './brain';
-import { tickStatus } from './status';
+import { canAct, tickStatus } from './status';
+import { decayRage } from './rage';
 import { kick, switchControl, tickKickCooldowns, updatePossession } from './possession';
 
 /** Pass/shoot/turbo are true only on the tick the button goes down. */
@@ -21,8 +22,11 @@ export function padToIntent(pad: PadInput, prev: PadInput): PlayerIntent {
 const isHumanControlled = (state: MatchState, p: PlayerState): boolean =>
   state.config.human[p.team] && state.controlled[p.team] === p.id;
 
-/** The one place a player's intent is decided: the pad for a human team's controlled player, the brain for everyone else. */
+const NEUTRAL_INTENT: BrainIntent = { moveX: 0, moveY: 0, pass: false, shoot: false, turbo: false, hitPress: false, hitHeld: false };
+
+/** The one place a player's intent is decided: nothing if he cannot act, else the pad for a human team's controlled player, the brain for everyone else. */
 function intentFor(state: MatchState, p: PlayerState, inputs: [PadInput, PadInput]): BrainIntent {
+  if (!canAct(p)) return NEUTRAL_INTENT;
   return isHumanControlled(state, p) ? padToIntent(inputs[p.team], state.prevInput[p.team]) : brainIntent(state, p);
 }
 
@@ -48,6 +52,7 @@ function applyActions(state: MatchState, intents: BrainIntent[]): void {
 
 function stepPlay(state: MatchState, inputs: [PadInput, PadInput]): TeamId | null {
   tickKickCooldowns(state);
+  decayRage(state);
   for (const p of state.players) tickStatus(p);
   const intents = state.players.map(p => intentFor(state, p, inputs));
   applyActions(state, intents);

@@ -5,6 +5,7 @@ import {
 } from './constants';
 import { goalCenter } from './setup';
 import { nextRandom } from './rng';
+import { nearestOutfield } from './possession';
 import { add, clamp, dist, norm, scale, sub } from './vec';
 
 export type BrainIntent = PlayerIntent & { kick?: 'pass' | 'shot'; aim?: Vec };
@@ -19,16 +20,6 @@ const move = (p: PlayerState, target: Vec): BrainIntent => {
 /** Like `move`, but stands still once within ARRIVE_DIST of the target. */
 const moveOrHold = (p: PlayerState, target: Vec): BrainIntent =>
   dist(p.pos, target) < ARRIVE_DIST ? move(p, p.pos) : move(p, target);
-
-/** The team's outfield player nearest the ball (ties to the lower id). */
-function nearestOutfield(state: MatchState, team: PlayerState['team']): number {
-  let best = -1, bestDist = Infinity;
-  for (const q of state.players) {
-    const d = dist(q.pos, state.ball.pos);
-    if (q.team === team && q.role === 'out' && d < bestDist) { best = q.id; bestDist = d; }
-  }
-  return best;
-}
 
 function isChaser(state: MatchState, p: PlayerState): boolean {
   if (p.role !== 'out') return false;

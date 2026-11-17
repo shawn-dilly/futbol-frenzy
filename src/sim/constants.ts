@@ -40,6 +40,7 @@ export const TURBO_HIT_FACTOR = 1.2, TEAM_POWER = 1;
 export const BIG_HIT_CHARGE_TICKS = 30, BIG_HIT_MAX_HOLD_TICKS = 90, CHARGE_MOVE_FACTOR = 0.5;
 export const HIT_COOLDOWN_TICKS = 20, LATE_HIT_COOLDOWN_TICKS = 90, HIT_LANDED_RECOVER_TICKS = 8;
 export const KNOCK_DECAY = 0.9, LOOSE_BALL_SPEED = 60;
+export const KNOCK_MIN_SPEED = 1; // units/s; knockback slower than this is zeroed
 export const MAX_HEALTH = 100, DAZED_HEALTH = 35, DAZED_SPEED_FACTOR = 0.8, DAZED_FUMBLE_CHANCE = 0.15;
 export const FUMBLE_COOLDOWN_TICKS = 20, HALFTIME_HEAL = 25;
 export const CPU_HIT_RANGE = 10; // units; the placeholder chaser shoulder-charges a carrier this close
