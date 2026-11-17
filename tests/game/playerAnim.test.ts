@@ -59,3 +59,7 @@ test('hurt is hurt_<tier>_<variant> on the status tick', () => {
   expect(animFor(player({ kind: 'hurt', tier: 'overTheTop', variant: 2 }, 50), 123)).toEqual({ key: 'hurt_overTheTop_2', tick: 50 });
   expect(animFor(player({ kind: 'hurt', tier: 'stumble', variant: 0 }, 1), 123)).toEqual({ key: 'hurt_stumble_0', tick: 1 });
 });
+
+test('a player with no velocity (as after a whistle) is idle on the match tick', () => {
+  expect(animFor(player({ kind: 'free' }, 40, { x: 0, y: 0 }), 99)).toEqual({ key: 'idle', tick: 99 });
+});

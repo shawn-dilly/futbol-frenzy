@@ -1,7 +1,7 @@
 import { expect, test } from 'vitest';
 import {
-  CRATER_TIER, CRATER_VARIANT, FLASH_MS, FLASH_PEAK_ALPHA, HIT_FEEDBACK, STAR_BURST,
-  craterLandTicks, flashAlpha, shakeOffset, shakeRemainingPx, starOffsets, strongerShake,
+  FLASH_MS, FLASH_PEAK_ALPHA, HIT_FEEDBACK, STAR_BURST,
+  craterLandTicks, flashAlpha, soundsForHit, shakeOffset, shakeRemainingPx, starOffsets, strongerShake,
 } from '../../src/game/hitFeedback';
 
 test('hit feedback per tier', () => {
@@ -34,7 +34,6 @@ test('flash starts at its peak and fades to nothing over FLASH_MS', () => {
 });
 
 test('only the over-the-top crater variant leaves a crater, landing when the airborne frames end', () => {
-  expect([CRATER_TIER, CRATER_VARIANT]).toEqual(['overTheTop', 2]);
   expect(craterLandTicks('overTheTop', 2)).toBe(60); // 5 airborne frames x 12 ticks
   expect(craterLandTicks('overTheTop', 1)).toBeNull();
   expect(craterLandTicks('overTheTop', 0)).toBeNull();
@@ -63,4 +62,9 @@ test('the star burst flies out from the centre, slows down, and ends', () => {
   expect(mid[1]).toEqual({ x: 10, y: -6 });
   expect(starOffsets(399)[0].y).toBe(-16);
   expect(starOffsets(400)).toEqual([]); expect(starOffsets(5000)).toEqual([]);
+});
+
+test('a recorded clip replaces the synthesised stack; without one the stack plays', () => {
+  expect(soundsForHit(HIT_FEEDBACK.wipeout, true)).toEqual([]);
+  expect(soundsForHit(HIT_FEEDBACK.wipeout, false)).toEqual(['crunch', 'grunt', 'ooh']);
 });

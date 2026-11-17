@@ -1,3 +1,5 @@
+import { PAL } from './palette';
+
 export type RectFn = (x: number, y: number, w: number, h: number, color: string) => void;
 
 const GLYPH_W = 3;
@@ -42,6 +44,17 @@ export function drawText(
       rect(left + i * GLYPH_ADVANCE * scale + (k % GLYPH_W) * scale, top + Math.floor(k / GLYPH_W) * scale, scale, scale, color);
     }
   }
+}
+
+/** Pixels the drop shadow of `drawShadowedText` sits down and to the right. */
+const SHADOW_OFFSET_PX = 1;
+
+/** `drawText` over a one-pixel drop shadow (ink by default). */
+export function drawShadowedText(
+  rect: RectFn, s: string, x: number, y: number, color: string, scale = 1, align: 'l' | 'c' | 'r' = 'l', shadow: string = PAL.ink,
+): void {
+  drawText(rect, s, x + SHADOW_OFFSET_PX, y + SHADOW_OFFSET_PX, shadow, scale, align);
+  drawText(rect, s, x, y, color, scale, align);
 }
 
 /** Whether the font has a glyph for `ch` (case-insensitive). */

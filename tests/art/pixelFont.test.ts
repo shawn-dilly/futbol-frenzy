@@ -1,5 +1,5 @@
 import { expect, test } from 'vitest';
-import { centeredLineTops, drawText, hasGlyph, textHeight, textWidth, wrapText, type RectFn } from '../../src/art/pixelFont';
+import { centeredLineTops, drawShadowedText, drawText, hasGlyph, textHeight, textWidth, wrapText, type RectFn } from '../../src/art/pixelFont';
 
 test('text width', () => { expect(textWidth('GOAL!')).toBe(19); expect(textWidth('GOAL!', 3)).toBe(57); expect(textWidth('')).toBe(0); });
 test('draws lit pixels, uppercases, aligns', () => {
@@ -34,4 +34,10 @@ test('centeredLineTops centres a block of lines on a y', () => {
   expect(centeredLineTops(1, 2, 62)).toEqual([57]);
   expect(centeredLineTops(1, 1, 62)).toEqual([59.5]);
   expect(centeredLineTops(0, 1, 62)).toEqual([]);
+});
+
+test('drawShadowedText draws the ink shadow one pixel down and right first, then the text', () => {
+  const calls: string[] = []; const rect: RectFn = (x, y, w, h, c) => calls.push(`${x},${y},${w},${h},${c}`);
+  drawShadowedText(rect, '-', 10, 20, '#fff');
+  expect(calls).toEqual(['11,23,1,1,#0b0b10', '12,23,1,1,#0b0b10', '13,23,1,1,#0b0b10', '10,22,1,1,#fff', '11,22,1,1,#fff', '12,22,1,1,#fff']);
 });

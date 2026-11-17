@@ -42,6 +42,22 @@ describe('CalloutPicker', () => {
     for (let i = 0; i < 100; i++) { const id = picker.pick('knockdown', 'shoulder')!.id; expect(id).not.toBe(prev); prev = id; }
   });
 
+  test('never shows the same line twice running, even across tiers', () => {
+    const picker = new CalloutPicker(LINES, seededRandom(6));
+    let prev = '';
+    for (let i = 0; i < 200; i++) {
+      const tier = i % 2 === 0 ? 'knockdown' : 'wipeout';
+      const id = picker.pick(tier, 'shoulder')!.id;
+      expect(id, `draw ${i}`).not.toBe(prev); prev = id;
+    }
+  });
+
+  test('a lone eligible line still shows when it was the last one', () => {
+    const picker = new CalloutPicker([{ id: 'only', text: 'ONLY', tiers: ['wipeout'] }], seededRandom(1));
+    expect(picker.pick('wipeout', 'shoulder')!.id).toBe('only');
+    expect(picker.pick('wipeout', 'shoulder')!.id).toBe('only');
+  });
+
   test('tiers rotate independently: a draw in one tier does not use up the other tier\'s bag', () => {
     const two: Callout[] = [
       { id: 'k1', text: 'K1', tiers: ['knockdown'] }, { id: 'k2', text: 'K2', tiers: ['knockdown'] },

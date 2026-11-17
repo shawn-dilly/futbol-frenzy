@@ -11,6 +11,8 @@ export interface AnimDef {
   arcHeight?: number;
   /** How many leading frames are airborne; the air time is airFrames x ticksPerFrame and the body lands as the next frame shows. */
   airFrames?: number;
+  /** The body lands face first and leaves a crater where it lands. */
+  crater?: true;
 }
 
 /** Ticks at the end of a hurt or recovering status spent getting back up. */
@@ -392,7 +394,7 @@ export const ANIMATIONS: Record<string, AnimDef> = {
     ],
   },
   hurt_overTheTop_2: {
-    ticksPerFrame: 12, loop: false, arcHeight: 30, airFrames: 5,
+    ticksPerFrame: 12, loop: false, arcHeight: 30, airFrames: 5, crater: true,
     frames: [
       // thrown up and back
       [...px('skin', [[-3, -5, 2, 2], [2, -5, 2, 2]]), ...px('boot', [[-4, -3, 3, 1], [2, -3, 3, 1]]),

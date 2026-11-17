@@ -1,7 +1,7 @@
 import Phaser from 'phaser';
 import { canvasRect } from '../art/canvasRect';
 import { PAL } from '../art/palette';
-import { drawText } from '../art/pixelFont';
+import { drawShadowedText, drawText } from '../art/pixelFont';
 import type { MatchState } from '../sim';
 import {
   DEPTH, HUD_BAR_H, RAGE_FLASH_TICKS, SCREEN_H, SCREEN_W, TEAM_NAMES, TURBO_PIPS, blinkOn, canRestart, formatClock, fullTimeLines, isRageFlashing, rageBarWidth, turboPips,
@@ -19,7 +19,7 @@ const PIP = { count: TURBO_PIPS, w: 6, h: 4, gap: 2, y: 174 };
 const RAGE = { y: HUD_BAR_H + 1, maxPx: 60, h: 3, frame: 1, leftX: LEFT.badgeX, rightEdgeX: RIGHT.badgeX + BADGE.size, labelGap: 3, label: 'RAGE' };
 const RAGE_FILL = PAL.pur, RAGE_FLASH = PAL.wht, RAGE_OUTLINE = PAL.wht, RAGE_WELL = PAL.ink;
 const PIP_UNLIT = PAL.dk;
-const BANNER = { y: 56, shadowDx: 1, shadowDy: 1 };
+const BANNER = { y: 56 };
 /** Text scale and the y step to the next line, per banner line (the first is the title). */
 const BANNER_LINES = [{ scale: 3, advance: 28 }, { scale: 2, advance: 20 }, { scale: 2, advance: 0 }];
 const HALF_LABEL = { 1: '1ST', 2: '2ND' } as const;
@@ -80,8 +80,7 @@ export class Hud {
       rect(x, RAGE.y, frameW, frameH, RAGE_OUTLINE);
       rect(x + RAGE.frame, RAGE.y + RAGE.frame, RAGE.maxPx, RAGE.h, RAGE_WELL);
       const labelX = team === 0 ? x + frameW + RAGE.labelGap : x - RAGE.labelGap;
-      drawText(rect, RAGE.label, labelX + 1, RAGE.y + 1, PAL.ink, 1, team === 0 ? 'l' : 'r');
-      drawText(rect, RAGE.label, labelX, RAGE.y, PAL.wht, 1, team === 0 ? 'l' : 'r');
+      drawShadowedText(rect, RAGE.label, labelX, RAGE.y, PAL.wht, 1, team === 0 ? 'l' : 'r');
       rect(team === 0 ? x + RAGE.frame : x + RAGE.frame + RAGE.maxPx - r.px, RAGE.y + RAGE.frame, r.px, RAGE.h, r.flashOn ? RAGE_FLASH : RAGE_FILL);
     });
     const pipsW = PIP.count * PIP.w + (PIP.count - 1) * PIP.gap;
@@ -91,8 +90,7 @@ export class Hud {
     let y = BANNER.y;
     bannerLines.forEach((text, i) => {
       const { scale, advance } = BANNER_LINES[i];
-      drawText(rect, text, SCREEN_W / 2 + BANNER.shadowDx, y + BANNER.shadowDy, PAL.ink, scale, 'c');
-      drawText(rect, text, SCREEN_W / 2, y, PAL.yel, scale, 'c');
+      drawShadowedText(rect, text, SCREEN_W / 2, y, PAL.yel, scale, 'c');
       y += advance;
     });
     this.texture.refresh();

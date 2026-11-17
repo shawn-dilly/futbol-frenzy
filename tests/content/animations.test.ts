@@ -127,3 +127,8 @@ test('airTicks is airFrames x ticksPerFrame, 0 without air time', () => {
   expect(airTicks(ANIMATIONS.hurt_overTheTop_2)).toBe(60);
   expect(airTicks({ frames: [], ticksPerFrame: 9, loop: false })).toBe(0);
 });
+
+test('only the over-the-top face-first variant is marked as leaving a crater', () => {
+  const craters = Object.keys(ANIMATIONS).filter(k => ANIMATIONS[k].crater);
+  expect(craters).toEqual([hurtAnimKey('overTheTop', 2)]);
+});

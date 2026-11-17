@@ -8,7 +8,7 @@ import { seededRandom } from '../content/shuffleBag';
 import { CalloutBanner } from './CalloutBanner';
 import { CALLOUT_SEED_SALT, CalloutPicker } from './calloutPicker';
 import { Hud } from './Hud';
-import { EFFECT_SEED_SALT, HIT_FEEDBACK, craterLandTicks, flashAlpha } from './hitFeedback';
+import { EFFECT_SEED_SALT, HIT_FEEDBACK, craterLandTicks, flashAlpha, soundsForHit } from './hitFeedback';
 import { bigHitReady, chargeFill, chargeJustStarted } from './indicators';
 import { MatchView } from './MatchView';
 import { FixedStepper } from './loop';
@@ -17,8 +17,8 @@ import { Sfx, sfxForEvent } from '../audio/sfx';
 
 declare global {
   interface Window {
-    /** `showCallout` is a dev/test hook: shows the callout a hit of that tier and type would. */
-    __ff?: { state: MatchState; showCallout: (tier: HurtTier, hit: HitType) => void }
+    /** Dev/test hooks: `showCallout` shows the callout a hit of that tier and type would; `calloutText` is what the banner shows now ('' if nothing). */
+    __ff?: { state: MatchState; showCallout: (tier: HurtTier, hit: HitType) => void; calloutText: () => string }
   }
 }
 
@@ -64,7 +64,11 @@ export class MatchScene extends Phaser.Scene {
     this.sfx.muted = params.mute;
     this.state = createMatch({ seed: this.seed, halfSeconds: params.halfSeconds, human: [!params.demo, false] });
     this.callouts = new CalloutPicker(CALLOUTS, seededRandom(this.seed ^ CALLOUT_SEED_SALT));
-    window.__ff = { state: this.state, showCallout: (tier, hit) => this.showCallout(tier, hit) };
+    window.__ff = {
+      state: this.state,
+      showCallout: (tier, hit) => { const c = this.callouts.pick(tier, hit); if (c) this.calloutBanner.show(c.text, tier, this.state.tick); },
+      calloutText: () => this.calloutBanner.visibleText(this.state.tick),
+    };
     this.view = new MatchView(this, seededRandom(this.seed ^ EFFECT_SEED_SALT));
     this.hud = new Hud(this);
     this.calloutBanner = new CalloutBanner(this);
@@ -162,14 +166,16 @@ export class MatchScene extends Phaser.Scene {
 
   private onHit(e: Extract<SimEvent, { type: 'hit' }>): void {
     const fb = HIT_FEEDBACK[e.tier];
-    fb.sounds.forEach(name => this.sfx.play(name));
+    const callout = this.callouts.pick(e.tier, e.hit);
+    const clipPlayed = !!callout?.audio && this.sfx.playClip(callout.audio);
+    soundsForHit(fb, clipPlayed).forEach(name => this.sfx.play(name));
     this.view.shake(fb.shakePx, fb.shakeMs, this.nowMs);
     this.freezeTicks = Math.max(this.freezeTicks, fb.freezeTicks);
     if (fb.flash) this.flashStartMs = this.nowMs;
     if (fb.stars) this.view.addStarBurst({ ...this.state.players[e.victim].pos }, this.nowMs);
     const landTicks = craterLandTicks(e.tier, e.variant);
     if (landTicks !== null) this.pendingCraters.push({ tick: this.state.tick + landTicks, victim: e.victim });
-    this.showCallout(e.tier, e.hit);
+    if (callout) this.calloutBanner.show(callout.text, e.tier, this.state.tick);
   }
 
   /** Puts a crater where each over-the-top victim has landed by now. */
@@ -180,13 +186,5 @@ export class MatchScene extends Phaser.Scene {
       this.view.addCrater({ x, y });
       return false;
     });
-  }
-
-  /** Shows the next callout for a hit of this tier and type, if the pool has one; the newest always replaces the last. */
-  private showCallout(tier: HurtTier, hit: HitType): void {
-    const callout = this.callouts.pick(tier, hit);
-    if (!callout) return;
-    this.calloutBanner.show(callout.text, tier, this.state.tick);
-    if (callout.audio) this.sfx.playClip(callout.audio);
   }
 }

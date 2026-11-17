@@ -1,4 +1,3 @@
-import { HIT_FEEDBACK } from './hitFeedback';
 import { RAGE_MAX, TICK_HZ, TURBO_COST, type Phase, type Vec } from '../sim';
 
 export const SCREEN_W = 320;
@@ -27,7 +26,8 @@ export function formatClock(clockTicks: number): string {
 export const HUD_BAR_H = 11;
 
 /** Extra pitch drawn past each screen edge (left, right, bottom): the biggest shake, so shaking never shows the background. */
-export const PITCH_MARGIN_PX = Math.max(...Object.values(HIT_FEEDBACK).map(f => f.shakePx));
+export const MAX_SHAKE_PX = 6; // no tier's `shakePx` (hitFeedback.ts) may exceed this
+export const PITCH_MARGIN_PX = MAX_SHAKE_PX;
 /** Size of the pre-drawn scrolling pitch texture: the whole camera travel plus one screen, plus the shake margin. */
 export const PITCH_TEX_W = CAMERA_MAX_X - CAMERA_MIN_X + SCREEN_W + 2 * PITCH_MARGIN_PX;
 export const PITCH_TEX_H = SCREEN_H + PITCH_MARGIN_PX;
@@ -45,9 +45,10 @@ export const GOAL_BANNER_TICKS = 90;
 /** Draw order, back to front: pitch, crater decals, shadows, ball (plus its y), marker, touch controls, then callouts, then the HUD layer with banners, then the hit flash over everything. */
 export const DEPTH = { pitch: -100, crater: -90, shadow: -50, ball: 0.1, marker: 1000, controls: 1500, callout: 1800, hud: 2000, flash: 2100 } as const;
 
-/** Callout banner: centre y on screen and the widest a line may be (320 minus a 4 px margin each side). */
+/** Callout banner: centre y on screen, and the widest a line may be (the screen minus a margin each side). */
 export const CALLOUT_CENTER_Y = 62;
-export const CALLOUT_MAX_W = 312;
+export const CALLOUT_MARGIN_PX = 4;
+export const CALLOUT_MAX_W = SCREEN_W - 2 * CALLOUT_MARGIN_PX;
 
 export const TURBO_PIPS = 3;
 

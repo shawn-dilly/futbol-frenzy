@@ -1,7 +1,6 @@
 import { describe, expect, test } from 'vitest';
 import type { PadInput } from '../../src/sim/types';
 import { createMatch, neutralPad } from '../../src/sim/setup';
-import { animFor } from '../../src/game/playerAnim';
 import { runTicks } from '../helpers';
 
 const cfg = { seed: 1, halfSeconds: 120, human: [true, false] as [boolean, boolean] };
@@ -61,7 +60,6 @@ describe('match flow', () => {
     const expectStopped = (s: ReturnType<typeof createMatch>) => {
       for (const p of s.players) {
         expect(p.vel, `player ${p.id}`).toEqual({ x: 0, y: 0 });
-        expect(animFor(p, s.tick), `player ${p.id}`).toEqual({ key: 'idle', tick: s.tick });
       }
     };
     test('goal', () => {

@@ -1,13 +1,11 @@
 import Phaser from 'phaser';
 import { canvasRect } from '../art/canvasRect';
-import { PAL } from '../art/palette';
-import { centeredLineTops, drawText, wrapText } from '../art/pixelFont';
+import { centeredLineTops, drawShadowedText, wrapText } from '../art/pixelFont';
 import { calloutDrawKey, calloutStyle } from './calloutPicker';
 import { CALLOUT_CENTER_Y, CALLOUT_MAX_W, DEPTH, SCREEN_H, SCREEN_W } from './layout';
 import type { HurtTier } from '../sim';
 
 const KEY = 'callout';
-const SHADOW_OFFSET_PX = 1;
 
 interface Shown { text: string; tier: HurtTier; tick: number }
 
@@ -32,6 +30,12 @@ export class CalloutBanner {
   /** Removes the callout at once (goal and whistle banners take the space). */
   clear(): void { this.shown = null; }
 
+  /** The text on screen at `nowTick` ('' when none; a flashing line counts as shown through its off beats). */
+  visibleText(nowTick: number): string {
+    const s = this.shown;
+    return s && nowTick - s.tick < calloutStyle(s.tier).ticks ? s.text : '';
+  }
+
   sync(nowTick: number): void {
     const key = calloutDrawKey(this.shown, nowTick);
     if (key === this.drawnKey) return;
@@ -48,8 +52,7 @@ export class CalloutBanner {
       const rect = canvasRect(ctx);
       const tops = centeredLineTops(lines.length, style.scale, CALLOUT_CENTER_Y);
       lines.forEach((line, i) => {
-        drawText(rect, line, SCREEN_W / 2 + SHADOW_OFFSET_PX, tops[i] + SHADOW_OFFSET_PX, PAL.ink, style.scale, 'c');
-        drawText(rect, line, SCREEN_W / 2, tops[i], style.color, style.scale, 'c');
+        drawShadowedText(rect, line, SCREEN_W / 2, tops[i], style.color, style.scale, 'c');
       });
     }
     this.texture.refresh();

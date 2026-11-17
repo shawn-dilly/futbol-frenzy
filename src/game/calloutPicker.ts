@@ -37,6 +37,8 @@ export const CALLOUT_SEED_SALT = 0x5ca11047;
 /** Chooses the callout for a hit: one shuffle bag per tier so lines rotate and never repeat back to back. */
 export class CalloutPicker {
   private readonly bags = new Map<HurtTier, ShuffleBag<Callout>>();
+  /** The line shown last, whatever its tier: it is not shown again straight away. */
+  private lastShown: Callout | null = null;
 
   constructor(private readonly callouts: readonly Callout[], private readonly random: () => number) {}
 
@@ -44,8 +46,11 @@ export class CalloutPicker {
     const forTier = this.callouts.filter((c) => c.tiers.includes(tier));
     const fits = (c: Callout) => !c.hitTypes || c.hitTypes.includes(hit);
     if (!forTier.some(fits)) return null;
+    const fresh = (c: Callout) => fits(c) && c !== this.lastShown;
     let bag = this.bags.get(tier);
     if (!bag) { bag = new ShuffleBag<Callout>(this.random); this.bags.set(tier, bag); }
-    return bag.next(forTier, (c) => c.weight ?? 1, fits);
+    const picked = bag.next(forTier, (c) => c.weight ?? 1, forTier.some(fresh) ? fresh : fits); // the last line again only if nothing else fits
+    this.lastShown = picked;
+    return picked;
   }
 }

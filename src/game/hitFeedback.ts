@@ -50,15 +50,15 @@ export function flashAlpha(elapsedMs: number): number {
   return FLASH_PEAK_ALPHA * Math.max(0, 1 - elapsedMs / FLASH_MS);
 }
 
-/** The over-the-top variant that lands face first and leaves a crater. */
-export const CRATER_TIER: HurtTier = 'overTheTop';
-export const CRATER_VARIANT = 2;
-
-/** Ticks from the hit until the victim lands and leaves a crater, or null when this hit leaves none. */
+/** Ticks from the hit until the victim lands and leaves a crater, or null when this hurt animation leaves none (`AnimDef.crater`). */
 export function craterLandTicks(tier: HurtTier, variant: number): number | null {
-  if (tier !== CRATER_TIER || variant !== CRATER_VARIANT) return null;
   const def = ANIMATIONS[hurtAnimKey(tier, variant)];
-  return airTicks(def);
+  return def?.crater ? airTicks(def) : null; // no animation for this tier and variant: no crater
+}
+
+/** The synthesised sounds of a hit: none when the callout's recorded clip played instead. */
+export function soundsForHit(feedback: HitFeedback, clipPlayed: boolean): SfxName[] {
+  return clipPlayed ? [] : feedback.sounds;
 }
 
 /** The star burst of an over-the-top hit: `count` stars fly out from the victim, slowing down, over `ms`. */
