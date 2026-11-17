@@ -79,9 +79,9 @@ android/                       Capacitor project (generated)
 **Interfaces:**
 - Produces: npm scripts `dev` (Vite on port 5173), `build` (`tsc --noEmit && vite build`, output `dist/`), `test` (`vitest run`), `typecheck`. A page with a `#game` div holding a 320x180 Phaser canvas.
 
-- [ ] **Step 1:** `git init` in the project root. Add `.gitignore` with `node_modules`, `dist`, `artifacts`, `test-results`, `android/app/build`, `android/.gradle`, `android/build`.
-- [ ] **Step 2:** `npm init -y`, then `npm i phaser@^4.2` and `npm i -D typescript@^7 vite@^8 vitest@^5`. Set `"type": "module"` and the scripts above. `tsconfig.json`: `strict: true`, `target: ES2022`, `module: ESNext`, `moduleResolution: bundler`, `noEmit: true`, include `src`, `tests`, `e2e`. `vitest.config.ts`: `environment: 'node'`, include `tests/**/*.test.ts`.
-- [ ] **Step 3:** Write the failing purity test.
+- [x] **Step 1:** `git init` in the project root. Add `.gitignore` with `node_modules`, `dist`, `artifacts`, `test-results`, `android/app/build`, `android/.gradle`, `android/build`.
+- [x] **Step 2:** `npm init -y`, then `npm i phaser@^4.2` and `npm i -D typescript@^7 vite@^8 vitest@^5`. Set `"type": "module"` and the scripts above. `tsconfig.json`: `strict: true`, `target: ES2022`, `module: ESNext`, `moduleResolution: bundler`, `noEmit: true`, include `src`, `tests`, `e2e`. `vitest.config.ts`: `environment: 'node'`, include `tests/**/*.test.ts`.
+- [x] **Step 3:** Write the failing purity test.
 
 ```ts
 // tests/sim/purity.test.ts
@@ -96,10 +96,10 @@ test('sim is pure: no engine, DOM, clock, or Math.random', () => {
 });
 ```
 
-- [ ] **Step 4:** Run `npm test`. Expected: FAIL, `src/sim` does not exist. Create `src/sim/index.ts` containing `export {};`. Run again. Expected: PASS.
-- [ ] **Step 5:** `index.html`: black page, no margins, `touch-action: none; user-select: none`, viewport meta `width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no`, title "Futbol Frenzy", a `#game` div filling the window. `src/game/main.ts`: create a `Phaser.Game` with `width: 320`, `height: 180`, `pixelArt: true`, `parent: 'game'`, `backgroundColor: '#16162a'`, scale mode FIT with centring on both axes, and one empty scene.
-- [ ] **Step 6:** Run `npm run build`. Expected: exits 0, `dist/index.html` exists. Run `npm run dev`, open the page, confirm a navy 16:9 rectangle that letterboxes when the window is resized.
-- [ ] **Step 7:** Commit: `chore: scaffold Futbol Frenzy (Vite, Phaser 4, Vitest)`.
+- [x] **Step 4:** Run `npm test`. Expected: FAIL, `src/sim` does not exist. Create `src/sim/index.ts` containing `export {};`. Run again. Expected: PASS.
+- [x] **Step 5:** `index.html`: black page, no margins, `touch-action: none; user-select: none`, viewport meta `width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no`, title "Futbol Frenzy", a `#game` div filling the window. `src/game/main.ts`: create a `Phaser.Game` with `width: 320`, `height: 180`, `pixelArt: true`, `parent: 'game'`, `backgroundColor: '#16162a'`, scale mode FIT with centring on both axes, and one empty scene.
+- [x] **Step 6:** Run `npm run build`. Expected: exits 0, `dist/index.html` exists. Run `npm run dev`, open the page, confirm a navy 16:9 rectangle that letterboxes when the window is resized.
+- [x] **Step 7:** Commit: `chore: scaffold Futbol Frenzy (Vite, Phaser 4, Vitest)`.
 
 ---
 
