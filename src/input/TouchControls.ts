@@ -40,8 +40,10 @@ export class TouchControls {
 
     const { input } = scene;
     // Pointer.x and .y are accessors on the prototype, so a Pointer must not be spread or copied; pass plain points.
-    input.on('pointerdown', (p: Phaser.Input.Pointer) => this.tracker.down(p.id, { x: p.x, y: p.y }));
-    input.on('pointermove', (p: Phaser.Input.Pointer) => this.tracker.move(p.id, { x: p.x, y: p.y }));
+    const down = (p: Phaser.Input.Pointer) => this.tracker.down(p.id, { x: p.x, y: p.y });
+    const move = (p: Phaser.Input.Pointer) => this.tracker.move(p.id, { x: p.x, y: p.y });
+    input.on('pointerdown', down);
+    input.on('pointermove', move);
     const release = (p: Phaser.Input.Pointer) => this.tracker.up(p.id);
     input.on('pointerup', release);
     input.on('pointerupoutside', release);
@@ -51,11 +53,18 @@ export class TouchControls {
     window.addEventListener('blur', cancel);
     document.addEventListener('visibilitychange', onVisibility);
     scene.events.once('shutdown', () => {
+      this.clear();
+      input.off('pointerdown', down);
+      input.off('pointermove', move);
+      input.off('pointerup', release);
+      input.off('pointerupoutside', release);
       window.removeEventListener('blur', cancel);
       document.removeEventListener('visibilitychange', onVisibility);
       scene.textures.remove(KEY);
     });
   }
+
+  clear(): void { this.tracker.cancelAll(); this.pad = neutralPad(); }
 
   /** The pad as of now; call once per sim step. Drawing is separate: see draw(). */
   read(): PadInput {

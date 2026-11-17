@@ -27,6 +27,11 @@ export class KeyboardPad {
     }
   }
 
+  clear(): void {
+    this.latch.clear();
+    if (this.keys) for (const key of Object.values(this.keys)) key.reset();
+  }
+
   read(): PadInput {
     const pad = neutralPad();
     const k = this.keys;

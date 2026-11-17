@@ -20,7 +20,7 @@ import { Sfx, sfxForEvent } from '../audio/sfx';
 declare global {
   interface Window {
     /** Dev/test hooks: `showCallout` shows the callout a hit of that tier and type would; `calloutText` is what the banner shows now ('' if nothing). */
-    __ff?: { state: MatchState; showCallout: (tier: HurtTier, hit: HitType) => void; calloutText: () => string; replay: () => ReplayRecord }
+    __ff?: { state: MatchState; showCallout: (tier: HurtTier, hit: HitType) => void; calloutText: () => string; replay: () => ReplayRecord; pause: () => void; resume: () => void }
   }
 }
 
@@ -45,6 +45,8 @@ export class MatchScene extends Phaser.Scene {
   private wasCharging = false;
   /** Craters waiting for their victim to land: the sim tick they appear on, and who lands. */
   private pendingCraters: { tick: number; victim: number; impact?: import('../sim').PlayerState; startTick: number }[] = [];
+  private paused = false;
+  private hidden = false;
   private seed = 0;
   /** Sim tick of the full-time whistle, null until it blows. */
   private fulltimeTick: number | null = null;
@@ -58,6 +60,9 @@ export class MatchScene extends Phaser.Scene {
   }
 
   create(): void {
+    this.paused = false;
+    this.hidden = document.hidden;
+    this.stepper.reset();
     this.fulltimeTick = null;
     this.pendingCraters = [];
     this.freezeTicks = 0;
@@ -68,12 +73,15 @@ export class MatchScene extends Phaser.Scene {
     this.state = createMatch({ seed: this.seed, halfSeconds: params.halfSeconds, human: [!params.demo, false], level: [params.level2 ?? params.level, params.level] });
     this.replay = createReplayRecord(this.state.config);
     this.callouts = new CalloutPicker(CALLOUTS, seededRandom(this.seed ^ CALLOUT_SEED_SALT));
-    window.__ff = {
+    const hook: NonNullable<Window["__ff"]> = {
       state: this.state,
+      pause: () => this.pause(),
+      resume: () => this.resume(),
       replay: () => structuredClone(this.replay),
       showCallout: (tier, hit) => { const c = this.callouts.pick(tier, hit); if (c) this.calloutBanner.show(c.text, tier, this.state.tick); },
       calloutText: () => this.calloutBanner.visibleText(this.state.tick),
     };
+    window.__ff = hook;
     this.view = new MatchView(this, seededRandom(this.seed ^ EFFECT_SEED_SALT));
     this.hud = new Hud(this);
     this.calloutBanner = new CalloutBanner(this);
@@ -88,7 +96,8 @@ export class MatchScene extends Phaser.Scene {
       if (canRestart(this.state.phase, this.state.tick, this.fulltimeTick)) this.scene.restart({ seed: this.seed + 1 });
     };
     this.input.on('pointerdown', restart);
-    this.input.keyboard?.on('keydown', (e: KeyboardEvent) => { if (!e.repeat) restart(); });
+    const restartKey = (e: KeyboardEvent) => { if (!e.repeat) restart(); };
+    this.input.keyboard?.on('keydown', restartKey);
     // Browsers block audio until a gesture: the first press unlocks it (idempotent, so listening to every press is harmless).
     const unlock = () => this.sfx.unlock();
     // pointerup too: on touch devices pointerdown comes from touchstart, which does not count as a gesture.
@@ -96,17 +105,23 @@ export class MatchScene extends Phaser.Scene {
     this.input.on('pointerup', unlock);
     this.input.keyboard?.on('keydown', unlock);
     this.events.once('shutdown', () => {
+      this.input.off('pointerdown', restart);
+      this.input.keyboard?.off('keydown', restartKey);
+      this.clearControls();
+      this.pendingCraters = [];
+      if (window.__ff === hook) delete window.__ff;
       this.input.off('pointerdown', unlock);
       this.input.off('pointerup', unlock);
       this.input.keyboard?.off('keydown', unlock);
     });
-    const onVisibility = () => { if (document.hidden) this.stepper.reset(); };
+    const onVisibility = () => { this.hidden = document.hidden; this.clearControls(); };
     document.addEventListener('visibilitychange', onVisibility);
     this.events.once('shutdown', () => document.removeEventListener('visibilitychange', onVisibility));
   }
 
   update(time: number, delta: number): void {
     this.nowMs = time;
+    if (this.paused || this.hidden) return;
     const steps = this.stepper.advance(delta);
     for (let i = 0; i < steps; i++) {
       const inputs = this.readPads();
@@ -123,6 +138,16 @@ export class MatchScene extends Phaser.Scene {
       }
     }
     this.syncPresentation();
+  }
+
+  pause(): void { this.paused = true; this.clearControls(); }
+
+  resume(): void { this.paused = false; this.clearControls(); }
+
+  private clearControls(): void {
+    this.stepper.reset();
+    this.keys?.clear();
+    this.touch?.clear();
   }
 
   private syncPresentation(): void {

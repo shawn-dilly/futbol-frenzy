@@ -4,7 +4,7 @@ import type { MatchState } from '../src/sim';
 
 declare global {
   interface Window {
-    __ff?: { state: MatchState; replay: () => ReplayRecord };
+    __ff?: { state: MatchState; replay: () => ReplayRecord; pause: () => void; resume: () => void };
   }
 }
 
