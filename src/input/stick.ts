@@ -38,17 +38,30 @@ export function buttonAt(p: Vec): ButtonName | null {
   return best;
 }
 
+/** Remembers buttons pressed since the last read, so a tap that ends between two reads is not lost. */
+export class PressLatch {
+  private readonly pending = new Set<ButtonName>();
+
+  press(name: ButtonName): void { this.pending.add(name); }
+
+  /** True once per press since the last take of this button. */
+  take(name: ButtonName): boolean { return this.pending.delete(name); }
+
+  clear(): void { this.pending.clear(); }
+}
+
 /** Pointer bookkeeping: one floating-stick pointer plus any number of button-holding pointers. */
 export class PadTracker {
   private stickId: number | null = null;
   private origin: Vec = { x: 0, y: 0 };
   private pointer: Vec = { x: 0, y: 0 };
   private readonly held = new Map<number, ButtonName>();
+  private readonly latch = new PressLatch();
 
   down(id: number, p: Vec): void {
     this.up(id);
     const button = buttonAt(p);
-    if (button) this.held.set(id, button);
+    if (button) { this.held.set(id, button); this.latch.press(button); }
     else if (p.x < STICK_ZONE_MAX_X && this.stickId === null) {
       this.stickId = id;
       this.origin = { x: p.x, y: p.y };
@@ -68,6 +81,7 @@ export class PadTracker {
   cancelAll(): void {
     this.stickId = null;
     this.held.clear();
+    this.latch.clear();
   }
 
   /** Where to draw the stick: its base at the floating origin and the knob at the pointer, or null when not held. */
@@ -83,6 +97,7 @@ export class PadTracker {
       pad.moveY = v.y;
     }
     for (const name of this.held.values()) pad[name] = true;
+    for (const name of BUTTON_NAMES) if (this.latch.take(name)) pad[name] = true;
     return pad;
   }
 }

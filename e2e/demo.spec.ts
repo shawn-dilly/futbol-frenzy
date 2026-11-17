@@ -34,10 +34,7 @@ test('a human can run with the arrow keys and pass with J, no errors', async ({ 
   expect(endX - startX).toBeGreaterThan(60);
 
   const ownerBefore = await page.evaluate(() => (window as any).__ff.state.ball.owner);
-  // Held across several frames: the pad samples key state once per frame, so an instant press can fall between samples.
-  await page.keyboard.down('KeyJ');
-  await page.waitForTimeout(100);
-  await page.keyboard.up('KeyJ');
+  await page.keyboard.press('KeyJ');
   await page.waitForFunction(
     (before) => {
       const b = (window as any).__ff.state.ball;
