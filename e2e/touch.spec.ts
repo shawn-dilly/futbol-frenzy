@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test';
 import { BUTTONS } from '../src/input/stick';
-import { SCREEN_W, SCREEN_H } from '../src/game/layout';
+import { FIELD_TOP, SCREEN_W, SCREEN_H } from '../src/game/layout';
 
 test.use({ hasTouch: true, viewport: { width: 844, height: 390 } });
 
@@ -87,3 +87,64 @@ for (const hit of ['shoulder', 'big'] as const) {
     await page.screenshot({ path: `artifacts/${hit}-victim.png` });
   });
 }
+
+test('phone SWITCH skips a stumble and keeps control when all outfielders stumble', async ({ page }) => {
+  await page.clock.install();
+  await page.goto('/?match=1&seed=17&mute=1');
+  await page.waitForFunction(() => window.__ff?.state.phase === 'play');
+  await page.clock.pauseAt(new Date(Date.now() + 1000));
+  await page.evaluate(() => {
+    const s = window.__ff!.state;
+    s.controlled[0] = 4;
+    s.ball.owner = null;
+    s.ball.pos = { x: 240, y: 66 };
+    s.ball.vel = { x: 0, y: 0 };
+    for (const p of s.players) {
+      p.kickCooldown = 120;
+      p.pos = { x: p.team ? 400 : 90, y: 20 + p.id * 8 };
+    }
+    s.players[1].pos = { x: 240, y: 54 };
+    s.players[1].status = { kind: 'hurt', tier: 'stumble', variant: 0 };
+    s.players[1].statusTick = 0;
+    s.players[1].statusTicks = 120;
+    s.players[2].pos = { x: 240, y: 90 };
+  });
+  const box = (await page.locator('canvas').boundingBox())!;
+  const point = (x: number, y: number) => ({ x: box.x + box.width * x / SCREEN_W, y: box.y + box.height * y / SCREEN_H });
+  const tapPoint = point(BUTTONS.pass.x, BUTTONS.pass.y);
+  const tapSwitch = async () => {
+    await page.touchscreen.tap(tapPoint.x, tapPoint.y);
+    await page.clock.runFor(48);
+  };
+  const read = () => page.evaluate(() => ({
+    id: window.__ff!.state.controlled[0], y: window.__ff!.state.players[2].pos.y, marker: window.__ff!.markerY(0),
+  }));
+  await tapSwitch();
+  const before = await read();
+  expect(before.id).toBe(2);
+  expect(before.marker).toBe(Math.round(before.y) + FIELD_TOP - 19);
+  const client = await page.context().newCDPSession(page);
+  const dragDown = async () => {
+    await client.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [point(50, 140)] });
+    await client.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [point(50, 166)] });
+    await page.clock.runFor(128);
+    await client.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+  };
+  await dragDown();
+  const after = await read();
+  expect(after.y).toBeGreaterThan(before.y);
+  expect(after.marker).toBe(Math.round(after.y) + FIELD_TOP - 19);
+  await page.screenshot({ path: 'artifacts/touch-actionable-switch.png' });
+  await page.evaluate(() => {
+    for (const p of window.__ff!.state.players.filter(p => p.team === 0 && p.role === 'out')) {
+      p.status = { kind: 'hurt', tier: 'stumble', variant: 0 };
+      p.statusTicks = 120;
+      p.statusTick = 0;
+    }
+  });
+  await tapSwitch();
+  const fallback = await read();
+  expect(fallback.id).toBe(2);
+  await dragDown();
+  expect((await read()).y).toBe(fallback.y);
+});

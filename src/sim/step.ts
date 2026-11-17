@@ -8,7 +8,7 @@ import { blankMemory, neutralIntent } from './setup';
 import { canAct, isHumanControlled, tickStatus } from './status';
 import { decayRage } from './rage';
 import { regenHealth } from './hurt';
-import { kick, switchControl, tickKickCooldowns, updatePossession } from './possession';
+import { kick, manualSwitchControl, tickKickCooldowns, updatePossession } from './possession';
 
 /** Pass/shoot/turbo are true only on the tick the button goes down. */
 export function padToIntent(pad: PadInput, prev: PadInput): PlayerIntent {
@@ -49,7 +49,7 @@ function applyActions(state: MatchState, intents: BrainIntent[]): void {
   for (const p of state.players) {
     const req = kickRequest(state, p, intents[p.id]);
     if (req) kick(state, p, req.kind, req.aim);
-    else if (isHumanControlled(state, p) && intents[p.id].pass && state.ball.owner !== p.id) switchControl(state, p.team, canAct(p) ? undefined : p.id);
+    else if (isHumanControlled(state, p) && intents[p.id].pass && state.ball.owner !== p.id) manualSwitchControl(state, p.team);
   }
 }
 

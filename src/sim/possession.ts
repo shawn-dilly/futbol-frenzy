@@ -95,3 +95,11 @@ export function nearestOutfield(state: MatchState, team: TeamId, exclude?: numbe
 export function switchControl(state: MatchState, team: TeamId, exclude?: number): void {
   state.controlled[team] = nearestOutfield(state, team, exclude);
 }
+
+/** A manual SWITCH uses the same eligibility as movement. Keep control if nobody can act. */
+export function manualSwitchControl(state: MatchState, team: TeamId): void {
+  const eligible = state.players.filter(p => p.team === team && p.role === 'out' && canAct(p));
+  // Roster slots are in ascending id order, so nearestTo resolves ties to the lower id.
+  const nearest = nearestTo(eligible, state.ball.pos);
+  if (nearest) state.controlled[team] = nearest.id;
+}

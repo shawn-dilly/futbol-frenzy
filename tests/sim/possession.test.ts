@@ -105,3 +105,22 @@ test('directional passes prefer an outfielder in the cone and fall back to the k
   s.players[1].pos = { x: 200, y: 20 };
   expect(pickPassTarget(s, s.players[4], { x: -1, y: 0 })).toBe(0);
 });
+
+test.each([false, true])('manual switch with every outfielder unavailable = %s', allUnavailable => {
+  s.ball.owner = null;
+  s.ball.pos = { x: 240, y: 66 };
+  s.controlled[0] = 4;
+  for (const [id, dx] of [0, 12, 24, -24, 60].entries()) {
+    const p = s.players[id];
+    p.pos = { x: 240 + dx, y: 66 };
+    p.kickCooldown = 100;
+    if (id === 1 || allUnavailable) {
+      p.status = { kind: 'hurt', tier: 'stumble', variant: 0 };
+      p.statusTicks = 100;
+      p.statusTick = 0;
+    }
+  }
+  runTicks(s, 1, [pad({ pass: true }), neutralPad()]);
+  // Equal distance selects the lower id. With no eligible outfielder keep control.
+  expect(s.controlled[0]).toBe(allUnavailable ? 4 : 2);
+});

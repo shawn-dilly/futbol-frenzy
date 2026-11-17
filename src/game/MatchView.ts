@@ -104,6 +104,11 @@ export class MatchView {
       .map(sprite => ({ frame: sprite.frame.name, y: sprite.y }));
   }
 
+  markerY(team: TeamId): number | null {
+    const marker = this.markers[team];
+    return marker.visible ? marker.y : null;
+  }
+
   addOutgoing(player: PlayerState, start: number): void {
     this.outgoing.push({ player, start, view: this.createPlayerView(player) });
   }

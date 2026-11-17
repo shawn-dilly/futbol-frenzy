@@ -25,7 +25,7 @@ import { Sfx, sfxForEvent } from '../audio/sfx';
 declare global {
   interface Window {
     /** Dev/test hooks: `showCallout` shows the callout a hit of that tier and type would; `calloutText` is what the banner shows now ('' if nothing). */
-    __ff?: { state: MatchState; renderedPlayers: MatchView['renderedPlayers']; showCallout: (tier: HurtTier, hit: HitType) => void; calloutText: () => string; replay: () => ReplayRecord; startReplay: (half: 0 | 1) => void; endReplay: () => void; replayTick: () => number | null; pause: () => void; resume: () => void; halftimeGate: () => boolean; continueHalftime: () => void; launch: (launch?: MatchLaunch) => void }
+    __ff?: { state: MatchState; renderedPlayers: MatchView['renderedPlayers']; markerY: MatchView['markerY']; showCallout: (tier: HurtTier, hit: HitType) => void; calloutText: () => string; replay: () => ReplayRecord; startReplay: (half: 0 | 1) => void; endReplay: () => void; replayTick: () => number | null; pause: () => void; resume: () => void; halftimeGate: () => boolean; continueHalftime: () => void; launch: (launch?: MatchLaunch) => void }
   }
 }
 
@@ -96,6 +96,7 @@ export class MatchScene extends Phaser.Scene {
     let active = true;
     const hook: NonNullable<Window["__ff"]> = {
       state: this.state,
+      markerY: team => active ? this.view.markerY(team) : null,
       renderedPlayers: id => active ? this.view.renderedPlayers(id) : [],
       pause: () => { if (active) this.pause(); },
       resume: () => { if (active) this.resume(); },
