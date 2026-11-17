@@ -1,6 +1,6 @@
 import { test, expect } from 'vitest';
 import { createMatch } from '../../src/sim/setup';
-import { canAct, isDown, setStatus, tickStatus } from '../../src/sim/status';
+import { canAct, isDown, isHumanControlled, setStatus, tickStatus } from '../../src/sim/status';
 import { HURT_TIERS } from '../../src/sim/constants';
 import type { HitType, PlayerState, PlayerStatus } from '../../src/sim/types';
 
@@ -49,4 +49,12 @@ test('isDown is true for hurt with tier knockdown or worse only', () => {
   for (const status of [{ kind: 'free' }, { kind: 'kicking' }, { kind: 'charging' }, { kind: 'lunging', hit: 'big' }, { kind: 'recovering', hit: 'big', landed: true }] as PlayerStatus[]) {
     const p = player(); p.status = status; expect(isDown(p), status.kind).toBe(false);
   }
+});
+
+test('isHumanControlled: only the controlled player of a human team', () => {
+  const s = createMatch(cfg);
+  const mine = s.players[s.controlled[0]];
+  const other = s.players.find(p => p.team === 0 && p.id !== mine.id)!;
+  const cpu = s.players[s.controlled[1]];
+  expect([isHumanControlled(s, mine), isHumanControlled(s, other), isHumanControlled(s, cpu)]).toEqual([true, false, false]);
 });

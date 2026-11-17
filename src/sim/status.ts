@@ -1,4 +1,4 @@
-import type { PlayerState, PlayerStatus } from './types';
+import type { MatchState, PlayerState, PlayerStatus } from './types';
 import { DAZED_HEALTH, HURT_TIERS } from './constants';
 
 /** Enters `status` for `ticks` ticks (0 = open-ended). */
@@ -32,4 +32,9 @@ export function isDazed(p: PlayerState): boolean {
 export function standingOrAll(players: PlayerState[]): PlayerState[] {
   const standing = players.filter(p => !isDown(p));
   return standing.length > 0 ? standing : players;
+}
+
+/** Whether this player is the one a human team is steering right now. */
+export function isHumanControlled(state: MatchState, p: PlayerState): boolean {
+  return state.config.human[p.team] && state.controlled[p.team] === p.id;
 }

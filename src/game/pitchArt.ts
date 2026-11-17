@@ -88,3 +88,17 @@ export function drawPitch(rect: RectFn): void {
   drawEnd(rect, 1);
   drawEnd(rect, -1);
 }
+
+/** Over-the-top crater decal: a dark oval with a deeper hole, drawn on its own small texture. */
+const CRATER_ROW_WIDTHS = [10, 14, 16, 14, 10];
+const CRATER_RIM_INSET = 2; // px between the rim edge and the hole, each side
+export const CRATER_W = Math.max(...CRATER_ROW_WIDTHS);
+export const CRATER_H = CRATER_ROW_WIDTHS.length;
+
+export function drawCrater(rect: RectFn): void {
+  CRATER_ROW_WIDTHS.forEach((w, row) => {
+    rect((CRATER_W - w) / 2, row, w, 1, PAL.dk);
+    const hole = w - 2 * CRATER_RIM_INSET;
+    if (row > 0 && row < CRATER_H - 1) rect((CRATER_W - hole) / 2, row, hole, 1, PAL.ink);
+  });
+}

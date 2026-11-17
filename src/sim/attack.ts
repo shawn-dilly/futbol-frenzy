@@ -7,7 +7,7 @@ import type { BrainIntent } from './brain';
 import { hurtPlayer } from './hurt';
 import { hitDamage, rageAfterHit, tierFor } from './rage';
 import { attackDir } from './setup';
-import { isDown, setStatus } from './status';
+import { isDown, isHumanControlled, setStatus } from './status';
 import { dist, isZero, norm } from './vec';
 
 /** The cooldown after a hit: the computer side waits at least CPU_HIT_COOLDOWN_TICKS, whatever the hit did. */
@@ -35,7 +35,7 @@ function releasedHit(state: MatchState, p: PlayerState): HitType {
 /** Charge start, release and launch for one player this tick. */
 export function updateAttack(state: MatchState, p: PlayerState, intent: BrainIntent): void {
   if (p.status.kind === 'charging') {
-    const stillHis = state.config.human[p.team] && state.controlled[p.team] === p.id;
+    const stillHis = isHumanControlled(state, p);
     if (state.ball.owner === p.id || !stillHis) setStatus(p, { kind: 'free' }, 0); // picked the ball up, or control moved on: no hit
     else if (!intent.hitHeld || p.statusTick >= BIG_HIT_MAX_HOLD_TICKS) launch(p, releasedHit(state, p), intent);
     return;

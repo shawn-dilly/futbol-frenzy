@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { GOAL_BANNER_TICKS, canRestart } from './layout';
+import { DEPTH, GOAL_BANNER_TICKS, SCREEN_H, SCREEN_W, canRestart } from './layout';
 import { HALFTIME_PAUSE_TICKS, createMatch, neutralPad, step, type HitType, type HurtTier, type MatchState, type PadInput, type SimEvent } from '../sim';
 import { KeyboardPad, mergePads } from '../input/keyboard';
 import { TouchControls } from '../input/TouchControls';
@@ -8,6 +8,7 @@ import { seededRandom } from '../content/shuffleBag';
 import { CalloutBanner } from './CalloutBanner';
 import { CALLOUT_SEED_SALT, CalloutPicker } from './calloutPicker';
 import { Hud } from './Hud';
+import { EFFECT_SEED_SALT, HIT_FEEDBACK, chargeFill, craterLandTicks, flashAlpha } from './hitFeedback';
 import { MatchView } from './MatchView';
 import { FixedStepper } from './loop';
 import { parseMatchParams } from './params';
@@ -30,6 +31,14 @@ export class MatchScene extends Phaser.Scene {
   private touch: TouchControls | null = null;
   private keys!: KeyboardPad;
   private readonly stepper = new FixedStepper();
+  private flash!: Phaser.GameObjects.Rectangle;
+  /** Real time of the latest frame, and of the latest flash; the shake and flash run on real time so they play through a hit-stop. */
+  private nowMs = 0;
+  private flashStartMs = -Infinity;
+  /** Hit-stop ticks asked for by the events of the step just run; update() hands them to the stepper. */
+  private freezeTicks = 0;
+  /** Craters waiting for their victim to land: the sim tick they appear on, and who lands. */
+  private pendingCraters: { tick: number; victim: number }[] = [];
   private seed = 0;
   /** Sim tick of the full-time whistle, null until it blows. */
   private fulltimeTick: number | null = null;
@@ -44,20 +53,22 @@ export class MatchScene extends Phaser.Scene {
 
   create(): void {
     this.fulltimeTick = null;
+    this.pendingCraters = [];
+    this.freezeTicks = 0;
+    this.flashStartMs = -Infinity;
     const params = parseMatchParams(window.location.search);
     this.sfx.muted = params.mute;
     this.state = createMatch({ seed: this.seed, halfSeconds: params.halfSeconds, human: [!params.demo, false] });
     this.callouts = new CalloutPicker(CALLOUTS, seededRandom(this.seed ^ CALLOUT_SEED_SALT));
     window.__ff = { state: this.state, showCallout: (tier, hit) => this.showCallout(tier, hit) };
-    this.view = new MatchView(this);
+    this.view = new MatchView(this, seededRandom(this.seed ^ EFFECT_SEED_SALT));
     this.hud = new Hud(this);
     this.calloutBanner = new CalloutBanner(this);
+    this.flash = this.add.rectangle(0, 0, SCREEN_W, SCREEN_H, 0xffffff).setOrigin(0, 0).setDepth(DEPTH.flash).setAlpha(0);
     this.keys = new KeyboardPad(this);
     this.touch = params.demo ? null : new TouchControls(this);
     this.handleEvents(this.state.events);
-    this.view.sync(this.state);
-    this.hud.sync(this.state);
-    this.calloutBanner.sync(this.state.tick);
+    this.syncPresentation();
 
     // Only a fresh press restarts: a key already held at full time keeps auto-repeating keydown, which must not count.
     const restart = () => {
@@ -81,15 +92,29 @@ export class MatchScene extends Phaser.Scene {
     this.events.once('shutdown', () => document.removeEventListener('visibilitychange', onVisibility));
   }
 
-  update(_time: number, delta: number): void {
+  update(time: number, delta: number): void {
+    this.nowMs = time;
     const steps = this.stepper.advance(delta);
     for (let i = 0; i < steps; i++) {
       step(this.state, this.readPads());
       this.handleEvents(this.state.events);
+      this.landCraters();
+      if (this.freezeTicks > 0) {
+        // Hit-stop: the steps this frame still owes are frozen too, so the pause is exact.
+        this.stepper.freeze(this.freezeTicks + (steps - i - 1));
+        this.freezeTicks = 0;
+        break;
+      }
     }
-    this.view.sync(this.state);
+    this.syncPresentation();
+  }
+
+  private syncPresentation(): void {
+    this.view.sync(this.state, this.nowMs);
     this.hud.sync(this.state);
     this.calloutBanner.sync(this.state.tick);
+    this.flash.setAlpha(flashAlpha(this.nowMs - this.flashStartMs));
+    this.touch?.draw(chargeFill(this.state.players[this.state.controlled[0]]));
   }
 
   /** Team 0 is the human (touch and keyboard, absent in demo mode); team 1 is always the CPU. */
@@ -98,17 +123,18 @@ export class MatchScene extends Phaser.Scene {
     return [mergePads(this.touch.read(), this.keys.read()), neutralPad()];
   }
 
-  /** The one place sim events become presentation: banners and sound. */
+  /** The one place sim events become presentation: banners, sound, shake, hit-stop, flash and craters. */
   private handleEvents(events: SimEvent[]): void {
     for (const e of events) {
       const sound = sfxForEvent(e);
       if (sound) this.sfx.play(sound);
-      if (e.type === 'hit') this.showCallout(e.tier, e.hit);
+      if (e.type === 'hit') this.onHit(e);
       else if (e.type === 'goal') {
         this.calloutBanner.clear();
         this.hud.showBanner('GOAL!', GOAL_BANNER_TICKS, this.state.tick);
       } else if (e.type === 'whistle') {
         this.calloutBanner.clear();
+        if (e.what === 'kickoff') { this.view.clearCraters(); this.pendingCraters = []; }
         if (e.what === 'halftime') this.hud.showBanner('HALF TIME', HALFTIME_PAUSE_TICKS, this.state.tick);
         else if (e.what === 'fulltime') {
           this.fulltimeTick = this.state.tick;
@@ -116,6 +142,27 @@ export class MatchScene extends Phaser.Scene {
         }
       }
     }
+  }
+
+  private onHit(e: Extract<SimEvent, { type: 'hit' }>): void {
+    const fb = HIT_FEEDBACK[e.tier];
+    fb.sounds.forEach(name => this.sfx.play(name));
+    this.view.shake(fb.shakePx, fb.shakeMs, this.nowMs);
+    this.freezeTicks = Math.max(this.freezeTicks, fb.freezeTicks);
+    if (fb.flash) this.flashStartMs = this.nowMs;
+    const landTicks = craterLandTicks(e.tier, e.variant);
+    if (landTicks !== null) this.pendingCraters.push({ tick: this.state.tick + landTicks, victim: e.victim });
+    this.showCallout(e.tier, e.hit);
+  }
+
+  /** Puts a crater where each over-the-top victim has landed by now. */
+  private landCraters(): void {
+    this.pendingCraters = this.pendingCraters.filter(c => {
+      if (c.tick > this.state.tick) return true;
+      const { x, y } = this.state.players[c.victim].pos;
+      this.view.addCrater({ x, y });
+      return false;
+    });
   }
 
   /** Shows the next callout for a hit of this tier and type, if the pool has one; the newest always replaces the last. */

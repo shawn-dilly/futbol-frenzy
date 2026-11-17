@@ -1,4 +1,4 @@
-import { TICK_HZ, TURBO_COST, type Phase, type Vec } from '../sim';
+import { RAGE_MAX, TICK_HZ, TURBO_COST, type Phase, type Vec } from '../sim';
 
 export const SCREEN_W = 320;
 export const SCREEN_H = 180;
@@ -30,8 +30,8 @@ export const PITCH_TEX_ORIGIN_X = -CAMERA_MIN_X;
 /** Ticks the GOAL! banner stays up. */
 export const GOAL_BANNER_TICKS = 90;
 
-/** Draw order, back to front: pitch, shadows, ball (plus its y), marker, touch controls, then callouts, then the HUD layer with banners. */
-export const DEPTH = { pitch: -100, shadow: -50, ball: 0.1, marker: 1000, controls: 1500, callout: 1800, hud: 2000 } as const;
+/** Draw order, back to front: pitch, crater decals, shadows, ball (plus its y), marker, touch controls, then callouts, then the HUD layer with banners, then the hit flash over everything. */
+export const DEPTH = { pitch: -100, crater: -90, shadow: -50, ball: 0.1, marker: 1000, controls: 1500, callout: 1800, hud: 2000, flash: 2100 } as const;
 
 /** Callout banner: centre y on screen and the widest a line may be (320 minus a 4 px margin each side). */
 export const CALLOUT_CENTER_Y = 62;
@@ -72,4 +72,20 @@ export function fullTimeLines(score: readonly [number, number], restartAllowed: 
 export function arcLift(arcHeight: number | undefined, tick: number, airTicks: number): number {
   if (!arcHeight || airTicks <= 0 || tick >= airTicks) return 0;
   return arcHeight * Math.sin(Math.PI * tick / airTicks);
+}
+
+/** Rage at or above this level makes the HUD meter flash: a big hit is nearly always affordable. */
+export const RAGE_FLASH_AT = 80;
+export const RAGE_FLASH_TICKS = 8;
+
+/** Filled width in whole pixels of a rage meter `maxPx` wide. */
+export function rageBarWidth(rage: number, maxPx: number): number {
+  return Math.round(Math.min(1, Math.max(0, rage / RAGE_MAX)) * maxPx);
+}
+
+export function isRageFlashing(rage: number): boolean { return rage >= RAGE_FLASH_AT; }
+
+/** True in the first, third, ... `periodTicks` of the tick count: a blink that starts lit. */
+export function blinkOn(tick: number, periodTicks: number): boolean {
+  return Math.floor(tick / periodTicks) % 2 === 0;
 }

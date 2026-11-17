@@ -5,7 +5,7 @@ import { advanceFlow } from './flow';
 import { brainIntent, type BrainIntent } from './brain';
 import { resolveContacts, updateAttack } from './attack';
 import { neutralIntent } from './setup';
-import { canAct, tickStatus } from './status';
+import { canAct, isHumanControlled, tickStatus } from './status';
 import { decayRage } from './rage';
 import { kick, switchControl, tickKickCooldowns, updatePossession } from './possession';
 
@@ -20,9 +20,6 @@ export function padToIntent(pad: PadInput, prev: PadInput): PlayerIntent {
     hitHeld: pad.hit,
   };
 }
-
-const isHumanControlled = (state: MatchState, p: PlayerState): boolean =>
-  state.config.human[p.team] && state.controlled[p.team] === p.id;
 
 /** The one place a player's intent is decided: nothing if he cannot act, else the pad for a human team's controlled player, the brain for everyone else. */
 function intentFor(state: MatchState, p: PlayerState, inputs: [PadInput, PadInput]): BrainIntent {

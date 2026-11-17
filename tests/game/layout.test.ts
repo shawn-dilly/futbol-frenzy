@@ -1,6 +1,6 @@
 import { expect, test } from 'vitest';
 import {
-  DEPTH, arcLift, FULLTIME_RESTART_DELAY_TICKS, TEAM_NAMES, canRestart, cameraTarget, fullTimeLines, formatClock, nextFlip, turboPips, worldToScreen,
+  DEPTH, RAGE_FLASH_AT, arcLift, blinkOn, isRageFlashing, rageBarWidth, FULLTIME_RESTART_DELAY_TICKS, TEAM_NAMES, canRestart, cameraTarget, fullTimeLines, formatClock, nextFlip, turboPips, worldToScreen,
 } from '../../src/game/layout';
 
 test('camera follows the ball and stops at both ends', () => {
@@ -18,9 +18,10 @@ test('flip follows horizontal facing and keeps the last flip on vertical moves',
 test('turbo pips lit by the meter', () => {
   expect([0, 0.33, 1 / 3, 0.5, 2 / 3, 1].map(turboPips)).toEqual([0, 0, 1, 1, 2, 3]);
 });
-test('draw order: pitch, shadow, ball, marker, controls, HUD', () => {
+test('draw order: pitch, crater, shadow, ball, marker, controls, HUD, flash', () => {
   const d = DEPTH;
-  expect([d.pitch, d.shadow, d.ball, d.marker, d.controls, d.hud]).toEqual([...[d.pitch, d.shadow, d.ball, d.marker, d.controls, d.hud]].sort((a, b) => a - b));
+  const order = [d.pitch, d.crater, d.shadow, d.ball, d.marker, d.controls, d.callout, d.hud, d.flash];
+  expect(order).toEqual([...order].sort((a, b) => a - b));
   expect(d.controls).toBeLessThan(d.hud);
 });
 
@@ -48,4 +49,16 @@ test('arcLift is 0 at the start, peaks at half the air time, and is 0 at and aft
 test('arcLift is zero without an arc or without air time', () => {
   expect(arcLift(undefined, 40, 100)).toBe(0);
   expect(arcLift(22, 40, 0)).toBe(0);
+});
+
+test('rage bar width is proportional, clamped, and whole pixels', () => {
+  expect([0, 50, 100].map(r => rageBarWidth(r, 60))).toEqual([0, 30, 60]);
+  expect(rageBarWidth(33, 60)).toBe(20); expect(rageBarWidth(-5, 60)).toBe(0); expect(rageBarWidth(140, 60)).toBe(60);
+});
+test('rage flashes from RAGE_FLASH_AT up', () => {
+  expect(RAGE_FLASH_AT).toBe(80);
+  expect(isRageFlashing(79.9)).toBe(false); expect(isRageFlashing(80)).toBe(true); expect(isRageFlashing(100)).toBe(true);
+});
+test('blinkOn alternates on and off every period, starting on', () => {
+  expect([0, 5, 6, 11, 12].map(t => blinkOn(t, 6))).toEqual([true, true, false, false, true]);
 });

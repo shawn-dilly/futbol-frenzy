@@ -1,7 +1,7 @@
 import type { HurtTier, MatchState, PlayerState, Vec } from './types';
 import { HURT, LOOSE_BALL_SPEED } from './constants';
 import { nextRandom } from './rng';
-import { isDown, setStatus } from './status';
+import { isDown, isHumanControlled, setStatus } from './status';
 import { switchControl } from './possession';
 import { norm, scale } from './vec';
 
@@ -24,7 +24,7 @@ export function hurtPlayer(state: MatchState, victim: PlayerState, tier: HurtTie
     state.ball.vel = scale(norm(dir), LOOSE_BALL_SPEED);
     victim.kickCooldown = Math.max(victim.kickCooldown, spec.downTicks);
   }
-  if (isDown(victim) && state.config.human[victim.team] && state.controlled[victim.team] === victim.id) {
+  if (isDown(victim) && isHumanControlled(state, victim)) {
     switchControl(state, victim.team);
   }
   return variant;

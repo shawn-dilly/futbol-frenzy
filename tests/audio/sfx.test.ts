@@ -1,5 +1,6 @@
 import { expect, test } from 'vitest';
 import { Sfx, sfxForEvent } from '../../src/audio/sfx';
+import { SOUNDS } from '../../src/content/sounds';
 
 test('event to sound mapping', () => {
   expect(sfxForEvent({ type: 'kick', kind: 'pass', player: 1 })).toBe('pass');
@@ -7,6 +8,10 @@ test('event to sound mapping', () => {
   expect(sfxForEvent({ type: 'bounce' })).toBe('bounce');
   expect(sfxForEvent({ type: 'goal', team: 0 })).toBe('goal');
   expect(sfxForEvent({ type: 'whistle', what: 'halftime' })).toBe('whistle');
+  expect(sfxForEvent({ type: 'whiff', player: 3, hit: 'shoulder' })).toBe('whiff');
+});
+test('a hit has no single sound: its sounds come from HIT_FEEDBACK', () => {
+  expect(sfxForEvent({ type: 'hit', tackler: 1, victim: 2, hit: 'big', tier: 'wipeout', variant: 0, damage: 30, late: false })).toBeNull();
 });
 test('play before unlock is a silent no-op and creates no context', () => {
   let made = 0; const s = new Sfx(() => { made++; throw new Error('blocked'); });
@@ -67,12 +72,14 @@ test('after unlock, play creates and starts an oscillator', () => {
 });
 test('goal plays exactly three tones, and its noise buffer is built once', () => {
   const { ctx, log } = fakeContext(); const s = new Sfx(() => ctx);
-  s.unlock(); s.play('goal'); s.play('goal');
+  s.unlock(); s.play('goal');
+  (ctx as { currentTime: number }).currentTime = SOUNDS.goal.minGapS; // past the minimum gap
+  s.play('goal');
   expect(log.oscillators).toBe(6);
   expect(log.buffers).toBe(1);
 });
 test('each sound creates its tones', () => {
-  const counts = { pass: 1, shot: 1, bounce: 1, whistle: 2, goal: 3 };
+  const counts = { pass: 1, shot: 1, bounce: 1, whistle: 2, goal: 3, thud: 1, grunt: 1, crunch: 1, ooh: 1, gasp: 1, whiff: 1, charge: 1 };
   for (const [name, n] of Object.entries(counts)) {
     const { ctx, log } = fakeContext(); const s = new Sfx(() => ctx);
     s.unlock(); s.play(name as keyof typeof counts);
@@ -131,4 +138,20 @@ test('a context left over from a failed setup is closed, and unlock can retry', 
 test('playClip is the hook for recorded lines: no clips exist yet, so it reports false and stays silent', () => {
   const s = new Sfx(() => { throw new Error('x'); });
   expect(s.playClip('crunch')).toBe(false);
+});
+
+test('a sound requested again inside its minimum gap makes no nodes; after the gap it plays', () => {
+  const { ctx, log } = fakeContext({ startState: 'running' }); const s = new Sfx(() => ctx);
+  s.unlock();
+  const gap = SOUNDS.grunt.minGapS;
+  (ctx as { currentTime: number }).currentTime = 10;
+  s.play('grunt'); expect(log.oscillators).toBe(1);
+  (ctx as { currentTime: number }).currentTime = 10 + gap / 2;
+  s.play('grunt'); expect(log.oscillators).toBe(1);
+  s.play('thud'); expect(log.oscillators).toBe(2); // a different sound is not blocked
+  (ctx as { currentTime: number }).currentTime = 10 + gap;
+  s.play('grunt'); expect(log.oscillators).toBe(3);
+});
+test('every sound has a positive minimum gap', () => {
+  for (const [name, spec] of Object.entries(SOUNDS)) expect(spec.minGapS, name).toBeGreaterThan(0);
 });
