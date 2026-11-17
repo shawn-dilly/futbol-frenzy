@@ -1,6 +1,8 @@
 import Phaser from 'phaser';
 import { GOAL_BANNER_TICKS } from './layout';
 import { HALFTIME_PAUSE_TICKS, createMatch, neutralPad, step, type MatchState, type PadInput, type SimEvent } from '../sim';
+import { KeyboardPad, mergePads } from '../input/keyboard';
+import { TouchControls } from '../input/TouchControls';
 import { Hud } from './Hud';
 import { MatchView } from './MatchView';
 import { FixedStepper } from './loop';
@@ -15,6 +17,8 @@ export class MatchScene extends Phaser.Scene {
   private state!: MatchState;
   private view!: MatchView;
   private hud!: Hud;
+  private touch: TouchControls | null = null;
+  private keys!: KeyboardPad;
   private readonly stepper = new FixedStepper();
   private seed = 0;
 
@@ -30,13 +34,16 @@ export class MatchScene extends Phaser.Scene {
     window.__ff = { state: this.state };
     this.view = new MatchView(this);
     this.hud = new Hud(this);
+    this.keys = new KeyboardPad(this);
+    this.touch = params.demo ? null : new TouchControls(this);
     this.handleEvents(this.state.events);
     this.view.sync(this.state);
     this.hud.sync(this.state);
 
+    // Only a fresh press restarts: a key already held at full time keeps auto-repeating keydown, which must not count.
     const restart = () => { if (this.state.phase === 'fulltime') this.scene.restart({ seed: this.seed + 1 }); };
     this.input.on('pointerdown', restart);
-    this.input.keyboard?.on('keydown', restart);
+    this.input.keyboard?.on('keydown', (e: KeyboardEvent) => { if (!e.repeat) restart(); });
     const onVisibility = () => { if (document.hidden) this.stepper.reset(); };
     document.addEventListener('visibilitychange', onVisibility);
     this.events.once('shutdown', () => document.removeEventListener('visibilitychange', onVisibility));
@@ -52,9 +59,10 @@ export class MatchScene extends Phaser.Scene {
     this.hud.sync(this.state);
   }
 
-  /** Task 10 replaces this body with touch and keyboard input. */
+  /** Team 0 is the human (touch and keyboard, absent in demo mode); team 1 is always the CPU. */
   private readPads(): [PadInput, PadInput] {
-    return [neutralPad(), neutralPad()];
+    if (!this.touch) return [neutralPad(), neutralPad()];
+    return [mergePads(this.touch.read(), this.keys.read()), neutralPad()];
   }
 
   /** The one place sim events become presentation; sound joins here. */

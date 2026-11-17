@@ -743,7 +743,7 @@ export function mergePads(a: PadInput, b: PadInput): PadInput;                  
 - `PadTracker`: a pointer that goes down at `x < 144` (left 45% of the screen) and not on a button becomes the stick pointer, with its origin where it went down (floating stick); only one stick pointer at a time. A pointer that goes down on a button holds that button until it goes up; sliding off does not release it and does not press another. `up` for the stick pointer returns the stick to neutral. `cancelAll` clears everything.
 - `TouchControls` enables 3 simultaneous pointers, feeds Phaser pointer events (down, move, up, and up-outside / cancel / game-out, whichever Phaser 4 provides) into a `PadTracker`, calls `cancelAll` on window `blur` and on `visibilitychange` to hidden, and draws the controls as in the mockup: translucent stick base and knob (the base moves to the floating origin while held), three translucent labelled buttons plus the smaller TURBO button, pressed buttons drawn brighter. Controls are hidden when `demo=1`.
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 ```ts
 // tests/input/stick.test.ts
@@ -784,11 +784,11 @@ test('mergePads', () => {
 });
 ```
 
-- [ ] **Step 2:** Run `npm test`. Expected: FAIL.
-- [ ] **Step 3:** Implement the three files and wire `mergePads(touch.read(), keys.read())` into `MatchScene` for team 0.
-- [ ] **Step 4:** Run `npm test` and `npm run build`. Expected: both pass.
-- [ ] **Step 5:** Run `npm run dev`. With the keyboard: run, turbo, pass to a teammate, shoot, score. With the browser's device toolbar in a landscape phone profile: drive the stick and press buttons with touch emulation.
-- [ ] **Step 6:** Commit: `feat(input): touch stick and buttons, keyboard, multi-touch tracking`.
+- [x] **Step 2:** Run `npm test`. Expected: FAIL.
+- [x] **Step 3:** Implement the three files and wire `mergePads(touch.read(), keys.read())` into `MatchScene` for team 0.
+- [x] **Step 4:** Run `npm test` and `npm run build`. Expected: both pass.
+- [x] **Step 5:** Run `npm run dev`. With the keyboard: run, turbo, pass to a teammate, shoot, score. With the browser's device toolbar in a landscape phone profile: drive the stick and press buttons with touch emulation.
+- [x] **Step 6:** Commit: `feat(input): touch stick and buttons, keyboard, multi-touch tracking`.
 
 ---
 
