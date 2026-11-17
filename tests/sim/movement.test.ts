@@ -64,6 +64,7 @@ test('keepers run at 40 units per second, outfield players at 60', () => {
   const s = playing(); s.controlled[0] = 0; const y0 = s.players[0].pos.y;
   runTicks(s, 60, [pad({ moveY: 1, turbo: true }), neutralPad()]);
   expect(s.players[0].pos.y - y0).toBeCloseTo(40, 1);
+  expect(s.turbo[0]).toBe(1); // a keeper cannot start a turbo burst
   const o = playing(); const x0 = o.players[4].pos.x;
   runTicks(o, 60, [pad({ moveX: 1 }), neutralPad()]);
   expect(o.players[4].pos.x - x0).toBeCloseTo(60, 1);

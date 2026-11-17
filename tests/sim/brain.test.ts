@@ -53,10 +53,14 @@ describe('placeholder brain', () => {
   });
   test('a team that owns the ball has no chaser', () => {
     const s = createMatch(cpu); runTicks(s, 60);
-    s.ball.owner = 4; s.ball.pos = { x: 235, y: 62 };
-    for (const p of s.players.filter(q => q.team === 0 && q.role === 'out' && q.id !== 4)) {
-      const i = brainIntent(s, p), d = norm(sub(s.ball.pos, p.pos));
-      expect(i.moveX * d.x + i.moveY * d.y).toBeLessThan(0.99);
+    s.players[0].pos = { x: 12, y: 20 }; // keeper owns the ball, so no outfield teammate is the carrier
+    s.ball.owner = 0; s.ball.pos = { x: 12, y: 20 };
+    for (const p of s.players.filter(q => q.team === 0 && q.role === 'out')) {
+      const target = {
+        x: p.anchor.x + (12 - 240) * ANCHOR_SHIFT_X, y: p.anchor.y + (20 - FIELD_MID_Y) * ANCHOR_SHIFT_Y,
+      };
+      const i = brainIntent(s, p), d = norm(sub(target, p.pos));
+      expect(i.moveX).toBeCloseTo(d.x, 9); expect(i.moveY).toBeCloseTo(d.y, 9);
     }
   });
   test('rule 5: everyone else heads for the shifted anchor and stands still within 3 units', () => {
