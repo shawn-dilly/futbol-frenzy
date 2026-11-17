@@ -2,8 +2,8 @@ import { describe, expect, test } from 'vitest';
 import { createMatch } from '../../src/sim/setup';
 import { brainIntent } from '../../src/sim/brain';
 import { goalCenter } from '../../src/sim/setup';
-import { ANCHOR_SHIFT_X, ANCHOR_SHIFT_Y, ARRIVE_DIST, CPU_SHOOT_RANGE, FIELD_MID_Y } from '../../src/sim/constants';
-import { norm, sub } from '../../src/sim/vec';
+import { ANCHOR_SHIFT_X, ANCHOR_SHIFT_Y, ARRIVE_DIST, CPU_SHOOT_RANGE, FIELD_MID_Y, JOCKEY_DIST } from '../../src/sim/constants';
+import { add, norm, scale, sub } from '../../src/sim/vec';
 import { runTicks } from '../helpers';
 
 const cpu = { seed: 7, halfSeconds: 120, human: [false, false] as [boolean, boolean] };
@@ -28,6 +28,33 @@ describe('placeholder brain', () => {
       return i.moveX * d.x + i.moveY * d.y > 0.99;
     });
     expect(toward).toHaveLength(1);
+  });
+  describe('chaser against a carried ball', () => {
+    const setup = () => {
+      const s = createMatch(cpu); runTicks(s, 60);
+      s.ball.owner = 4; s.ball.pos = { x: 300, y: 40 }; // team 0 carries it; team 1 defends the goal at x = 480
+      const chaser = s.players[7];
+      for (const id of [6, 8, 9]) s.players[id].pos = { x: 470, y: 10 + 10 * id }; // park the other defenders so `chaser` is nearest
+      const jockey = add(s.ball.pos, scale(norm(sub(goalCenter(1), s.ball.pos)), JOCKEY_DIST));
+      return { s, chaser, jockey };
+    };
+    test('heads for the point JOCKEY_DIST from the ball toward its own goal', () => {
+      const { s, chaser, jockey } = setup();
+      chaser.pos = { x: 330, y: 70 };
+      const i = brainIntent(s, chaser), d = norm(sub(jockey, chaser.pos));
+      expect(i.moveX).toBeCloseTo(d.x, 9); expect(i.moveY).toBeCloseTo(d.y, 9);
+    });
+    test('stands still once within ARRIVE_DIST of the jockey point', () => {
+      const { s, chaser, jockey } = setup();
+      chaser.pos = { x: jockey.x + (ARRIVE_DIST - 0.5), y: jockey.y };
+      const i = brainIntent(s, chaser); expect(i.moveX).toBe(0); expect(i.moveY).toBe(0);
+    });
+    test('still runs straight at a free ball', () => {
+      const { s, chaser } = setup();
+      s.ball.owner = null; chaser.pos = { x: 330, y: 70 };
+      const i = brainIntent(s, chaser), d = norm(sub(s.ball.pos, chaser.pos));
+      expect(i.moveX).toBeCloseTo(d.x, 9); expect(i.moveY).toBeCloseTo(d.y, 9);
+    });
   });
   test('keeper releases the ball after holding it 30 ticks', () => {
     const s = createMatch(cpu); runTicks(s, 60);

@@ -1,11 +1,11 @@
 import type { MatchState, PlayerIntent, PlayerState, Vec } from './types';
 import {
   ANCHOR_SHIFT_X, ARRIVE_DIST, ANCHOR_SHIFT_Y, CPU_SHOOT_RANGE, FIELD_H, FIELD_MID_Y, FIELD_W, GK_HOLD_TICKS,
-  GK_LINE_X, GOAL_HALF, PLAYER_RADIUS, SHOT_Y_MARGIN,
+  GK_LINE_X, GOAL_HALF, JOCKEY_DIST, PLAYER_RADIUS, SHOT_Y_MARGIN,
 } from './constants';
 import { goalCenter } from './setup';
 import { nextRandom } from './rng';
-import { clamp, dist, norm, sub } from './vec';
+import { add, clamp, dist, norm, scale, sub } from './vec';
 
 export type BrainIntent = PlayerIntent & { kick?: 'pass' | 'shot'; aim?: Vec };
 
@@ -46,6 +46,12 @@ function anchorTarget(state: MatchState, p: PlayerState): Vec {
   };
 }
 
+/** Where a chaser stands against a carried ball: JOCKEY_DIST from it, on the line toward the chaser's own goal. */
+function jockeyTarget(state: MatchState, p: PlayerState): Vec {
+  const ball = state.ball.pos;
+  return add(ball, scale(norm(sub(goalCenter(p.team), ball)), JOCKEY_DIST));
+}
+
 /** Placeholder computer brain; M3 replaces this. Move vectors are unit length or zero; never turbo. */
 export function brainIntent(state: MatchState, p: PlayerState): BrainIntent {
   const ball = state.ball;
@@ -70,6 +76,6 @@ export function brainIntent(state: MatchState, p: PlayerState): BrainIntent {
   }
 
   if (ball.owner === null && ball.passTarget === p.id) return move(p, ball.pos);
-  if (isChaser(state, p)) return move(p, ball.pos);
+  if (isChaser(state, p)) return ball.owner === null ? move(p, ball.pos) : moveOrHold(p, jockeyTarget(state, p));
   return moveOrHold(p, anchorTarget(state, p));
 }
