@@ -19,11 +19,18 @@ export class KeyboardPad {
       pass: K.J, shoot: K.K, hit: K.L, turbo: K.SPACE,
     }) as KeyMap | null ?? null;
     if (!this.keys) return;
+    for (const key of Object.values(this.keys)) {
+      key.on('down', (_key: Phaser.Input.Keyboard.Key, event: KeyboardEvent) => {
+        if (event.repeat) key.reset();
+      });
+    }
     const buttonKeys: Record<ButtonName, Phaser.Input.Keyboard.Key> = {
       pass: this.keys.pass, shoot: this.keys.shoot, hit: this.keys.hit, turbo: this.keys.turbo,
     };
     for (const [name, key] of Object.entries(buttonKeys) as [ButtonName, Phaser.Input.Keyboard.Key][]) {
-      key.on('down', () => this.latch.press(name));
+      key.on('down', (_key: Phaser.Input.Keyboard.Key, event: KeyboardEvent) => {
+        if (!event.repeat) this.latch.press(name);
+      });
     }
   }
 

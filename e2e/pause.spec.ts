@@ -47,7 +47,17 @@ test('held movement and button inputs are cleared across a long pause', async ({
   const tick = await page.evaluate(() => { window.__ff!.pause(); return window.__ff!.state.tick; });
   await page.waitForTimeout(1500);
   expect(await page.evaluate(() => window.__ff!.state.tick)).toBe(tick);
-  await page.evaluate(() => window.__ff!.resume());
+  await page.evaluate(() => {
+    for (const [key, code, keyCode] of [['ArrowRight', 'ArrowRight', 39], ['l', 'KeyL', 76]] as const)
+      window.dispatchEvent(new KeyboardEvent('keydown', { key, code, keyCode, repeat: true, bubbles: true }));
+    Object.defineProperty(document, 'hidden', { configurable: true, value: true });
+    document.dispatchEvent(new Event('visibilitychange'));
+    window.__ff!.resume();
+    Object.defineProperty(document, 'hidden', { configurable: true, value: false });
+    document.dispatchEvent(new Event('visibilitychange'));
+    for (const [key, code, keyCode] of [['ArrowRight', 'ArrowRight', 39], ['l', 'KeyL', 76]] as const)
+      window.dispatchEvent(new KeyboardEvent('keydown', { key, code, keyCode, repeat: true, bubbles: true }));
+  });
   await page.waitForFunction(t => window.__ff!.state.tick >= t + 3, tick);
   const inputs = await page.evaluate(t => window.__ff!.replay().inputs.slice(t), tick);
   expect(inputs.length).toBeLessThan(15);
@@ -56,6 +66,14 @@ test('held movement and button inputs are cleared across a long pause', async ({
     expect(pad.moveY).toBe(0);
     expect(pad.hit).toBe(false);
   }
+  await page.keyboard.up('ArrowRight');
+  await page.keyboard.up('l');
+  await page.keyboard.down('ArrowRight');
+  await page.keyboard.down('l');
+  const freshTick = await page.evaluate(() => window.__ff!.state.tick);
+  await page.waitForFunction(t => window.__ff!.state.tick >= t + 2, freshTick);
+  const fresh = await page.evaluate(t => window.__ff!.replay().inputs.slice(t), freshTick);
+  expect(fresh.some(([pad]) => pad.moveX === 1 && pad.hit)).toBe(true);
   await page.keyboard.up('ArrowRight');
   await page.keyboard.up('l');
 });
