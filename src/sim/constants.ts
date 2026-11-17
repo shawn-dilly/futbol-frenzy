@@ -64,3 +64,7 @@ export const LANE_SHIFT = 12; // units: a supporter with a blocked lane from the
 export const GK_CLAIM_DIST = 30; // units from his goal inside which a keeper leaves his line for a free ball when he is nearest
 
 export const CATCHUP_GOAL_GAP = 2, CATCHUP_SPEED_FACTOR = 1.06, CATCHUP_TURBO_REFILL_FACTOR = 1.5;
+
+// Rating adjustments around neutral 0.5. Power spans 0.8–1.3.
+export const RATING_SPEED_SPAN = 0.2, RATING_SKILL_KICK_SPAN = 0.2, RATING_DIRTY_LATE_DAMAGE_SPAN = 0.2;
+export const RATING_POWER_MIN = 0.8, RATING_POWER_SPAN = 0.5;

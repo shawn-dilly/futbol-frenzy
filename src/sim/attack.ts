@@ -1,7 +1,7 @@
 import type { HitType, MatchState, PlayerIntent, PlayerState, TeamId } from './types';
 import {
   BIG_HIT_CHARGE_TICKS, BIG_HIT_MAX_HOLD_TICKS, HIT_COOLDOWN_TICKS, HIT_LANDED_RECOVER_TICKS, HITS,
-  LATE_HIT_COOLDOWN_TICKS, TURBO_COST, TEAM_POWER,
+  LATE_HIT_COOLDOWN_TICKS, TURBO_COST, RATING_POWER_MIN, RATING_POWER_SPAN, RATING_DIRTY_LATE_DAMAGE_SPAN,
 } from './constants';
 import { hurtPlayer } from './hurt';
 import { LEVELS } from './levels';
@@ -61,9 +61,12 @@ function findVictim(state: MatchState, tackler: PlayerState, reach: number): Pla
 }
 
 function land(state: MatchState, tackler: PlayerState, victim: PlayerState, hit: HitType): void {
-  const damage = hitDamage(hit, state.rage[tackler.team], tackler.turboTicks > 0, TEAM_POWER);
-  const tier = tierFor(damage);
   const late = state.ball.owner !== victim.id;
+  const ratings = state.config.ratings[tackler.team];
+  const power = RATING_POWER_MIN + RATING_POWER_SPAN * ratings.power;
+  // Dirty teams hit harder when the victim is away from the ball.
+  const damage = hitDamage(hit, state.rage[tackler.team], tackler.turboTicks > 0, power) * (late ? 1 + (ratings.dirty - 0.5) * RATING_DIRTY_LATE_DAMAGE_SPAN : 1);
+  const tier = tierFor(damage);
   const variant = hurtPlayer(state, victim, tier, tackler.facing, damage);
   rageAfterHit(state, tackler.team, tier);
   state.events.push({ type: 'hit', tackler: tackler.id, victim: victim.id, hit, tier, variant, damage, late });

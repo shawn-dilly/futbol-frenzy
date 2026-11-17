@@ -192,15 +192,15 @@ describe('Review Focus 4: a held HIT never launches by accident', () => {
 });
 
 describe('contact', () => {
-  test('a shoulder within reach at rage 0: stumble, 10 damage, ball loose, rage 10 for the tackler and 6 for the victim', () => {
+  test('a shoulder within reach at rage 0: stumble, 10.5 damage, ball loose, rage 10 for the tackler and 6 for the victim', () => {
     const s = playing(); placeVictimAhead(s, 5);
     s.ball.owner = VICTIM; s.ball.pos = { ...s.players[VICTIM].pos };
     runTicks(s, 1, HIT_DOWN); runTicks(s, 1, HIT_UP);
-    expect(hits(s)).toEqual([{ type: 'hit', tackler: TACKLER, victim: VICTIM, hit: 'shoulder', tier: 'stumble', variant: expect.any(Number), damage: 10, late: false }]);
+    expect(hits(s)).toEqual([{ type: 'hit', tackler: TACKLER, victim: VICTIM, hit: 'shoulder', tier: 'stumble', variant: expect.any(Number), damage: 10 * 1.05, late: false }]);
     expect(s.ball.owner).toBeNull();
     expect(s.rage).toEqual([10, 6]);
     expect(s.players[VICTIM].status).toMatchObject({ kind: 'hurt', tier: 'stumble' });
-    expect(s.players[VICTIM].health).toBe(90);
+    expect(s.players[VICTIM].health).toBe(100 - 10 * 1.05);
   });
   test('the tackler recovers for 8 ticks after landing, with a 20-tick cooldown on a tackle of the carrier', () => {
     const s = playing(); placeVictimAhead(s, 5); s.ball.owner = VICTIM;
@@ -213,7 +213,7 @@ describe('contact', () => {
   test('a big hit at rage 100 is over the top, and the tackler ends at 70 rage', () => {
     const s = playing(); s.rage = [100, 0]; placeVictimAhead(s, 8);
     hold(s, BIG_HIT_CHARGE_TICKS);
-    expect(hits(s)).toEqual([expect.objectContaining({ hit: 'big', tier: 'overTheTop', damage: 60, late: true })]);
+    expect(hits(s)).toEqual([expect.objectContaining({ hit: 'big', tier: 'overTheTop', damage: 24 * 2.5 * 1.05, late: true })]);
     expect(s.rage).toEqual([70, 6]);
   });
   test('a hit on a player without the ball is late: 90-tick cooldown', () => {
@@ -221,10 +221,10 @@ describe('contact', () => {
     hold(s, 1);
     expect(hits(s)[0].late).toBe(true); expect(s.players[TACKLER].hitCooldown).toBe(LATE_HIT_COOLDOWN_TICKS);
   });
-  test('a slide during a turbo burst does 16 x 1.2 damage', () => {
+  test('a slide during a turbo burst does 16 x 1.05 x 1.2 damage', () => {
     const s = playing(); s.players[TACKLER].turboTicks = 50; placeVictimAhead(s, 6);
     hold(s, 1);
-    expect(hits(s)[0]).toMatchObject({ hit: 'slide', damage: 16 * 1.2, tier: 'knockdown' });
+    expect(hits(s)[0]).toMatchObject({ hit: 'slide', damage: 16 * 1.05 * 1.2, tier: 'knockdown' });
   });
   test('a whiff recovers for missTicks, then is free; the cooldown is 20', () => {
     const s = playing(); hold(s, 1);
@@ -283,7 +283,7 @@ describe('contact', () => {
     runTicks(s, 1);
     expect(hits(s)).toEqual([expect.objectContaining({ tackler: MATE, victim: VICTIM, tier: 'stumble' })]);
     expect(status(s)).toEqual(lunge);
-    expect(s.players[VICTIM].health).toBe(90);
+    expect(s.players[VICTIM].health).toBe(100 - 10 * 1.05);
   });
   test('both teams lunging at each other: one hit, lower tackler id resolves first', () => {
     const s = playing(); const lunge = { kind: 'lunging', hit: 'shoulder' } as const;

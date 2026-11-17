@@ -19,8 +19,9 @@ export interface PlayerState {
   health: number; hitCooldown: number; knock: Vec /* knockback velocity, units/s */;
 }
 export interface BallState { pos: Vec; vel: Vec; owner: number | null; ownerTicks: number; passTarget: number | null }
+export interface Ratings { speed: number; power: number; skill: number; dirty: number }
 /** `level[team]` drives every brain-controlled player of that team. */
-export interface MatchConfig { seed: number; halfSeconds: number; human: [boolean, boolean]; level: [Level, Level] }
+export interface MatchConfig { seed: number; halfSeconds: number; human: [boolean, boolean]; level: [Level, Level]; ratings?: [Ratings, Ratings] }
 export type BrainRole = 'keeper' | 'carrier' | 'presser' | 'cover' | 'marker' | 'support' | 'receiver' | 'chaser';
 /** What the computer brain remembers between re-thinks, one per player (index = player id). */
 export interface BrainMemory {
@@ -43,7 +44,7 @@ export type SimEvent =
   | { type: 'whiff'; player: number; hit: HitType }
   | { type: 'whistle'; what: 'kickoff' | 'halftime' | 'fulltime' };
 export interface MatchState {
-  config: MatchConfig; tick: number; rng: number;
+  config: MatchConfig & { ratings: [Ratings, Ratings] }; tick: number; rng: number;
   phase: Phase; phaseTicks: number; half: 1 | 2; clockTicks: number;
   score: [number, number]; kickoffTeam: TeamId;
   rage: [number, number]; lastHitTick: [number, number] /* tick the team last landed a hit */;

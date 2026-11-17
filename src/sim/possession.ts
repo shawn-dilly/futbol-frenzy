@@ -1,7 +1,7 @@
 import type { MatchState, PlayerState, TeamId, Vec } from './types';
 import {
   BALL_RADIUS, DRIBBLE_OFFSET, FIELD_H, FIELD_W, KICK_ANIM_TICKS, KICK_COOLDOWN_TICKS, PASS_CONE_RAD,
-  PASS_SPEED, PICKUP_MAX_BALL_SPEED, DAZED_FUMBLE_CHANCE, FUMBLE_COOLDOWN_TICKS, PICKUP_RADIUS, SHOT_SPEED,
+  RATING_SKILL_KICK_SPAN, PASS_SPEED, PICKUP_MAX_BALL_SPEED, DAZED_FUMBLE_CHANCE, FUMBLE_COOLDOWN_TICKS, PICKUP_RADIUS, SHOT_SPEED,
 } from './constants';
 import { add, angleBetween, clamp, dist, isZero, len, nearestTo, norm, scale, sub } from './vec';
 import { goalCenter, otherTeam } from './setup';
@@ -68,12 +68,12 @@ export function kick(state: MatchState, p: PlayerState, kind: 'pass' | 'shot', a
   if (ball.owner !== p.id) return;
   if (kind === 'pass') {
     const target = state.players[pickPassTarget(state, p, aim)];
-    ball.vel = scale(norm(sub(target.pos, ball.pos)), PASS_SPEED);
+    ball.vel = scale(norm(sub(target.pos, ball.pos)), PASS_SPEED * (1 + (state.config.ratings[p.team].skill - 0.5) * RATING_SKILL_KICK_SPAN));
     ball.passTarget = target.id;
     if (state.config.human[p.team]) state.controlled[p.team] = target.id;
   } else {
     const dir = isZero(aim) ? sub(goalCenter(otherTeam(p.team)), ball.pos) : aim;
-    ball.vel = scale(norm(dir), SHOT_SPEED);
+    ball.vel = scale(norm(dir), SHOT_SPEED * (1 + (state.config.ratings[p.team].skill - 0.5) * RATING_SKILL_KICK_SPAN));
     ball.passTarget = null;
   }
   ball.owner = null;

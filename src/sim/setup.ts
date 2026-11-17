@@ -1,4 +1,4 @@
-import type { BrainMemory, MatchConfig, MatchState, PadInput, PlayerIntent, PlayerState, TeamId, Vec } from './types';
+import type { BrainMemory, MatchConfig, MatchState, PadInput, PlayerIntent, PlayerState, Ratings, TeamId, Vec } from './types';
 import {
   FIELD_MID_Y, FIELD_W, FORMATION, KICKER_BEHIND_BALL, KICKOFF_PAUSE_TICKS, MAX_HEALTH, TICK_HZ,
 } from './constants';
@@ -83,8 +83,13 @@ export function createMatch(config: MatchConfig): MatchState {
   for (const team of [0, 1] as const) {
     for (let i = 0; i < PLAYERS_PER_TEAM; i++) players.push(makePlayer(team, i));
   }
+  const normalize = (ratings?: Ratings): Ratings => {
+    const value = (n: number | undefined) => Number.isFinite(n) ? Math.max(0, Math.min(1, n!)) : 0.5;
+    return { speed: value(ratings?.speed), power: value(ratings?.power), skill: value(ratings?.skill), dirty: value(ratings?.dirty) };
+  };
+  const normalizedConfig = { ...config, human: [...config.human] as MatchConfig['human'], level: [...config.level] as MatchConfig['level'], ratings: [normalize(config.ratings?.[0]), normalize(config.ratings?.[1])] as [Ratings, Ratings] };
   const state: MatchState = {
-    config, tick: 0, rng: config.seed,
+    config: normalizedConfig, tick: 0, rng: config.seed,
     phase: 'kickoff', phaseTicks: 0, half: 1, clockTicks: config.halfSeconds * TICK_HZ,
     score: [0, 0], kickoffTeam: 0, rage: [0, 0], lastHitTick: [0, 0],
     players, ball: { pos: { ...KICKOFF_SPOT }, vel: { x: 0, y: 0 }, owner: null, ownerTicks: 0, passTarget: null },

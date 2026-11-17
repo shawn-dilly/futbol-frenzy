@@ -28,7 +28,7 @@ export const LEVELS: Record<Level, LevelSpec> = {
     positioning: 0.3, keeperSpeedFactor: 1.4, usesTurbo: false,
   },
   pro: {
-    label: 'PRO', defensiveHitIntervalTicks: 0, reactionTicks: 14, passMistakeChance: 0.15, shotErrorRad: 0.35, shootRange: 90, pressureDist: 20,
+    label: 'PRO', defensiveHitIntervalTicks: 0, reactionTicks: 14, passMistakeChance: 0.15, shotErrorRad: 0.4, shootRange: 90, pressureDist: 20,
     teamHitCooldownTicks: 750, hitTypes: ['shoulder', 'slide'], hitAimErrorRad: 0.3, hitRange: 10, lateHitChance: 0,
     positioning: 0.6, keeperSpeedFactor: 1, usesTurbo: true,
   },

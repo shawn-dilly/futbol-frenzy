@@ -25,8 +25,8 @@ Halftime is a presentation gate: after the step first enters `halftime`, shell s
 ## Tasks
 
 ### 1. Team data and simulation ratings
-- [ ] Add six fictional team records with names, kit choices and four ratings; inspect existing `KITS`/atlas constraints before mapping kits. Extend `MatchConfig` with backwards-compatible defaults so existing demos/tests work. Pass plain rating values into sim without importing presentation/content from `src/sim`.
-- [ ] Apply Speed to movement, Power to `attack.ts` damage in place of `TEAM_POWER`, Skill to a documented kick/pass mechanic, and Dirty to a documented hit mechanic for both human and CPU. Put tuning in named data/constants. Test boundaries, neutral defaults, both teams, observable effects, deterministic seed and sim purity. Run `npm test`, typecheck; Sol review.
+- [x] Add six fictional team records with names, kit choices and four ratings; inspect existing `KITS`/atlas constraints before mapping kits. Extend `MatchConfig` with backwards-compatible defaults so existing demos/tests work. Pass plain rating values into sim without importing presentation/content from `src/sim`.
+- [x] Apply Speed to movement, Power to `attack.ts` damage in place of `TEAM_POWER`, Skill to a documented kick/pass mechanic, and Dirty to a documented hit mechanic for both human and CPU. Put tuning in named data/constants. Test boundaries, neutral defaults, both teams, observable effects, deterministic seed and sim purity. Run `npm test`, typecheck; Sol review.
 
 ### 2. Substitutions and statistics
 - [ ] Extend state and events at the actual `hurtPlayer`/`resolveContacts`, `kick` and possession boundaries. Preserve hit presentation and stable player IDs/brain indexing; ensure lethal hit drops ball and control changes safely before replacement. Reset reserve transient fields and brain memory, decrement exactly once; 1 HP fallback after depletion. Account for concurrent hits and halftime.
