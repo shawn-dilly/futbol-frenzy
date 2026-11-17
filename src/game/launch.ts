@@ -13,3 +13,8 @@ export function launchFromSearch(search: string): MatchLaunch {
   return { mode: p.demo ? 'demo' : 'direct', matchId: null, mute: p.mute,
     config: { seed: p.seed, halfSeconds: p.halfSeconds, human: [!p.demo, false], level: [p.level2 ?? p.level, p.level] } };
 }
+
+export function initialRoute(search: string): 'shell' | 'match' {
+  const query = new URLSearchParams(search);
+  return query.get('demo') === '1' || query.get('match') === '1' ? 'match' : 'shell';
+}

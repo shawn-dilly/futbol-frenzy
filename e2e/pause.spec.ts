@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test';
 
 test('pause preserves match and recording and resumes without stale input', async ({ page }) => {
-  await page.goto('/?seed=7&mute=1');
+  await page.goto('/?match=1&seed=7&mute=1');
   await page.waitForFunction(() => window.__ff && window.__ff.state.tick > 10);
   await page.keyboard.down('l');
   const before = await page.evaluate(() => {
@@ -18,7 +18,7 @@ test('pause preserves match and recording and resumes without stale input', asyn
 });
 
 test('visibility transitions respect manual pause in either order', async ({ page }) => {
-  await page.goto('/?seed=7&mute=1');
+  await page.goto('/?match=1&seed=7&mute=1');
   await page.waitForFunction(() => window.__ff && window.__ff.state.tick > 10);
   for (const manualFirst of [true, false]) {
     const frozen = await page.evaluate((first) => {
@@ -40,7 +40,7 @@ test('visibility transitions respect manual pause in either order', async ({ pag
 });
 
 test('held movement and button inputs are cleared across a long pause', async ({ page }) => {
-  await page.goto('/?seed=7&mute=1');
+  await page.goto('/?match=1&seed=7&mute=1');
   await page.waitForFunction(() => window.__ff && window.__ff.state.tick > 10);
   await page.keyboard.down('ArrowRight');
   await page.keyboard.down('l');

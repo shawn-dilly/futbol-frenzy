@@ -10,7 +10,7 @@ declare global {
 }
 
 test('live steps are recorded and reconstruct the scene', async ({ page }) => {
-  await page.goto('/?seed=3&mute=1&half=20');
+  await page.goto('/?match=1&seed=3&mute=1&half=20');
   await page.waitForFunction(() => (window.__ff?.state.tick ?? 0) >= 180);
   await page.keyboard.down('ArrowLeft');
   const heldStart = await page.evaluate(() => window.__ff!.state.tick);

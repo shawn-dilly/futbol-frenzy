@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { BootScene } from './BootScene';
 import { MatchScene } from './MatchScene';
+import { ShellScene } from './ShellScene';
 import { SCREEN_H, SCREEN_W } from './layout';
 import { PAL } from '../art/palette';
 
@@ -16,5 +17,5 @@ new Phaser.Game({
     mode: Phaser.Scale.FIT,
     autoCenter: Phaser.Scale.CENTER_BOTH,
   },
-  scene: [BootScene, MatchScene],
+  scene: [BootScene, ShellScene, MatchScene],
 });

@@ -25,7 +25,7 @@ test('a CPU-v-CPU match runs, players move, no errors', async ({ page }) => {
 
 test('a human can run with the arrow keys and pass with J, no errors', async ({ page }) => {
   const errors = collectErrors(page);
-  await page.goto('/?seed=1&mute=1&half=20&level=rookie');
+  await page.goto('/?match=1&seed=1&mute=1&half=20&level=rookie');
   await page.waitForFunction(() => (window as any).__ff?.state.phase === 'play', null, { timeout: 30_000 });
   const { id, startX, startTick } = await page.evaluate(() => {
     const st = (window as any).__ff.state;
@@ -97,7 +97,7 @@ async function dropTheBall(page: Page): Promise<void> {
 
 test('a human hit tap lands a recorded hit', async ({ page }) => {
   const errors = collectErrors(page);
-  await page.goto('/?seed=3&mute=1&half=60');
+  await page.goto('/?match=1&seed=3&mute=1&half=60');
   await page.waitForFunction(() => (window as any).__ff?.state.phase === 'play', null, { timeout: 30_000 });
   await recordEvents(page, ['hit', 'whiff']);
   await dropTheBall(page);
@@ -150,7 +150,7 @@ test('a human hit tap lands a recorded hit', async ({ page }) => {
 
 test('holding L for 40 ticks and releasing makes a big hit or a big whiff', async ({ page }) => {
   const errors = collectErrors(page);
-  await page.goto('/?seed=3&mute=1&half=60');
+  await page.goto('/?match=1&seed=3&mute=1&half=60');
   await page.waitForFunction(() => (window as any).__ff?.state.phase === 'play', null, { timeout: 30_000 });
   await recordEvents(page, ['hit', 'whiff']);
   // The CPU can flatten the human mid-hold, so try a few times; each try ends with a big hit or a big whiff, or is retried.

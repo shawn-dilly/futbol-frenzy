@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { initialRoute } from './launch';
 import { canvasRect } from '../art/canvasRect';
 import { KITS, PAL } from '../art/palette';
 import { FRAME_H, FRAME_W, atlasLayout, drawFrame, frameKey } from '../art/sprites';
@@ -38,6 +39,6 @@ export class BootScene extends Phaser.Scene {
     rect(1, 1, 1, 1, PAL.ink);
     ball.refresh();
 
-    this.scene.start('match');
+    this.scene.start(initialRoute(window.location.search));
   }
 }

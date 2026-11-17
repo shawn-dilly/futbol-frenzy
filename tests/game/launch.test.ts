@@ -10,3 +10,13 @@ describe('launchFromSearch', () => {
     expect(launchFromSearch('?match=1').config.human).toEqual([true, false]);
   });
 });
+
+describe('initial route', () => {
+  it('uses the shell by default and lets demo take precedence', async () => {
+    const { initialRoute } = await import('../../src/game/launch');
+    expect(initialRoute('')).toBe('shell');
+    expect(initialRoute('?match=1')).toBe('match');
+    expect(initialRoute('?demo=1&match=1')).toBe('match');
+    expect(initialRoute('?demo=0&match=0')).toBe('shell');
+  });
+});

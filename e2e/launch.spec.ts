@@ -2,7 +2,7 @@ import { test, expect } from '@playwright/test';
 import { createMatch } from '../src/sim';
 
 test('shell halftime gates once and composes with manual pause', async ({ page }) => {
-  await page.goto('/?mute=1');
+  await page.goto('/?match=1&mute=1');
   await page.waitForFunction(() => !!window.__ff);
   await page.evaluate(() => window.__ff!.launch({ mode: 'friendly', matchId: 'one', mute: true, config: { seed: 17, halfSeconds: 1, human: [false, false], level: ['pro', 'pro'] } }));
   await page.waitForFunction(() => window.__ff?.halftimeGate(), null, { timeout: 30000 });
@@ -25,7 +25,7 @@ test('shell halftime gates once and composes with manual pause', async ({ page }
 
 for (const mode of ['friendly', 'cup'] as const) {
   test(`${mode} gate resumes the existing countdown and a new launch clears it`, async ({ page }) => {
-    await page.goto('/?mute=1');
+    await page.goto('/?match=1&mute=1');
     await page.waitForFunction(() => !!window.__ff);
     await page.evaluate(mode => window.__ff!.launch({ mode, matchId: 'first', mute: true, config: { seed: 31, halfSeconds: 1, human: [false, false], level: ['rookie', 'pro'] } }), mode);
     await page.waitForFunction(() => window.__ff?.halftimeGate(), null, { timeout: 30000 });
