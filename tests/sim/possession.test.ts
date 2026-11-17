@@ -8,7 +8,7 @@ import { runTicks } from '../helpers';
 const pad = (o: Partial<PadInput>): PadInput => ({ ...neutralPad(), ...o });
 let s: MatchState;
 beforeEach(() => {
-  s = createMatch({ seed: 1, halfSeconds: 120, human: [true, false] });
+  s = createMatch({ seed: 1, halfSeconds: 120, human: [true, true] });
   runTicks(s, 60);
 });
 

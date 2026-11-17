@@ -3,6 +3,7 @@ import {
   HITS, HURT, HURT_TIERS, RAGE_BIG_HIT_SPEND, RAGE_DAMAGE_FACTOR, RAGE_DECAY_DELAY_TICKS, RAGE_DECAY_PER_TICK,
   RAGE_MAX, RAGE_VICTIM_GAIN, TEAM_POWER, TURBO_HIT_FACTOR,
 } from './constants';
+import { otherTeam } from './setup';
 import { clamp } from './vec';
 
 /** Damage of a hit: base, scaled up by the tackler's team rage, team power and an active turbo burst. */
@@ -23,10 +24,9 @@ export function addRage(state: MatchState, team: TeamId, amount: number): void {
 
 /** A hit landed: the tackler's team gains rage (and spends some on a wipeout or worse), the victim's team gains a little. */
 export function rageAfterHit(state: MatchState, tacklerTeam: TeamId, tier: HurtTier): void {
-  const victimTeam: TeamId = tacklerTeam === 0 ? 1 : 0;
   addRage(state, tacklerTeam, HURT[tier].rageGain);
   if (tier === 'wipeout' || tier === 'overTheTop') addRage(state, tacklerTeam, -RAGE_BIG_HIT_SPEND);
-  addRage(state, victimTeam, RAGE_VICTIM_GAIN);
+  addRage(state, otherTeam(tacklerTeam), RAGE_VICTIM_GAIN);
   state.lastHitTick[tacklerTeam] = state.tick;
 }
 

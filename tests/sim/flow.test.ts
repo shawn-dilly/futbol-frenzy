@@ -1,7 +1,6 @@
 import { describe, expect, test } from 'vitest';
 import type { PadInput } from '../../src/sim/types';
-import { createMatch } from '../../src/sim/setup';
-import { neutralPad } from '../../src/sim/setup';
+import { createMatch, neutralPad } from '../../src/sim/setup';
 import { animFor } from '../../src/game/playerAnim';
 import { runTicks } from '../helpers';
 

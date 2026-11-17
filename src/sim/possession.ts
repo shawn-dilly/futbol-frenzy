@@ -4,7 +4,7 @@ import {
   PASS_SPEED, PICKUP_MAX_BALL_SPEED, DAZED_FUMBLE_CHANCE, FUMBLE_COOLDOWN_TICKS, PICKUP_RADIUS, SHOT_SPEED,
 } from './constants';
 import { add, angleBetween, clamp, dist, len, norm, scale, sub } from './vec';
-import { goalCenter } from './setup';
+import { goalCenter, otherTeam } from './setup';
 import { nextRandom } from './rng';
 import { isDazed, isDown, setStatus, standingOrAll } from './status';
 
@@ -73,8 +73,7 @@ export function kick(state: MatchState, p: PlayerState, kind: 'pass' | 'shot', a
     ball.passTarget = target.id;
     if (state.config.human[p.team]) state.controlled[p.team] = target.id;
   } else {
-    const opposing: TeamId = p.team === 0 ? 1 : 0;
-    const dir = isZero(aim) ? sub(goalCenter(opposing), ball.pos) : aim;
+    const dir = isZero(aim) ? sub(goalCenter(otherTeam(p.team)), ball.pos) : aim;
     ball.vel = scale(norm(dir), SHOT_SPEED);
     ball.passTarget = null;
   }

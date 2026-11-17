@@ -8,7 +8,7 @@ const cpu = { seed: 7, halfSeconds: 120, human: [false, false] as [boolean, bool
 const MAX_MATCH_TICKS = 40000; // cap: two 120 s halves are 14400 ticks plus kickoff, goal and halftime pauses
 const SPLIT_TICKS = 1500;
 
-/** A fixed function of the tick: moves, passes, shoots, uses turbo and HIT. */
+/** A fixed function of the tick: moves, passes, shoots, uses turbo and HIT (taps and holds). */
 function scriptedPad(tick: number): PadInput {
   const phase = Math.floor(tick / 30);
   return {
@@ -16,7 +16,7 @@ function scriptedPad(tick: number): PadInput {
     moveY: [0, 0.7, 1, -0.7, 0, -1][(phase + 2) % 6],
     pass: tick % 90 === 10,
     shoot: tick % 200 === 150,
-    hit: tick % 75 === 20,
+    hit: tick % 75 === 20 || (tick % 600 >= 300 && tick % 600 < 340), // a tap every 75 ticks and a 40-tick hold every 600
     turbo: phase % 4 === 1,
   };
 }
@@ -58,4 +58,15 @@ test('a different seed gives a different match', () => {
   const a = createMatch(config), b = createMatch({ ...config, seed: 8 });
   drive(a, 0, SPLIT_TICKS); drive(b, 0, SPLIT_TICKS);
   expect(playOutcome(a)).not.toBe(playOutcome(b));
+});
+
+test.each([1, 2, 3, 4, 5])('a 2 x 120 s CPU-v-CPU match with seed %i has hits and still ends at fulltime', seed => {
+  const m = createMatch({ ...cpu, seed });
+  let hitEvents = 0;
+  for (let t = 0; t < MAX_MATCH_TICKS && m.phase !== 'fulltime'; t++) {
+    step(m, [neutralPad(), neutralPad()]);
+    hitEvents += m.events.filter(e => e.type === 'hit').length;
+  }
+  expect(m.phase).toBe('fulltime');
+  expect(hitEvents).toBeGreaterThanOrEqual(1);
 });

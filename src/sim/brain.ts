@@ -1,20 +1,20 @@
-import type { MatchState, PlayerIntent, PlayerState, Vec } from './types';
+import type { HitType, MatchState, PlayerIntent, PlayerState, Vec } from './types';
 import {
-  ANCHOR_SHIFT_X, ARRIVE_DIST, ANCHOR_SHIFT_Y, CPU_SHOOT_RANGE, FIELD_H, FIELD_MID_Y, FIELD_W, GK_HOLD_TICKS,
+  ANCHOR_SHIFT_X, ARRIVE_DIST, CPU_ENGAGE_RANGE, CPU_HIT_RANGE, ANCHOR_SHIFT_Y, CPU_SHOOT_RANGE, FIELD_H, FIELD_MID_Y, FIELD_W, GK_HOLD_TICKS,
   GK_LINE_X, GOAL_HALF, JOCKEY_DIST, PLAYER_RADIUS, SHOT_Y_MARGIN,
 } from './constants';
-import { goalCenter } from './setup';
+import { goalCenter, neutralIntent, otherTeam } from './setup';
 import { nextRandom } from './rng';
 import { nearestOutfield } from './possession';
 import { add, clamp, dist, norm, scale, sub } from './vec';
 
-export type BrainIntent = PlayerIntent & { kick?: 'pass' | 'shot'; aim?: Vec };
+export type BrainIntent = PlayerIntent & { kick?: 'pass' | 'shot'; aim?: Vec; hit?: HitType };
 
 const PITCH_CENTER_X = FIELD_W / 2;
 
 const move = (p: PlayerState, target: Vec): BrainIntent => {
   const d = norm(sub(target, p.pos));
-  return { moveX: d.x, moveY: d.y, pass: false, shoot: false, turbo: false, hitPress: false, hitHeld: false };
+  return { ...neutralIntent(), moveX: d.x, moveY: d.y };
 };
 
 /** Like `move`, but stands still once within ARRIVE_DIST of the target. */
@@ -59,7 +59,7 @@ export function brainIntent(state: MatchState, p: PlayerState): BrainIntent {
   }
 
   if (hasBall) {
-    const goal = goalCenter(p.team === 0 ? 1 : 0);
+    const goal = goalCenter(otherTeam(p.team));
     const intent = move(p, goal);
     if (dist(p.pos, goal) > CPU_SHOOT_RANGE) return intent;
     const aimY = FIELD_MID_Y + (nextRandom(state) * 2 - 1) * (GOAL_HALF - SHOT_Y_MARGIN);
@@ -67,6 +67,15 @@ export function brainIntent(state: MatchState, p: PlayerState): BrainIntent {
   }
 
   if (ball.owner === null && ball.passTarget === p.id) return move(p, ball.pos);
-  if (isChaser(state, p)) return ball.owner === null ? move(p, ball.pos) : moveOrHold(p, jockeyTarget(state, p));
+  if (isChaser(state, p)) {
+    if (ball.owner === null) return move(p, ball.pos);
+    const carrier = state.players[ball.owner];
+    const gap = dist(p.pos, carrier.pos);
+    if (p.hitCooldown === 0 && gap <= CPU_ENGAGE_RANGE) { // a ready chaser stops jockeying and goes in
+      const intent = move(p, carrier.pos);
+      return gap <= CPU_HIT_RANGE ? { ...intent, hit: 'shoulder' } : intent;
+    }
+    return moveOrHold(p, jockeyTarget(state, p));
+  }
   return moveOrHold(p, anchorTarget(state, p));
 }

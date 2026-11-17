@@ -1,4 +1,4 @@
-import type { MatchConfig, MatchState, PadInput, PlayerState, TeamId, Vec } from './types';
+import type { MatchConfig, MatchState, PadInput, PlayerIntent, PlayerState, TeamId, Vec } from './types';
 import {
   FIELD_MID_Y, FIELD_W, FORMATION, KICKER_BEHIND_BALL, KICKOFF_PAUSE_TICKS, MAX_HEALTH, TICK_HZ,
 } from './constants';
@@ -12,6 +12,8 @@ const STRIKER_INDEX = PLAYERS_PER_TEAM - 1;
 
 export function attackDir(team: TeamId): 1 | -1 { return team === 0 ? 1 : -1; }
 
+export function otherTeam(team: TeamId): TeamId { return team === 0 ? 1 : 0; }
+
 /** Centre of the goal that `defending` protects. */
 export function goalCenter(defending: TeamId): Vec {
   return { x: defending === 0 ? 0 : FIELD_W, y: FIELD_MID_Y };
@@ -19,6 +21,11 @@ export function goalCenter(defending: TeamId): Vec {
 
 export function neutralPad(): PadInput {
   return { moveX: 0, moveY: 0, pass: false, shoot: false, hit: false, turbo: false };
+}
+
+/** A fresh do-nothing intent; a new object every call so callers may extend it freely. */
+export function neutralIntent(): PlayerIntent {
+  return { moveX: 0, moveY: 0, pass: false, shoot: false, turbo: false, hitPress: false, hitHeld: false };
 }
 
 function makePlayer(team: TeamId, index: number): PlayerState {
@@ -49,7 +56,7 @@ export function placeForKickoff(state: MatchState, kicking: TeamId): void {
   state.ball.owner = kicker.id;
   state.controlled[kicking] = kicker.id;
 
-  const other: TeamId = kicking === 0 ? 1 : 0;
+  const other = otherTeam(kicking);
   let nearest = -1, best = Infinity;
   for (const p of state.players) {
     if (p.team !== other || p.role === 'gk') continue;

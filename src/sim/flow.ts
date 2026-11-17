@@ -1,7 +1,7 @@
 import type { MatchState, TeamId } from './types';
 import { GOAL_PAUSE_TICKS, HALFTIME_HEAL, HALFTIME_PAUSE_TICKS, MAX_HEALTH, RAGE_CONCEDE_GAIN, TICK_HZ } from './constants';
 import { addRage } from './rage';
-import { placeForKickoff } from './setup';
+import { otherTeam, placeForKickoff } from './setup';
 
 /** Counts the current pause down; true on the tick it reaches 0. */
 function pauseElapsed(state: MatchState): boolean {
@@ -12,11 +12,11 @@ function pauseElapsed(state: MatchState): boolean {
 function advancePlay(state: MatchState, scored: TeamId | null): void {
   if (scored !== null) {
     state.score[scored] += 1;
-    addRage(state, scored === 0 ? 1 : 0, RAGE_CONCEDE_GAIN);
+    addRage(state, otherTeam(scored), RAGE_CONCEDE_GAIN);
     state.events.push({ type: 'goal', team: scored });
     state.phase = 'goal';
     state.phaseTicks = GOAL_PAUSE_TICKS;
-    state.kickoffTeam = scored === 0 ? 1 : 0;
+    state.kickoffTeam = otherTeam(scored);
     return;
   }
   state.clockTicks -= 1;

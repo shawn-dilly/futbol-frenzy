@@ -2,7 +2,7 @@ import { describe, expect, test } from 'vitest';
 import { createMatch } from '../../src/sim/setup';
 import { brainIntent } from '../../src/sim/brain';
 import { goalCenter } from '../../src/sim/setup';
-import { ANCHOR_SHIFT_X, ANCHOR_SHIFT_Y, ARRIVE_DIST, CPU_SHOOT_RANGE, FIELD_MID_Y, JOCKEY_DIST } from '../../src/sim/constants';
+import { ANCHOR_SHIFT_X, ANCHOR_SHIFT_Y, ARRIVE_DIST, CPU_ENGAGE_RANGE, CPU_HIT_RANGE, CPU_SHOOT_RANGE, FIELD_MID_Y, JOCKEY_DIST } from '../../src/sim/constants';
 import { add, norm, scale, sub } from '../../src/sim/vec';
 import { runTicks } from '../helpers';
 
@@ -48,6 +48,33 @@ describe('placeholder brain', () => {
       const { s, chaser, jockey } = setup();
       chaser.pos = { x: jockey.x + (ARRIVE_DIST - 0.5), y: jockey.y };
       const i = brainIntent(s, chaser); expect(i.moveX).toBe(0); expect(i.moveY).toBe(0);
+    });
+    describe('shoulder charge', () => {
+      const carried = () => { // carrier 4 at (300,40) with the ball 7 ahead; chaser 7 is the nearest defender
+        const { s, chaser } = setup();
+        s.players[4].pos = { x: 300, y: 40 }; s.ball.pos = { x: 307, y: 40 };
+        return { s, chaser };
+      };
+      test('a chaser within CPU_HIT_RANGE of the carrier shoulders him, moving straight at him', () => {
+        const { s, chaser } = carried(); chaser.pos = { x: 300 + CPU_HIT_RANGE, y: 40 };
+        const i = brainIntent(s, chaser);
+        expect(i.hit).toBe('shoulder'); expect(i.moveX).toBeCloseTo(-1, 9); expect(i.moveY).toBeCloseTo(0, 9);
+      });
+      test('just outside CPU_HIT_RANGE it closes in without hitting', () => {
+        const { s, chaser } = carried(); chaser.pos = { x: 300 + CPU_HIT_RANGE + 1, y: 40 };
+        const i = brainIntent(s, chaser);
+        expect(i.hit).toBeUndefined(); expect(i.moveX).toBeCloseTo(-1, 9);
+      });
+      test('beyond CPU_ENGAGE_RANGE it still jockeys, and on cooldown it jockeys at any range', () => {
+        const { s, chaser } = carried();
+        const jockey = add(s.ball.pos, scale(norm(sub(goalCenter(1), s.ball.pos)), JOCKEY_DIST));
+        chaser.pos = { x: 300 + CPU_ENGAGE_RANGE + 1, y: 40 };
+        let d = norm(sub(jockey, chaser.pos)), i = brainIntent(s, chaser);
+        expect(i.hit).toBeUndefined(); expect(i.moveX).toBeCloseTo(d.x, 9); expect(i.moveY).toBeCloseTo(d.y, 9);
+        chaser.pos = { x: 300 + CPU_HIT_RANGE, y: 44 }; chaser.hitCooldown = 5;
+        d = norm(sub(jockey, chaser.pos)); i = brainIntent(s, chaser);
+        expect(i.hit).toBeUndefined(); expect(i.moveX).toBeCloseTo(d.x, 9); expect(i.moveY).toBeCloseTo(d.y, 9);
+      });
     });
     test('still runs straight at a free ball', () => {
       const { s, chaser } = setup();

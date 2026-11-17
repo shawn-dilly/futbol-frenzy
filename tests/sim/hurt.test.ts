@@ -1,5 +1,5 @@
 import { test, expect } from 'vitest';
-import { createMatch, neutralPad, placeForKickoff } from '../../src/sim/setup';
+import { createMatch, goalCenter, neutralPad, placeForKickoff } from '../../src/sim/setup';
 import { hurtPlayer, isDazed } from '../../src/sim/hurt';
 import { setStatus } from '../../src/sim/status';
 import { pickPassTarget, switchControl, updatePossession } from '../../src/sim/possession';
@@ -7,9 +7,10 @@ import { brainIntent } from '../../src/sim/brain';
 import { nextRandom } from '../../src/sim/rng';
 import { step } from '../../src/sim/step';
 import {
-  DAZED_FUMBLE_CHANCE, FIELD_H, FUMBLE_COOLDOWN_TICKS, HALFTIME_HEAL, HURT, LOOSE_BALL_SPEED, PLAYER_RADIUS,
+  DAZED_FUMBLE_CHANCE, FIELD_H, FUMBLE_COOLDOWN_TICKS, HALFTIME_HEAL, HURT, JOCKEY_DIST, LOOSE_BALL_SPEED, PLAYER_RADIUS,
   RAGE_CONCEDE_GAIN, TURBO_SPEED,
 } from '../../src/sim/constants';
+import { add, norm, scale, sub } from '../../src/sim/vec';
 import type { MatchState, PadInput } from '../../src/sim/types';
 import { runTicks } from '../helpers';
 
@@ -140,7 +141,9 @@ test('the brain picks the nearest standing outfielder as chaser', () => {
   expect(brainIntent(s, s.players[7]).moveX).toBe(0); // 9 is the chaser, 7 holds its anchor
   knockDown(s, 9);
   const intent = brainIntent(s, s.players[7]);
-  expect(intent.moveX).toBeLessThan(0); expect(intent.moveY).toBeGreaterThan(0);
+  const jockey = add(s.ball.pos, scale(norm(sub(goalCenter(1), s.ball.pos)), JOCKEY_DIST));
+  const d = norm(sub(jockey, s.players[7].pos));
+  expect(intent.moveX).toBeCloseTo(d.x, 9); expect(intent.moveY).toBeCloseTo(d.y, 9);
 });
 
 test('isDazed is true below 35 health only', () => {
@@ -150,9 +153,10 @@ test('isDazed is true below 35 health only', () => {
 });
 test('a Dazed player runs at 0.8 of run speed and of turbo speed', () => {
   const s = playing(); s.controlled[0] = 4; s.players[4].health = 30;
+  for (const q of s.players) if (q.team === 1) q.hitCooldown = Infinity; // keep the opponents from tackling the runner
   const x0 = s.players[4].pos.x;
   runTicks(s, 60, [pad({ moveX: 1 }), neutralPad()]);
-  expect(s.players[4].pos.x - x0).toBeCloseTo(48, 1);
+  expect(s.players[4].pos.x - x0).toBeCloseTo(48, 9);
   runTicks(s, 1, [pad({ moveX: 1, turbo: true }), neutralPad()]);
   expect(s.players[4].vel.x).toBeCloseTo(TURBO_SPEED * 0.8, 9);
 });

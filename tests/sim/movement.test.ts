@@ -4,7 +4,7 @@ import { dist } from '../../src/sim/vec';
 import type { PadInput } from '../../src/sim/types';
 import { runTicks } from '../helpers';
 
-const cfg = { seed: 1, halfSeconds: 120, human: [true, false] as [boolean, boolean] };
+const cfg = { seed: 1, halfSeconds: 120, human: [true, true] as [boolean, boolean] };
 const pad = (o: Partial<PadInput>) => ({ ...neutralPad(), ...o });
 const playing = () => { const s = createMatch(cfg); runTicks(s, 60); expect(s.phase).toBe('play'); return s; };
 test('nobody moves during the kickoff pause', () => {

@@ -44,3 +44,4 @@ export const KNOCK_MIN_SPEED = 1; // units/s; knockback slower than this is zero
 export const MAX_HEALTH = 100, DAZED_HEALTH = 35, DAZED_SPEED_FACTOR = 0.8, DAZED_FUMBLE_CHANCE = 0.15;
 export const FUMBLE_COOLDOWN_TICKS = 20, HALFTIME_HEAL = 25;
 export const CPU_HIT_RANGE = 10; // units; the placeholder chaser shoulder-charges a carrier this close
+export const CPU_ENGAGE_RANGE = 24; // units; a ready chaser this close to the carrier stops jockeying (at JOCKEY_DIST from the ball) and closes in
