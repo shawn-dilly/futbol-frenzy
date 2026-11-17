@@ -55,13 +55,26 @@ Task 4 independent Sol approvals: replay core `5129d9c`, live recording `8b588c6
 ### 6. Halftime, fulltime and Cup screens
 - [x] Gate the existing halftime countdown for shell sessions with explicit stats, hit replay and continue controls; show score, all four stats for both teams, reserves and hit/no-hit. Fulltime offers appropriate next Cup match, result, retry/new match and title flows. Keep demo behavior testable and replay isolated. Use mockup halftime as visual target.
 - [x] Unit-test screen models and transitions, duplicate fulltime updates and taps, scene recreation and replay return as idempotent consumption, retry identity and same rung/settings, and fresh stats/reserves/history on advancement; e2e scripted short matches across halftime, replay, fulltime, Cup advance/loss and return to title. Confirm no stale state or duplicate listeners after repeated matches. Run `npm test`, build, e2e.
-- [ ] Sol runs and compares halftime/fulltime screenshots against mockups and reports observations.
+- [x] Sol runs and compares halftime/fulltime screenshots against mockups and reports observations.
 
 Task 6 implementation checks passed with 554 unit tests, typecheck, production build and all 25 Playwright tests. Two short matches exercised both halves and a recorded second-half hit. The Cup ladder test scripted final-second scores to cover draws, losses, retries, conflicting duplicate results after scene recreation, repeated taps and completion. Implementer inspection found the score and four stats aligned in the left column, hit status and reserves on the right, and the footer controls legible at 640×360. The hit panel uses text in place of the illustrated mockup thumbnail. Physical-device input and audio remain unverified.
 
 ### 7. Milestone verification and delivery
-- [ ] Run `npm test`, `npm run typecheck`, `npm run build`, `npm run e2e`; inspect screenshots and exercise normal, demo, replay and Cup flows. Record results and any real-phone limitations in this plan and roadmap. Independent Sol reviews full milestone diff, standards, test evidence and visual screenshots. Resolve findings and obtain passing review.
-- [ ] Update roadmap and progress, commit all milestone code/docs/progress conventionally, push `m4-game-shell` to origin, verify remote hash and branch and report them. Do not call delivered on push failure; no force push or automatic main merge.
+- [x] Record full-suite results, normal/demo/replay/Cup coverage, screenshot observations and device limitations in the plan and roadmap.
+- [ ] Independent Sol reviews the whole milestone diff from M3 `2ded47f` through the candidate, including project standards, test evidence and screenshots. Resolve findings and obtain approval.
+- [ ] After approval, finalize plan and roadmap, commit, push `m4-game-shell` to origin, verify the remote branch and hash against the local commit and report both.
+
+Task 6 independent Sol review approved `90e3d94` with no findings. On that commit Sol independently passed 554 unit tests, typecheck, production build and all 25 Playwright tests. Task 7 uses those results because the candidate changes only this plan and the roadmap. GPT-6.2 Astra prepared the candidate. Whole-milestone Sol signoff and verified push are pending.
+
+| M4 requirement | Candidate evidence |
+|---|---|
+| Normal launch and setup | Shell browser tests cover title, back, settings selection, keyboard kickoff and Cup pointer navigation. Task 5 checked all 72 team/length/difficulty combinations. Six teams use four effective ratings and contrasting side-based kits. |
+| Rules, substitutions and stats | Sim suites cover timed halves and first-to-five boundaries, three reserves per side including keeper replacement, exhausted reserves, all four counters and highest-hit selection. Balance acceptance uses neutral-rated CPU matches under the Task 2 contract. |
+| Demo and direct launch | Browser tests cover CPU-vs-CPU demo bypass, direct human movement, pass and hit, and automatic halftime countdown on both routes. |
+| Friendly results and replay | Short friendlies exercise halftime, fulltime, a recorded second-half hit, rematch and return to title. Replay tests check reconstruction, frozen live state and input history, no-hit return and restart cleanup. |
+| Cup Run | Sol verified a live draw and retry, duplicate taps, replay isolation and advancement. The automated ladder scripts final-second scores and lets the sim whistle, checking victory, elimination, retry, fresh match state, conflicting duplicate results and completion against all five opponents. |
+
+Sol inspected result screens at 640×360. The score, four stat rows, reserves and footer actions are legible. The hit card uses text in place of the illustrated mockup thumbnail. Cup win/loss coverage uses scripted scores. Physical Android touch, audio and suspend/resume, and human balance across selectable teams remain unverified.
 
 Task 2 independent Sol review: approved against 441abe6, including balance contracts and prior visual review. 522 tests, typecheck, build and 4 e2e passed; balance and negative-control evidence confirmed.
 
