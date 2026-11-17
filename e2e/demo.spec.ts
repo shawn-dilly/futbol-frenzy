@@ -11,7 +11,7 @@ function collectErrors(page: Page): string[] {
 test('a CPU-v-CPU match runs, players move, no errors', async ({ page }) => {
   const errors = collectErrors(page);
   await page.goto('/?demo=1&seed=1&mute=1&half=20');
-  await page.waitForFunction(() => (window as any).__ff?.state.tick >= 600, null, { timeout: 30_000 });
+  await page.waitForFunction(() => (window as any).__ff?.state.tick >= 900, null, { timeout: 30_000 });
   const s = await page.evaluate(() => (window as any).__ff.state);
   expect(s.phase === 'play' || s.phase === 'goal' || s.phase === 'kickoff').toBe(true);
   const moved = s.players.filter((p: any) => Math.hypot(p.pos.x - p.anchor.x, p.pos.y - p.anchor.y) > 5).length;
@@ -38,7 +38,7 @@ test('a human can run with the arrow keys and pass with J, no errors', async ({ 
   await page.waitForFunction((t) => (window as any).__ff.state.tick >= t + 90, startTick, { timeout: 10_000 });
   await page.keyboard.up('ArrowLeft');
   const endX = await page.evaluate((i) => (window as any).__ff.state.players[i].pos.x as number, id);
-  expect(Math.abs(endX - startX)).toBeGreaterThan(60);
+  expect(startX - endX).toBeGreaterThan(60);
 
   const s = await page.evaluate(() => (window as any).__ff.state);
   expect(s.ball.owner).toBe(id); // the human's player has the ball, so J is a pass
@@ -109,6 +109,7 @@ test('a human hit tap lands a recorded hit', async ({ page }) => {
   // Steer the controlled player at the nearest opponent and tap L when close; the CPU also tackles, so re-read every step.
   const deadline = Date.now() + 60_000;
   let hit: any;
+  const tacklers = new Set<number>(); // the players controlled when L was tapped: the hit must be one of theirs, not the computer's
   while (!hit && Date.now() < deadline) {
     const aim = await page.evaluate(() => {
       const st = (window as any).__ff.state;
@@ -126,15 +127,22 @@ test('a human hit tap lands a recorded hit', async ({ page }) => {
     if (aim.dx > 4) keys.push('ArrowRight'); else if (aim.dx < -4) keys.push('ArrowLeft');
     if (aim.dy > 4) keys.push('ArrowDown'); else if (aim.dy < -4) keys.push('ArrowUp');
     await press(keys);
-    if (aim.d < 12) { await page.keyboard.press('KeyL'); }
+    if (aim.d < 12) {
+      tacklers.add(await page.evaluate(() => (window as any).__ff.state.controlled[0] as number));
+      await page.keyboard.press('KeyL');
+    }
     await page.waitForTimeout(40);
-    hit = await findEvent(page, "e.type === 'hit'");
+    if (tacklers.size > 0) hit = await findEvent(page, `e.type === 'hit' && [${[...tacklers]}].includes(e.tackler)`);
   }
   await press([]);
   expect(hit, 'a hit event was recorded').toBeTruthy();
   expect(['stumble', 'knockdown', 'wipeout', 'overTheTop']).toContain(hit.tier);
   expect(hit.damage).toBeGreaterThan(0);
-  // The callout layer is a Phaser object, not state; the screenshot below is where the banner is looked at.
+  expect([...tacklers]).toContain(hit.tackler);
+  // The victim is hurt in the same tick the event is pushed; he stays hurt (the shortest spell is 24 ticks) while this is read.
+  expect(await page.evaluate((v) => (window as any).__ff.state.players[v].status.kind as string, hit.victim)).toBe('hurt');
+  // Knockdown or worse puts a callout on screen (the banner stays up at least 60 ticks).
+  if (hit.tier !== 'stumble') expect(await page.evaluate(() => (window as any).__ff.calloutText() as string)).not.toBe('');
   await page.screenshot({ path: 'artifacts/m2-hit.png' });
   expect(errors).toEqual([]);
 });
