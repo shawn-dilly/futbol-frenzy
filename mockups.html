@@ -1,0 +1,253 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  .wrap { display: flex; flex-direction: column; gap: 28px; max-width: 664px; }
+  figure { margin: 0; }
+  figcaption { font: 600 13px/1.4 var(--font-sans, sans-serif); margin-bottom: 8px; }
+  figcaption span { font-weight: 400; color: var(--muted-foreground, #888); }
+  .phone { background: #0b0b10; border-radius: 22px; padding: 12px; border: 1px solid var(--border, #333); }
+  canvas { display: block; width: 100%; aspect-ratio: 16 / 9; image-rendering: pixelated; image-rendering: crisp-edges; border-radius: 6px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <figure><figcaption>Live match <span>— a slide tackle lands, the ball pops loose (animated)</span></figcaption><div class="phone"><canvas id="match" width="320" height="180"></canvas></div></figure>
+  <figure><figcaption>Title screen <span>— working title, placeholder</span></figcaption><div class="phone"><canvas id="title" width="320" height="180"></canvas></div></figure>
+  <figure><figcaption>Match setup <span>— teams, mode, difficulty</span></figcaption><div class="phone"><canvas id="setup" width="320" height="180"></canvas></div></figure>
+  <figure><figcaption>Halftime <span>— hit stats and a dazed player</span></figcaption><div class="phone"><canvas id="half" width="320" height="180"></canvas></div></figure>
+</div>
+<script>
+const P = { g1:'#2f8f3a', g2:'#38a045', line:'#e8f5e0', navy:'#16162a', ink:'#0b0b10', red:'#e43b44', blue:'#3b7de4',
+  yel:'#fee761', wht:'#f4f4f4', org:'#f77622', skin:'#f2c79b', skin2:'#8d5a3b', gry:'#5a6988', dk:'#262b44', pur:'#b55088', grn:'#63c74d' };
+const FONT = {A:'111101111101101',B:'110101110101110',C:'111100100100111',D:'110101101101110',E:'111100111100111',F:'111100111100100',
+G:'111100101101111',H:'101101111101101',I:'111010010010111',J:'001001001101111',K:'101101110101101',L:'100100100100111',
+M:'111111101101101',N:'110101101101101',O:'111101101101111',P:'111101111100100',Q:'111101101111001',R:'111101110101101',
+S:'111100111001111',T:'111010010010010',U:'101101101101111',V:'101101101101010',W:'101101111111101',X:'101101010101101',
+Y:'101101010010010',Z:'111001010100111','0':'111101101101111','1':'010110010010111','2':'111001111100111','3':'111001111001111',
+'4':'101101111001001','5':'111100111001111','6':'111100111101111','7':'111001001001001','8':'111101111101111','9':'111101111001111',
+'!':'010010010000010',':':'000010000010000','-':'000000111000000','.':'000000000000010',"'":'010010000000000','/':'001001010100100',
+'>':'100010001010100','+':'000010111010000','?':'111001011000010','<':'001010100010001',' ':'000000000000000'};
+
+function kit(id) {
+  const c = document.getElementById(id), x = c.getContext('2d');
+  x.imageSmoothingEnabled = false;
+  const R = (a, b, w, h, col) => { x.fillStyle = col; x.fillRect(Math.round(a), Math.round(b), w, h); };
+  const T = (s, a, b, col, sc = 1, align = 'l') => {
+    s = String(s).toUpperCase();
+    const w = s.length * 4 * sc - sc;
+    if (align === 'c') a -= w / 2; else if (align === 'r') a -= w;
+    a = Math.round(a); b = Math.round(b);
+    x.fillStyle = col;
+    for (let i = 0; i < s.length; i++) {
+      const g = FONT[s[i]] || FONT['?'];
+      for (let k = 0; k < 15; k++) if (g[k] === '1') x.fillRect(a + i * 4 * sc + (k % 3) * sc, b + ((k / 3) | 0) * sc, sc, sc);
+    }
+  };
+  const TS = (s, a, b, col, sc, align, sh = P.ink) => { T(s, a + sc, b + sc, sh, sc, align); T(s, a, b, col, sc, align); };
+  const disc = (cx, cy, r, col, ring = 0) => {
+    x.fillStyle = col;
+    for (let dy = -r; dy <= r; dy++) for (let dx = -r; dx <= r; dx++) {
+      const d = dx * dx + dy * dy;
+      if (d <= r * r && (!ring || d > (r - ring) * (r - ring))) x.fillRect(cx + dx, cy + dy, 1, 1);
+    }
+  };
+  // player: (px,py) = feet centre
+  const man = (px, py, k, f = 0, dir = 1, st = 'run') => {
+    px = Math.round(px); py = Math.round(py);
+    const r = (dx, dy, w, h, col) => R(dir === 1 ? px + dx : px - dx - w, py + dy, w, h, col);
+    const sk = k.skin || P.skin;
+    if (st === 'ko') {
+      r(-8, -4, 8, 4, k.j); r(-8, -2, 8, 1, k.t); r(0, -5, 4, 4, sk); r(0, -5, 4, 1, k.h);
+      r(-12, -3, 4, 2, k.s); r(-15, -3, 3, 2, sk); r(-17, -3, 2, 2, P.ink);
+      return;
+    }
+    if (st === 'slide') {
+      r(-6, -11, 4, 4, sk); r(-6, -12, 4, 2, k.h);
+      r(-5, -7, 7, 4, k.j); r(-5, -5, 7, 1, k.t); r(1, -4, 4, 3, k.s);
+      r(4, -3, 6, 2, sk); r(10, -4, 3, 3, P.ink); r(-1, -2, 4, 2, sk);
+      return;
+    }
+    r(-2, -15, 5, 2, k.h); r(-2, -13, 5, 3, sk); r(2, -12, 1, 1, P.ink);
+    r(-3, -10, 7, 5, k.j); r(-3, -8, 7, 1, k.t);
+    r(-4, -9, 1, 3, sk); r(4, -9, 1, 3, sk);
+    r(-3, -5, 7, 2, k.s);
+    if (f % 2 === 0) { r(-3, -3, 2, 2, sk); r(2, -3, 2, 2, sk); r(-3, -1, 2, 1, P.ink); r(2, -1, 3, 1, P.ink); }
+    else { r(-4, -3, 2, 1, sk); r(3, -3, 2, 2, sk); r(-5, -2, 2, 1, P.ink); r(3, -1, 3, 1, P.ink); }
+  };
+  const shadow = (px, py, w = 10) => R(px - w / 2, py, w, 2, 'rgba(0,0,0,.28)');
+  const ball = (bx, by) => { R(bx - 1, by - 3, 3, 3, P.wht); R(bx, by - 2, 1, 1, P.ink); };
+  const star = (sx, sy, col, s = 1) => { R(sx - s, sy, 3 * s, s, col); R(sx, sy - s, s, 3 * s, col); };
+  const big = (fn, sx, sy, sc) => { x.save(); x.translate(sx, sy); x.scale(sc, sc); fn(); x.restore(); };
+  const panel = (a, b, w, h, fill = P.dk, edge = P.gry) => { R(a, b, w, h, edge); R(a + 1, b + 1, w - 2, h - 2, fill); };
+  return { c, x, R, T, TS, disc, man, shadow, ball, star, big, panel };
+}
+
+const RED = { j: P.red, t: P.wht, s: P.wht, h: '#3a2414' };
+const BLU = { j: P.blue, t: P.yel, s: P.navy, h: P.yel };
+const REDd = { ...RED, skin: P.skin2, h: P.ink };
+const BLUd = { ...BLU, skin: P.skin2, h: P.ink };
+let seed = 7; const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+
+/* ---------- LIVE MATCH ---------- */
+(function () {
+  const k = kit('match'), { x, R, T, TS, disc, man, shadow, ball, star } = k;
+  const crowd = []; seed = 11;
+  const cc = [P.red, P.blue, P.yel, P.wht, P.org, P.pur, P.gry];
+  for (let i = 0; i < 420; i++) crowd.push([(rnd() * 320) | 0, 13 + ((rnd() * 20) | 0), cc[(rnd() * cc.length) | 0]]);
+  const extras = [[40, 70, BLUd, 1], [70, 140, BLU, 1], [140, 62, RED, -1], [222, 82, REDd, -1], [236, 136, BLU, 1], [286, 104, { j: P.grn, t: P.ink, s: P.ink, h: P.org }, -1]];
+
+  function pitch(cheer) {
+    R(0, 0, 320, 180, P.navy);
+    for (const [cx, cy, col] of crowd) R(cx, cy - (cheer && (cx + cy) % 3 === 0 ? 1 : 0), 2, 2, col);
+    R(0, 35, 320, 9, P.ink);
+    T('CRUNCH COLA', 8, 37, P.yel); T('BONEZ BOOTS', 84, 37, P.red); T('NO REF TV', 160, 37, P.blue); T('OUCH! GUM', 226, 37, P.grn); T('KO', 296, 37, P.org);
+    for (let i = 0; i < 8; i++) R(i * 40, 44, 40, 136, i % 2 ? P.g1 : P.g2);
+    R(0, 50, 320, 1, P.line); R(0, 172, 320, 1, P.line);
+    R(110, 50, 1, 123, P.line); disc(110, 111, 22, P.line, 1.5);
+    R(250, 76, 1, 71, P.line); R(250, 76, 58, 1, P.line); R(250, 146, 58, 1, P.line);
+    R(284, 94, 1, 35, P.line); R(284, 94, 24, 1, P.line); R(284, 128, 24, 1, P.line);
+    R(308, 50, 1, 123, P.line);
+    R(308, 97, 9, 1, P.wht); R(308, 125, 9, 1, P.wht); R(316, 97, 1, 29, P.wht);
+    for (let i = 0; i < 4; i++) R(310 + i * 2, 98, 1, 27, 'rgba(255,255,255,.25)');
+  }
+  function hud(tm) {
+    R(0, 0, 320, 11, P.ink);
+    R(4, 2, 7, 7, P.blue); T('VIPERS', 14, 3, P.wht); T('2', 46, 3, P.yel);
+    T('1ST ' + tm, 160, 3, P.wht, 1, 'c');
+    R(309, 2, 7, 7, P.red); T('RHINOS', 304, 3, P.wht, 1, 'r'); T('1', 270, 3, P.yel);
+  }
+  function controls(tb) {
+    x.globalAlpha = .28; disc(40, 140, 26, P.wht); x.globalAlpha = .55; disc(40, 140, 26, P.wht, 1.5); disc(47, 135, 10, P.wht); x.globalAlpha = 1;
+    const b = [[248, 150, 'PASS', P.blue], [276, 124, 'SHOOT', P.yel], [302, 152, 'HIT', P.red]];
+    for (const [bx, by, lb, col] of b) { x.globalAlpha = .6; disc(bx, by, 13, col); x.globalAlpha = 1; disc(bx, by, 13, P.ink, 1.5); T(lb, bx + 1, by - 2, P.ink, 1, 'c'); }
+    T('TURBO', 139, 164, P.wht, 1, 'r'); R(142, 163, 46, 7, P.ink); R(143, 164, Math.round(44 * tb), 5, tb > .3 ? P.org : P.red);
+    T('RAGE', 139, 173, P.wht, 1, 'r'); R(142, 172, 46, 7, P.ink); R(143, 173, 31, 5, P.pur);
+  }
+  function frame(t) {
+    const f = t % 250, run = (t / 5) | 0;
+    let sx = 0, sy = 0;
+    if (f >= 90 && f < 102) { sx = ((f % 2) * 2 - 1) * 3; sy = ((f % 3) - 1) * 2; }
+    x.save(); x.translate(sx, sy);
+    pitch(f >= 90 && f < 170 && run % 2);
+    extras.forEach(([ex, ey, kt, d], i) => { const o = Math.sin(t / 22 + i * 2) * 5; shadow(ex + o, ey); man(ex + o, ey, kt, run + i, d); });
+    // blue carrier
+    let bx, by = 112, bst = 'run', lift = 0;
+    if (f < 90) bx = 92 + f * .95;
+    else if (f < 118) { const u = (f - 90) / 28; bx = 177 - u * 34; lift = Math.sin(u * Math.PI) * 20; bst = 'ko'; }
+    else { bx = 143; bst = f < 228 ? 'ko' : 'run'; }
+    // red tackler
+    let rx, rst = 'run';
+    if (f < 66) rx = 262 - f * .8;
+    else if (f < 90) { rx = 209 - (f - 66) * .95; rst = 'slide'; }
+    else if (f < 124) { rx = 186 - Math.min(f - 90, 10) * .6; rst = 'slide'; }
+    else rx = 180 + Math.min(f - 124, 40) * .75;
+    // ball
+    let ox, oy, oz = 0;
+    if (f < 90) { ox = bx + 7; oy = by; }
+    else if (f < 150) { const u = (f - 90) / 60; ox = 184 + u * 28; oy = 112 - u * 10; oz = Math.abs(Math.sin(u * Math.PI * 3)) * 12 * (1 - u); }
+    else { ox = 212; oy = 102; if (f >= 162) { ox = Math.min(rx + 7, 218); } }
+    shadow(bx, by, bst === 'ko' ? 16 : 10); shadow(rx, by + 1);
+    R(ox - 1, oy, 4, 1, 'rgba(0,0,0,.28)');
+    man(bx, by - lift, BLU, run, 1, bst);
+    man(rx, by + 1, RED, run, -1, rst);
+    ball(ox, oy - oz);
+    if (rst === 'slide' && f < 90) for (let i = 0; i < 4; i++) R(rx + 8 + i * 5, by - 1 - (i % 2), 2, 1, P.line);
+    if (bst === 'ko' && f >= 118) for (let i = 0; i < 3; i++) { const a = t / 6 + i * 2.1; star(bx + 2 + Math.cos(a) * 8, by - 11 + Math.sin(a) * 2, P.yel); }
+    if (f >= 90 && f < 100) { const s = 2 + (f % 2); star(182, 104, P.wht, s); star(182, 104, P.yel, s - 1); }
+    if (f >= 90 && f < 140) { const sc = f < 96 ? 4 : 3; TS('CRUNCH!', 184, 64 - (f - 90) * .15, f % 4 < 2 ? P.yel : P.wht, sc, 'c', P.red); }
+    if (f >= 140 && f < 215) TS('LOOSE BALL!', 160, 60, P.wht, 2, 'c');
+    x.restore();
+    if (f >= 90 && f < 93) { x.globalAlpha = .45; R(0, 0, 320, 180, P.wht); x.globalAlpha = 1; }
+    hud('02:' + String(41 + ((f / 62) | 0)).padStart(2, '0'));
+    controls(f < 90 ? 1 - f / 110 : .18 + Math.min((f - 90) / 300, .5));
+  }
+  if (matchMedia('(prefers-reduced-motion: reduce)').matches) frame(97);
+  else { let t = 0, last = 0; const loop = ts => { if (ts - last > 32) { last = ts; frame(t++); } requestAnimationFrame(loop); }; requestAnimationFrame(loop); frame(97); }
+})();
+
+/* ---------- TITLE ---------- */
+(function () {
+  const { x, R, T, TS, man, star, big, disc } = kit('title');
+  R(0, 0, 320, 180, P.navy);
+  seed = 3; for (let i = 0; i < 60; i++) R((rnd() * 320) | 0, (rnd() * 90) | 0, 1, 1, P.gry);
+  for (const lx of [18, 302]) { R(lx - 1, 20, 2, 110, P.dk); R(lx - 9, 10, 18, 11, P.gry); for (let i = 0; i < 8; i++) R(lx - 8 + (i % 4) * 4, 11 + ((i / 4) | 0) * 5, 3, 4, P.yel); }
+  x.globalAlpha = .07; for (let i = 0; i < 14; i++) { R(18 + i * 4, 21 + i * 8, 40 + i * 10, 8, P.yel); R(302 - i * 4 - 40 - i * 10, 21 + i * 8, 40 + i * 10, 8, P.yel); } x.globalAlpha = 1;
+  for (let i = 0; i < 8; i++) R(i * 40, 132, 40, 48, i % 2 ? P.g1 : P.g2);
+  R(0, 132, 320, 1, P.line);
+  TS('FUTBOL', 160, 14, P.wht, 6, 'c', P.red);
+  TS('FRENZY', 160, 52, P.yel, 8, 'c', P.red);
+  R(267, 16, 17, 24, P.ink); R(265, 14, 17, 24, P.red); R(267, 16, 3, 20, '#ff7a80');
+  big(() => man(0, 0, RED, 0, 1, 'slide'), 78, 172, 3);
+  big(() => man(0, 0, BLU, 0, 1, 'ko'), 282, 150, 3);
+  star(206, 150, P.wht, 3); star(206, 150, P.yel, 2); star(226, 128, P.yel, 2); star(190, 134, P.org, 1);
+  R(196, 160, 9, 9, P.wht); R(199, 163, 3, 3, P.ink);
+  const items = ['1P VS CPU', '2P VERSUS', 'CUP RUN', 'OPTIONS'];
+  R(108, 108, 104, 66, 'rgba(11,11,16,.82)');
+  items.forEach((s, i) => { const y = 114 + i * 15; if (i === 0) { R(110, y - 3, 100, 15, P.red); T('>', 115, y, P.yel, 2); } T(s, 166, y, i === 0 ? P.wht : P.gry, 2, 'c'); });
+})();
+
+/* ---------- SETUP ---------- */
+(function () {
+  const { x, R, T, TS, man, big, panel } = kit('setup');
+  R(0, 0, 320, 180, P.navy);
+  for (let i = 0; i < 12; i++) R(0, i * 16, 320, 8, 'rgba(255,255,255,.025)');
+  TS('MATCH SETUP', 160, 6, P.yel, 2, 'c', P.red);
+  const card = (cx, name, kt, col, st, who, d) => {
+    panel(cx, 22, 128, 82, P.dk, col);
+    R(cx + 1, 23, 126, 12, col); T(name, cx + 64, 26, P.ink, 1, 'c');
+    R(cx + 6, 40, 40, 44, P.navy); for (let i = 0; i < 3; i++) R(cx + 6, 72 + i * 4, 40, 2, i % 2 ? P.g1 : P.g2);
+    big(() => man(0, 0, kt, 0, d), cx + 26, 80, 2.5);
+    T(who, cx + 26, 90, P.wht, 1, 'c'); T('< SWIPE >', cx + 26, 97, P.gry, 1, 'c');
+    [['SPEED', st[0]], ['POWER', st[1]], ['SKILL', st[2]], ['DIRTY', st[3]]].forEach(([n, v], i) => {
+      const y = 42 + i * 13; T(n, cx + 54, y, P.wht);
+      for (let j = 0; j < 8; j++) R(cx + 54 + j * 8, y + 7, 7, 3, j < v ? (i === 3 ? P.red : P.yel) : P.navy);
+    });
+  };
+  card(12, 'IRON RHINOS', RED, P.red, [3, 8, 4, 7], 'P1', 1);
+  card(180, 'NEON VIPERS', BLU, P.blue, [7, 3, 6, 5], 'CPU', -1);
+  TS('VS', 160, 54, P.wht, 3, 'c', P.red);
+  const row = (y, label, opts, sel, col) => {
+    T(label, 12, y + 4, P.gry);
+    const w = (248 - (opts.length - 1) * 4) / opts.length;
+    opts.forEach((o, i) => { const a = 60 + i * (w + 4); panel(a, y, w, 13, i === sel ? col : P.dk, i === sel ? P.wht : P.gry); T(o, a + w / 2, y + 4, i === sel ? P.ink : P.wht, 1, 'c'); });
+  };
+  row(110, 'MODE', ['1P VS CPU', '2P SAME PHONE', '2P ONLINE'], 0, P.yel);
+  row(127, 'CPU LEVEL', ['ROOKIE', 'PRO', 'BRUISER', 'PSYCHO'], 2, P.org);
+  row(144, 'MATCH', ['2 MIN', '4 MIN', 'FIRST TO 5'], 1, P.yel);
+  panel(104, 162, 112, 15, P.red, P.wht); T('KICK OFF >', 160, 165, P.wht, 2, 'c');
+})();
+
+/* ---------- HALFTIME ---------- */
+(function () {
+  const { x, R, T, TS, man, big, panel, star } = kit('half');
+  R(0, 0, 320, 180, P.navy);
+  for (let i = 0; i < 12; i++) R(0, i * 16, 320, 8, 'rgba(255,255,255,.025)');
+  TS('HALF TIME', 160, 6, P.yel, 3, 'c', P.red);
+  panel(12, 28, 176, 22, P.ink, P.gry);
+  R(16, 32, 14, 14, P.red); T('RHINOS', 34, 34, P.wht, 2); T('1', 94, 32, P.yel, 3, 'c');
+  T('-', 100, 34, P.gry, 2, 'c'); T('2', 108, 32, P.yel, 3, 'c'); T('VIPERS', 168, 34, P.wht, 2, 'r'); R(170, 32, 14, 14, P.blue);
+  panel(12, 54, 176, 84);
+  [['SHOTS', 3, 6], ['BIG HITS', 14, 5], ["K.O.'S", 3, 1], ['STEALS', 8, 4], ['POSSESSION', '38', '62']].forEach(([n, a, b], i) => {
+    const y = 60 + i * 15; T(n, 100, y + 2, P.gry, 1, 'c');
+    T(a, 24, y, a > b ? P.yel : P.wht, 2); T(b, 176, y, b > a ? P.yel : P.wht, 2, 'r');
+    if (i < 4) R(18, y + 12, 164, 1, P.navy);
+  });
+  panel(196, 28, 112, 76, P.ink, P.yel);
+  R(197, 29, 110, 10, P.yel); T('HIT OF THE HALF', 252, 31, P.ink, 1, 'c');
+  for (let i = 0; i < 3; i++) R(197, 39 + i * 16, 110, 16, i % 2 ? P.g1 : P.g2);
+  big(() => man(0, 0, RED, 0, 1, 'slide'), 222, 80, 2);
+  big(() => man(0, 0, BLU, 0, 1, 'ko'), 296, 62, 2);
+  star(258, 68, P.wht, 2); star(258, 68, P.yel, 1); star(276, 46, P.yel, 1);
+  R(197, 87, 110, 16, P.ink); T('NO.4 BRUNO', 201, 89, P.wht); T('WATCH REPLAY >', 201, 96, P.yel);
+  panel(196, 108, 112, 30, P.dk, P.red);
+  T('NO.9 KOWALSKI IS DAZED', 252, 112, P.wht, 1, 'c');
+  T('HP', 202, 121, P.gry); R(212, 120, 90, 5, P.ink); R(213, 121, 22, 3, P.red);
+  T('SLOWER + FUMBLES MORE', 252, 129, P.org, 1, 'c');
+  panel(12, 144, 144, 26, P.dk, P.gry); T('SUB NO.9 OUT', 84, 151, P.wht, 2, 'c'); T('2 SUBS LEFT', 84, 163, P.gry, 1, 'c');
+  panel(164, 144, 144, 26, P.red, P.wht); T('2ND HALF >', 236, 153, P.wht, 2, 'c');
+})();
+</script>
+</body>
+</html>
