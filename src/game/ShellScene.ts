@@ -1,4 +1,6 @@
 import Phaser from 'phaser';
+import { frameKey } from '../art/sprites';
+import { ATLAS_KEY, BALL_KEY } from './BootScene';
 import { drawText } from '../art/pixelFont';
 import { PAL } from '../art/palette';
 import { TEAMS } from '../content/teams';
@@ -58,7 +60,18 @@ export class ShellScene extends Phaser.Scene {
       this.add.zone(x, y, w, h).setOrigin(0).setInteractive().on('pointerdown', (p: Phaser.Input.Pointer) => { this.focus = index; this.activate(index, p.x < x + w / 2 ? -1 : 1); this.render(); });
     };
     if (this.screen === 'title') {
+      for (let i = 0; i < 60; i++) rect((i * 73) % 320, (i * 37) % 90, 1, 1, PAL.gry);
+      for (const x of [18, 302]) {
+        rect(x - 1, 20, 2, 112, PAL.dk); rect(x - 9, 10, 18, 11, PAL.gry);
+        for (let i = 0; i < 8; i++) rect(x - 8 + (i % 4) * 4, 11 + Math.floor(i / 4) * 5, 3, 4, PAL.yel);
+      }
       for (let i = 0; i < 8; i++) rect(i * 40, 132, 40, 48, i % 2 ? PAL.g1 : PAL.g2);
+      rect(0, 132, 320, 1, PAL.line);
+      text('FUTBOL', 162, 20, PAL.red, 6, 'c'); text('FRENZY', 162, 59, PAL.red, 7, 'c');
+      this.add.image(65, 151, ATLAS_KEY, frameKey(0, 'idle', 0)).setScale(3);
+      this.add.image(270, 151, ATLAS_KEY, frameKey(1, 'idle', 0)).setScale(3).setFlipX(true);
+      this.add.image(205, 157, BALL_KEY).setScale(3);
+      rect(220, 138, 3, 9, PAL.yel); rect(217, 141, 9, 3, PAL.yel);
       text('FUTBOL', 160, 18, PAL.wht, 6, 'c'); text('FRENZY', 160, 57, PAL.yel, 7, 'c');
       button(0, 100, 112, 120, 23, '1P VS CPU', PAL.red);
       return;
@@ -68,14 +81,14 @@ export class ShellScene extends Phaser.Scene {
     [this.selection.team, opponent].forEach((teamIndex, side) => {
       const x = side ? 180 : 12; const team = TEAMS[teamIndex]; const col = side ? PAL.blue : PAL.red;
       rect(x, 22, 128, 80, col); rect(x + 1, 23, 126, 78, PAL.dk); rect(x + 1, 23, 126, 12, col);
-      text(team.name, x + 64, 26, PAL.ink, 1, 'c'); rect(x + 8, 43, 30, 28, col); text(side ? 'CPU' : 'P1', x + 23, 78, PAL.wht, 1, 'c');
+      text(team.name, x + 64, 26, PAL.ink, 1, 'c'); rect(x + 6, 40, 36, 35, PAL.navy); this.add.image(x + 24, 58, ATLAS_KEY, frameKey(side ? team.kits.away[0] : team.kits.home[0], 'idle', 0)).setScale(2).setFlipX(!!side); text(side ? 'CPU' : 'P1', x + 23, 78, PAL.wht, 1, 'c');
       Object.entries(team.ratings).forEach(([name, value], i) => { const y = 38 + i * 12; text(name, x + 45, y); for (let j = 0; j < 8; j++) rect(x + 45 + j * 8, y + 6, 7, 3, j < Math.round(value * 8) ? PAL.yel : PAL.navy); });
-      button(side, x, 88, 128, 13, '<  CHANGE  >');
+      button(side, x, 88, 128, 22, '<  CHANGE  >');
     });
     text('VS', 160, 55, PAL.wht, 3, 'c');
-    button(2, 12, 108, 145, 18, `LEVEL: < ${this.selection.level} >`);
+    button(2, 12, 112, 145, 22, `LEVEL: < ${this.selection.level} >`);
     const label = this.selection.length === 'short' ? '2 X 120S' : this.selection.length === 'long' ? '2 X 240S' : 'FIRST TO 5';
-    button(3, 163, 108, 145, 18, `LENGTH: < ${label} >`);
+    button(3, 163, 112, 145, 22, `LENGTH: < ${label} >`);
     button(4, 12, 145, 90, 24, '< BACK'); button(5, 110, 145, 198, 24, 'KICK OFF >', PAL.red);
   }
 }

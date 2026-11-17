@@ -29,3 +29,20 @@ test('demo bypasses the shell', async ({ page }) => {
   await page.waitForFunction(() => !!window.__ff);
   expect(await page.evaluate(() => window.__ff!.state.config.human)).toEqual([false, false]);
 });
+
+test('setup direction targets fit at 640 by 360', async ({ page }) => {
+  await page.setViewportSize({ width: 640, height: 360 });
+  await page.goto('/?seed=42&mute=1');
+  await page.waitForSelector('canvas');
+  await page.waitForTimeout(300);
+  await page.mouse.click(320, 246);
+  await page.waitForTimeout(100);
+  // Each half of each selector is at least 44px high and 128px wide.
+  for (const [x, y] of [[50, 198], [240, 198], [390, 198], [570, 198], [60, 246], [250, 246], [380, 246], [570, 246]]) {
+    await page.mouse.click(x, y);
+    await page.waitForTimeout(30);
+  }
+  await page.mouse.click(410, 314);
+  await page.waitForFunction(() => !!window.__ff);
+  expect(await page.evaluate(() => window.__ff!.state.config)).toMatchObject({ seed: 42, halfSeconds: 120, level: ['pro', 'pro'] });
+});
