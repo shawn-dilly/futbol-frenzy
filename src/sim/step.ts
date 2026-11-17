@@ -75,7 +75,7 @@ function stepPause(state: MatchState): void {
 
 export function step(state: MatchState, inputs: [PadInput, PadInput]): void {
   state.events = [];
-  const finished = state.phase === 'fulltime'; // terminal: nothing changes but events and tick
+  const finished = state.phase === 'fulltime'; // terminal: no play, and no new input is recorded; only a flattened player's animation, events and tick move
   if (state.phase !== 'play') stepPause(state);
   const scored = state.phase === 'play' ? stepPlay(state, inputs) : null;
   advanceFlow(state, scored);

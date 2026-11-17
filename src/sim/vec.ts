@@ -5,6 +5,7 @@ export function sub(a: Vec, b: Vec): Vec { return { x: a.x - b.x, y: a.y - b.y }
 export function scale(v: Vec, k: number): Vec { return { x: v.x * k, y: v.y * k }; }
 export function len(v: Vec): number { return Math.hypot(v.x, v.y); }
 export function dist(a: Vec, b: Vec): number { return len(sub(a, b)); }
+export function isZero(v: Vec): boolean { return v.x === 0 && v.y === 0; }
 /** Unit vector; the zero vector stays zero. */
 export function norm(v: Vec): Vec {
   const l = len(v);

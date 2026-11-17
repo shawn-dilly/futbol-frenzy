@@ -1,11 +1,12 @@
 import { describe, expect, test } from 'vitest';
 import { createMatch, neutralPad, neutralIntent } from '../../src/sim/setup';
-import { updateAttack } from '../../src/sim/attack';
-import { setStatus } from '../../src/sim/status';
+import { resolveContacts, updateAttack } from '../../src/sim/attack';
+import { setStatus, tickStatus } from '../../src/sim/status';
+import { applyMovement } from '../../src/sim/movement';
 import { hurtPlayer } from '../../src/sim/hurt';
 import { step } from '../../src/sim/step';
 import {
-  BIG_HIT_CHARGE_TICKS, BIG_HIT_MAX_HOLD_TICKS, HIT_COOLDOWN_TICKS, HIT_LANDED_RECOVER_TICKS, HITS, LATE_HIT_COOLDOWN_TICKS,
+  BIG_HIT_CHARGE_TICKS, BIG_HIT_MAX_HOLD_TICKS, CHARGE_MOVE_FACTOR, CPU_HIT_COOLDOWN_TICKS, HIT_COOLDOWN_TICKS, RUN_SPEED, HIT_LANDED_RECOVER_TICKS, HITS, LATE_HIT_COOLDOWN_TICKS,
   TICK_HZ, TURBO_COST, TURBO_REFILL_PER_TICK,
 } from '../../src/sim/constants';
 import type { MatchState, PadInput, PlayerState, SimEvent } from '../../src/sim/types';
@@ -88,7 +89,7 @@ describe('charging and launching', () => {
   test('a charging player moves at half speed', () => {
     const s = playing(); const x0 = s.players[TACKLER].pos.x;
     runTicks(s, 1, HIT_DOWN); runTicks(s, 6, [pad({ hit: true, moveX: 1 }), neutralPad()]);
-    expect(s.players[TACKLER].pos.x - x0).toBeCloseTo(6 * 60 * 0.5 / TICK_HZ + 0, 9);
+    expect(s.players[TACKLER].pos.x - x0).toBeCloseTo(6 * RUN_SPEED * CHARGE_MOVE_FACTOR / TICK_HZ, 9);
   });
   test('the ball carrier cannot charge', () => {
     const s = playing(); s.ball.owner = TACKLER; s.ball.pos = { ...s.players[TACKLER].pos };
@@ -110,6 +111,13 @@ describe('charging and launching', () => {
     const s = playing(); s.players[TACKLER].hitCooldown = 2;
     runTicks(s, 1, HIT_DOWN); expect(status(s)).toEqual({ kind: 'free' });
   });
+  test('a charge is cancelled when control moves to another player', () => {
+    const s = playing(); runTicks(s, 1, HIT_DOWN); expect(status(s)).toEqual({ kind: 'charging' });
+    s.controlled[0] = MATE;
+    runTicks(s, 1, HIT_UP);
+    expect(status(s)).toEqual({ kind: 'free' }); expect(s.events.some(e => e.type === 'whiff')).toBe(false);
+    runTicks(s, 12); expect(status(s)).toEqual({ kind: 'free' });
+  });
   test('the brain launches a shoulder directly when free, off cooldown and not the carrier', () => {
     const s = playing(); const p = s.players[7];
     updateAttack(s, p, { ...neutralIntent(), hit: 'shoulder' });
@@ -123,10 +131,13 @@ describe('charging and launching', () => {
 
 describe('Review Focus 4: a held HIT never launches by accident', () => {
   const noAttack = (s: MatchState) => s.players.filter(p => p.team === 0).every(p => p.status.kind !== 'charging' && p.status.kind !== 'lunging');
-  test('held through being flattened', () => {
+  test('held through a stumble (control stays with the stumbling player)', () => {
     const s = playing(); runTicks(s, 1, HIT_DOWN);
-    hurtPlayer(s, s.players[TACKLER], 'overTheTop', { x: -1, y: 0 }, 50);
-    for (let t = 0; t < 260; t++) { runTicks(s, 1, HIT_DOWN); expect(noAttack(s), `tick ${t}`).toBe(true); }
+    hurtPlayer(s, s.players[TACKLER], 'stumble', { x: -1, y: 0 }, 10);
+    expect(s.controlled[0]).toBe(TACKLER);
+    for (let t = 0; t < 60; t++) { runTicks(s, 1, HIT_DOWN); expect(noAttack(s), `tick ${t}`).toBe(true); }
+    expect(status(s)).toEqual({ kind: 'free' });
+    runTicks(s, 1, HIT_UP); runTicks(s, 1, HIT_DOWN); expect(status(s)).toEqual({ kind: 'charging' });
   });
   test('held through a goal and the kickoff after it', () => {
     const s = playing(); runTicks(s, 1, HIT_DOWN); expect(status(s)).toEqual({ kind: 'charging' });
@@ -146,7 +157,7 @@ describe('contact', () => {
     s.ball.owner = VICTIM; s.ball.pos = { ...s.players[VICTIM].pos };
     runTicks(s, 1, HIT_DOWN); runTicks(s, 1, HIT_UP);
     expect(hits(s)).toEqual([{ type: 'hit', tackler: TACKLER, victim: VICTIM, hit: 'shoulder', tier: 'stumble', variant: expect.any(Number), damage: 10, late: false }]);
-    expect(s.ball.owner).not.toBe(VICTIM);
+    expect(s.ball.owner).toBeNull();
     expect(s.rage).toEqual([10, 6]);
     expect(s.players[VICTIM].status).toMatchObject({ kind: 'hurt', tier: 'stumble' });
     expect(s.players[VICTIM].health).toBe(90);
@@ -220,9 +231,19 @@ describe('contact', () => {
     runTicks(s, 1);
     expect(hits(s)).toEqual([expect.objectContaining({ tackler: MATE, victim: VICTIM })]);
     expect(status(s)).toEqual(lunge);
-    runTicks(s, HITS.shoulder.lungeTicks - 2);
+    for (let t = 0; t < HITS.shoulder.lungeTicks - 2; t++) { runTicks(s, 1); expect(s.events.some(e => e.type === 'hit'), `tick ${t}`).toBe(false); }
     expect(s.events).toContainEqual({ type: 'whiff', player: TACKLER, hit: 'shoulder' });
-    expect(s.events.some(e => e.type === 'hit')).toBe(false);
+  });
+  test('a victim hurt earlier this tick is not hit again, even by a stumble-level hit', () => {
+    const s = playing(); // rage 0: the first hit is only a stumble, so only the same-tick rule protects the victim
+    const lunge = { kind: 'lunging', hit: 'shoulder' } as const;
+    s.players[MATE].pos = { x: 100, y: 50 }; s.players[TACKLER].pos = { x: 100, y: 54 };
+    for (const id of [MATE, TACKLER]) { s.players[id].facing = { x: 1, y: 0 }; setStatus(s.players[id], lunge, HITS.shoulder.lungeTicks); }
+    s.players[VICTIM].pos = { x: 108, y: 52 };
+    runTicks(s, 1);
+    expect(hits(s)).toEqual([expect.objectContaining({ tackler: MATE, victim: VICTIM, tier: 'stumble' })]);
+    expect(status(s)).toEqual(lunge);
+    expect(s.players[VICTIM].health).toBe(90);
   });
   test('both teams lunging at each other: one hit, lower tackler id resolves first', () => {
     const s = playing(); const lunge = { kind: 'lunging', hit: 'shoulder' } as const;
@@ -233,6 +254,44 @@ describe('contact', () => {
     expect(hits(s)).toEqual([expect.objectContaining({ tackler: MATE, victim: VICTIM })]);
     expect(s.players[MATE].status).toMatchObject({ kind: 'recovering', landed: true });
     expect(s.players[VICTIM].status.kind).toBe('hurt');
+  });
+});
+
+describe('lunging players and the ball', () => {
+  test('a slide through a loose ball does not collect it', () => {
+    const s = playing(); s.players[TACKLER].turboTicks = 50;
+    s.ball.pos = { x: 112, y: 52 };
+    hold(s, 1); expect(status(s)).toEqual({ kind: 'lunging', hit: 'slide' });
+    runTicks(s, HITS.slide.lungeTicks - 1);
+    expect(s.ball.owner).toBeNull();
+  });
+});
+
+describe('the computer side hits less often', () => {
+  const cpuTackler = () => {
+    const s = createMatch({ seed: 1, halfSeconds: 120, human: [true, false] }); runTicks(s, 60);
+    s.ball.owner = null; s.ball.pos = { x: 30, y: 10 };
+    const t = s.players[7], v = s.players[3];
+    t.pos = { x: 300, y: 52 }; t.facing = { x: -1, y: 0 }; v.pos = { x: 295, y: 52 };
+    for (const p of s.players) if (p.team === 1 && p.id !== 7) p.pos = { x: 460, y: 10 };
+    return { s, t, v };
+  };
+  test('a brain hit that lands sets the cooldown to 240 (a late hit would only be 90)', () => {
+    const { s, t } = cpuTackler();
+    updateAttack(s, t, { ...neutralIntent(), hit: 'shoulder' }); resolveContacts(s);
+    expect(s.events).toContainEqual(expect.objectContaining({ type: 'hit', tackler: 7, late: true }));
+    expect(t.hitCooldown).toBe(CPU_HIT_COOLDOWN_TICKS);
+  });
+  test('a brain hit that misses sets the cooldown to 240', () => {
+    const { s, t, v } = cpuTackler(); v.pos = { x: 100, y: 100 };
+    updateAttack(s, t, { ...neutralIntent(), hit: 'shoulder' });
+    for (let i = 0; i < HITS.shoulder.lungeTicks; i++) { if (i > 0) tickStatus(t); applyMovement(s, t, neutralIntent()); resolveContacts(s); }
+    expect(s.events).toContainEqual({ type: 'whiff', player: 7, hit: 'shoulder' });
+    expect(t.hitCooldown).toBe(CPU_HIT_COOLDOWN_TICKS);
+  });
+  test('a human hit keeps the normal cooldown', () => {
+    const s = playing(); placeVictimAhead(s, 5); s.ball.owner = VICTIM;
+    hold(s, 1); expect(s.players[TACKLER].hitCooldown).toBe(HIT_COOLDOWN_TICKS);
   });
 });
 

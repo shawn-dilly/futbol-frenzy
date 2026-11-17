@@ -1,6 +1,6 @@
 import type { HitType, MatchState, PlayerState } from './types';
 import {
-  BIG_HIT_CHARGE_TICKS, BIG_HIT_MAX_HOLD_TICKS, HIT_COOLDOWN_TICKS, HIT_LANDED_RECOVER_TICKS, HITS,
+  BIG_HIT_CHARGE_TICKS, BIG_HIT_MAX_HOLD_TICKS, CPU_HIT_COOLDOWN_TICKS, HIT_COOLDOWN_TICKS, HIT_LANDED_RECOVER_TICKS, HITS,
   LATE_HIT_COOLDOWN_TICKS, TURBO_COST,
 } from './constants';
 import type { BrainIntent } from './brain';
@@ -8,9 +8,12 @@ import { hurtPlayer } from './hurt';
 import { hitDamage, rageAfterHit, tierFor } from './rage';
 import { attackDir } from './setup';
 import { isDown, setStatus } from './status';
-import { dist, norm } from './vec';
+import { dist, isZero, norm } from './vec';
 
-const isZero = (v: { x: number; y: number }) => v.x === 0 && v.y === 0;
+/** The cooldown after a hit: the computer side waits at least CPU_HIT_COOLDOWN_TICKS, whatever the hit did. */
+function cooldownAfter(state: MatchState, p: PlayerState, ticks: number): number {
+  return state.config.human[p.team] ? ticks : Math.max(ticks, CPU_HIT_COOLDOWN_TICKS);
+}
 
 /** Starts the lunge: the facing is fixed here (the intent's heading if any, else the team's attack direction). */
 function launch(p: PlayerState, hit: HitType, intent: BrainIntent): void {
@@ -32,7 +35,8 @@ function releasedHit(state: MatchState, p: PlayerState): HitType {
 /** Charge start, release and launch for one player this tick. */
 export function updateAttack(state: MatchState, p: PlayerState, intent: BrainIntent): void {
   if (p.status.kind === 'charging') {
-    if (state.ball.owner === p.id) setStatus(p, { kind: 'free' }, 0); // picked the ball up: no hit from a carrier
+    const stillHis = state.config.human[p.team] && state.controlled[p.team] === p.id;
+    if (state.ball.owner === p.id || !stillHis) setStatus(p, { kind: 'free' }, 0); // picked the ball up, or control moved on: no hit
     else if (!intent.hitHeld || p.statusTick >= BIG_HIT_MAX_HOLD_TICKS) launch(p, releasedHit(state, p), intent);
     return;
   }
@@ -62,13 +66,13 @@ function land(state: MatchState, tackler: PlayerState, victim: PlayerState, hit:
   rageAfterHit(state, tackler.team, tier);
   state.events.push({ type: 'hit', tackler: tackler.id, victim: victim.id, hit, tier, variant, damage, late });
   setStatus(tackler, { kind: 'recovering', hit, landed: true }, HIT_LANDED_RECOVER_TICKS);
-  tackler.hitCooldown = late ? LATE_HIT_COOLDOWN_TICKS : HIT_COOLDOWN_TICKS;
+  tackler.hitCooldown = cooldownAfter(state, tackler, late ? LATE_HIT_COOLDOWN_TICKS : HIT_COOLDOWN_TICKS);
 }
 
 function whiff(state: MatchState, tackler: PlayerState, hit: HitType): void {
   state.events.push({ type: 'whiff', player: tackler.id, hit });
   setStatus(tackler, { kind: 'recovering', hit, landed: false }, HITS[hit].missTicks);
-  tackler.hitCooldown = HIT_COOLDOWN_TICKS;
+  tackler.hitCooldown = cooldownAfter(state, tackler, HIT_COOLDOWN_TICKS);
 }
 
 /** After movement: every lunging player in ascending id lands on the nearest valid opponent, or whiffs on his last lunge tick. */
