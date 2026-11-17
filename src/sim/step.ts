@@ -1,5 +1,6 @@
 import type { MatchState, PadInput, PlayerIntent, PlayerState } from './types';
 import { applyMovement, updateTurboMeters } from './movement';
+import { moveFreeBall } from './ball';
 
 const NO_INTENT: PlayerIntent = { moveX: 0, moveY: 0, pass: false, shoot: false, turbo: false };
 
@@ -27,6 +28,7 @@ function stepKickoff(state: MatchState): void {
 function stepPlay(state: MatchState, inputs: [PadInput, PadInput]): void {
   for (const p of state.players) applyMovement(state, p, intentFor(state, p, inputs));
   updateTurboMeters(state);
+  moveFreeBall(state);
 }
 
 export function step(state: MatchState, inputs: [PadInput, PadInput]): void {

@@ -306,7 +306,7 @@ test('players stay on the pitch', () => {
 - Rules: advance by `vel / TICK_HZ`; then `vel *= BALL_FRICTION`; if speed is below `BALL_STOP_SPEED`, velocity becomes zero. Top and bottom walls (`y < BALL_RADIUS` or `y > FIELD_H - BALL_RADIUS`): reflect position, `vel.y *= -WALL_RESTITUTION`, push `{type:'bounce'}`. End lines (`x < 0` or `x > FIELD_W`): compute the y at which the ball's path this tick crossed the line by linear interpolation; if `|y - FIELD_MID_Y| <= GOAL_HALF` it is a goal (crossing `x < 0` scores for team 1, `x > FIELD_W` for team 0) and the ball stops where it is; otherwise reflect position about the line, `vel.x *= -WALL_RESTITUTION`, push `{type:'bounce'}`. Resolve the end line before the side walls so a corner hit handles both in one tick.
 - `step` ignores the return value until Task 6.
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 ```ts
 // tests/sim/ball.test.ts — each test builds a state in 'play' and sets ball.owner = null, then sets pos/vel directly
@@ -355,10 +355,10 @@ test('an owned ball is left alone', () => {
 });
 ```
 
-- [ ] **Step 2:** Run `npm test`. Expected: FAIL.
-- [ ] **Step 3:** Implement `ball.ts` and the `step` call.
-- [ ] **Step 4:** Run `npm test`. Expected: PASS.
-- [ ] **Step 5:** Commit: `feat(sim): ball physics, wall bounces, goal-line crossing`.
+- [x] **Step 2:** Run `npm test`. Expected: FAIL.
+- [x] **Step 3:** Implement `ball.ts` and the `step` call.
+- [x] **Step 4:** Run `npm test`. Expected: PASS.
+- [x] **Step 5:** Commit: `feat(sim): ball physics, wall bounces, goal-line crossing`.
 
 ---
 
