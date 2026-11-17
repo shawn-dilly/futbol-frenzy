@@ -8,12 +8,17 @@
     "build": "tsc --noEmit && vite build",
     "test": "vitest run",
     "typecheck": "tsc --noEmit",
-    "e2e": "playwright test"
+    "e2e": "playwright test",
+    "android:sync": "npm run build && npx cap sync android",
+    "android:apk": "npm run android:sync && cd android && ./gradlew assembleDebug"
   },
   "dependencies": {
+    "@capacitor/android": "^8.6.2",
+    "@capacitor/core": "^8.6.2",
     "phaser": "^4.2.1"
   },
   "devDependencies": {
+    "@capacitor/cli": "^8.6.2",
     "@playwright/test": "^1.65.1",
     "@types/node": "^22.20.5",
     "typescript": "^7.0.2",

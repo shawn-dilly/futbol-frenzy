@@ -894,13 +894,13 @@ test('a CPU-v-CPU match runs, players move, no errors', async ({ page }) => {
 **Interfaces:**
 - Produces: npm scripts `android:sync` (`npm run build && npx cap sync android`) and `android:apk` (`npm run android:sync && cd android && ./gradlew assembleDebug`). APK at `android/app/build/outputs/apk/debug/app-debug.apk`.
 
-- [ ] **Step 1:** Check the Capacitor 8 docs for current init and Android requirements (`npx ctx7@latest library "Capacitor" "add android platform"`). `npm i @capacitor/core@^8 @capacitor/android@^8` and `npm i -D @capacitor/cli@^8`.
-- [ ] **Step 2:** `npx cap init "Futbol Frenzy" com.futbolfrenzy.app --web-dir dist`, `npm run build`, `npx cap add android`. The application id is a placeholder the owner may change before any store upload; do not publish with it unconfirmed.
-- [ ] **Step 3:** In `AndroidManifest.xml`, on the main activity: `android:screenOrientation="sensorLandscape"`. In `MainActivity`, after `super.onCreate`: hide the system bars with `WindowInsetsControllerCompat` (behaviour: show transient bars by swipe) and add `FLAG_KEEP_SCREEN_ON`.
-- [ ] **Step 4:** Build. If `JAVA_HOME` or `ANDROID_HOME` is unset, on this machine they are `~/.local/opt/android-studio/jbr` and `~/Android/Sdk`. Run `npm run android:apk`. Expected: `BUILD SUCCESSFUL` and the APK exists.
-- [ ] **Step 5:** Run `adb devices`. If a device or emulator is listed: `adb install -r android/app/build/outputs/apk/debug/app-debug.apk`, launch it, and confirm: locked to landscape, no system bars, touch stick and all four buttons respond, stick plus a button work together, sound plays after the first touch, the game holds a steady frame rate. Save a screenshot with `adb exec-out screencap -p > artifacts/m1-android.png` and look at it. If no device is listed, stop and report that the APK is built but untested on hardware; do not claim it works on a phone.
-- [ ] **Step 6:** Run the whole suite once more: `npm test && npm run e2e`. Expected: all pass.
-- [ ] **Step 7:** Commit: `feat(android): Capacitor wrapper, landscape, immersive, debug APK`.
+- [x] **Step 1:** Check the Capacitor 8 docs for current init and Android requirements (`npx ctx7@latest library "Capacitor" "add android platform"`). `npm i @capacitor/core@^8 @capacitor/android@^8` and `npm i -D @capacitor/cli@^8`.
+- [x] **Step 2:** `npx cap init "Futbol Frenzy" com.futbolfrenzy.app --web-dir dist`, `npm run build`, `npx cap add android`. The application id is a placeholder the owner may change before any store upload; do not publish with it unconfirmed.
+- [x] **Step 3:** In `AndroidManifest.xml`, on the main activity: `android:screenOrientation="sensorLandscape"`. In `MainActivity`, after `super.onCreate`: hide the system bars with `WindowInsetsControllerCompat` (behaviour: show transient bars by swipe) and add `FLAG_KEEP_SCREEN_ON`.
+- [x] **Step 4:** Build. If `JAVA_HOME` or `ANDROID_HOME` is unset, on this machine they are `~/.local/opt/android-studio/jbr` and `~/Android/Sdk`. Run `npm run android:apk`. Expected: `BUILD SUCCESSFUL` and the APK exists.
+- [x] **Step 5:** Run `adb devices`. If a device or emulator is listed: `adb install -r android/app/build/outputs/apk/debug/app-debug.apk`, launch it, and confirm: locked to landscape, no system bars, touch stick and all four buttons respond, stick plus a button work together, sound plays after the first touch, the game holds a steady frame rate. Save a screenshot with `adb exec-out screencap -p > artifacts/m1-android.png` and look at it. If no device is listed, stop and report that the APK is built but untested on hardware; do not claim it works on a phone.
+- [x] **Step 6:** Run the whole suite once more: `npm test && npm run e2e`. Expected: all pass.
+- [x] **Step 7:** Commit: `feat(android): Capacitor wrapper, landscape, immersive, debug APK`.
 
 ---
 
