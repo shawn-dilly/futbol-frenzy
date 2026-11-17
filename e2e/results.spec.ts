@@ -94,3 +94,44 @@ test('Cup advances once, retries the lost round and finishes the ladder', async 
   await page.waitForFunction(() => !window.__ff);
   expect(errors).toEqual([]);
 });
+
+async function friendlyFulltime(page: Page) {
+  await page.goto('/?match=1&mute=1');
+  await page.waitForFunction(() => !!window.__ff);
+  await page.evaluate(() => window.__ff!.launch({ mode: 'friendly', matchId: null, mute: true,
+    config: { ...window.__ff!.state.config, seed: 77 } }));
+  await page.waitForFunction(() => window.__ff?.state.config.seed === 77);
+  await page.evaluate(() => {
+    window.__ff!.state.half = 2;
+    window.__ff!.state.clockTicks = 1;
+  });
+  await whistle(page);
+}
+
+// Synchronous dispatch keeps every down/up pair in the same Phaser frame.
+async function pressInOneFrame(page: Page, keys: string[]) {
+  await page.evaluate(keys => {
+    const codes: Record<string, number> = { Enter: 13, ArrowUp: 38, Escape: 27 };
+    for (const key of keys) {
+      for (const type of ['keydown', 'keyup']) {
+        window.dispatchEvent(new KeyboardEvent(type, { key, code: key, keyCode: codes[key], bubbles: true, cancelable: true }));
+      }
+    }
+  }, keys);
+}
+
+test('same-frame setup presses launch once with the selected teams', async ({ page }) => {
+  await friendlyFulltime(page);
+  await page.keyboard.press('Escape');
+  await page.waitForFunction(() => !window.__ff);
+  await pressInOneFrame(page, ['Enter', 'ArrowUp', 'Enter']);
+  await page.waitForFunction(() => !!window.__ff, null, { timeout: 5000 });
+  expect(await page.evaluate(() => window.__ff!.state.config.ratings)).toEqual([TEAMS[0].ratings, TEAMS[1].ratings]);
+});
+
+test('same-frame replay return and rematch act on successive screens', async ({ page }) => {
+  await friendlyFulltime(page);
+  await page.evaluate(() => window.__ff!.startReplay(1));
+  await pressInOneFrame(page, ['Escape', 'Enter']);
+  await page.waitForFunction(() => window.__ff?.state.config.seed === 78, null, { timeout: 5000 });
+});

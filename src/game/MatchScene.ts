@@ -136,26 +136,27 @@ export class MatchScene extends Phaser.Scene {
         }
       } else restart();
     };
-    this.input.keyboard?.on('keydown', restartKey);
+    // A queued Phaser keydown can fire again after the first delivery changes screens.
+    window.addEventListener('keydown', restartKey);
     // Browsers block audio until a gesture: the first press unlocks it (idempotent, so listening to every press is harmless).
     const unlock = () => this.sfx.unlock();
     // pointerup too: on touch devices pointerdown comes from touchstart, which does not count as a gesture.
     this.input.on('pointerdown', unlock);
     this.input.on('pointerup', unlock);
-    this.input.keyboard?.on('keydown', unlock);
+    window.addEventListener('keydown', unlock);
     this.events.once('shutdown', () => {
       active = false;
       this.disposeReplay();
       this.hideSummary();
       this.sfx.dispose();
       this.input.off('pointerdown', restart);
-      this.input.keyboard?.off('keydown', restartKey);
+      window.removeEventListener('keydown', restartKey);
       this.clearControls();
       this.pendingCraters = [];
       if (window.__ff === hook) delete window.__ff;
       this.input.off('pointerdown', unlock);
       this.input.off('pointerup', unlock);
-      this.input.keyboard?.off('keydown', unlock);
+      window.removeEventListener('keydown', unlock);
     });
     const onVisibility = () => { this.hidden = document.hidden; this.clearControls(); };
     document.addEventListener('visibilitychange', onVisibility);

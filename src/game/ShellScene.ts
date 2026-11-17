@@ -24,8 +24,10 @@ export class ShellScene extends Phaser.Scene {
   constructor() { super('shell'); }
 
   create(): void {
-    this.input.keyboard?.on('keydown', this.onKey, this);
-    this.events.once('shutdown', () => this.input.keyboard?.off('keydown', this.onKey, this));
+    // Menu commands follow native presses. Phaser can re-emit queued events within a frame.
+    const onKey = (event: KeyboardEvent) => this.onKey(event);
+    window.addEventListener('keydown', onKey);
+    this.events.once('shutdown', () => window.removeEventListener('keydown', onKey));
     this.render();
   }
   private onKey(event: KeyboardEvent): void {
