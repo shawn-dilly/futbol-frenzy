@@ -50,9 +50,12 @@ test('a state serialised to JSON mid-match continues exactly like the original',
   expect(JSON.stringify(copy)).toBe(JSON.stringify(original));
 });
 
+/** What play produces; excludes the stored seed and rng, which differ from tick 0. */
+const playOutcome = (m: MatchState): string => JSON.stringify({ players: m.players, ball: m.ball, score: m.score });
+
 test('a different seed gives a different match', () => {
   const config = { ...cpu, human: [true, false] as [boolean, boolean] };
   const a = createMatch(config), b = createMatch({ ...config, seed: 8 });
   drive(a, 0, SPLIT_TICKS); drive(b, 0, SPLIT_TICKS);
-  expect(JSON.stringify(a)).not.toBe(JSON.stringify(b));
+  expect(playOutcome(a)).not.toBe(playOutcome(b));
 });
