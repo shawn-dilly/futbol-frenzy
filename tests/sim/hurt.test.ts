@@ -8,7 +8,7 @@ import { nextRandom } from '../../src/sim/rng';
 import { step } from '../../src/sim/step';
 import {
   DAZED_FUMBLE_CHANCE, FIELD_H, FUMBLE_COOLDOWN_TICKS, HALFTIME_HEAL, HURT, JOCKEY_DIST, LOOSE_BALL_SPEED, PLAYER_RADIUS,
-  RAGE_CONCEDE_GAIN, TURBO_SPEED,
+  HEALTH_REGEN_PER_TICK, MAX_HEALTH, RAGE_CONCEDE_GAIN, TURBO_SPEED,
 } from '../../src/sim/constants';
 import { add, norm, scale, sub } from '../../src/sim/vec';
 import type { MatchState, PadInput } from '../../src/sim/types';
@@ -219,5 +219,41 @@ test('halftime heals everyone by 25 up to 100', () => {
   s.players[3].health = 50; s.players[6].health = 90; s.clockTicks = 1;
   runTicks(s, 1);
   expect(s.phase).toBe('halftime');
-  expect([s.players[3].health, s.players[6].health]).toEqual([50 + HALFTIME_HEAL, 100]);
+  expect(s.players[3].health).toBeCloseTo(50 + HALFTIME_HEAL, 1); // plus this tick's regen
+  expect(s.players[6].health).toBe(100);
+});
+
+test('health regenerates 0.5 per second in play for everyone not hurt, capped at 100', () => {
+  expect(HEALTH_REGEN_PER_TICK).toBe(0.5 / 60);
+  const s = playing(); s.players[3].health = 50; s.players[6].health = 99.999; s.players[4].health = 50;
+  for (const q of s.players) if (q.team === 1) q.hitCooldown = Infinity; // nobody tackles during the measurement
+  setStatus(s.players[4], { kind: 'hurt', tier: 'stumble', variant: 0 }, 1000);
+  s.players[4].knock = { x: 0, y: 0 };
+  runTicks(s, 60);
+  expect(s.players[3].health).toBeCloseTo(50.5, 6);
+  expect(s.players[6].health).toBe(MAX_HEALTH);
+  expect(s.players[4].health).toBe(50);
+});
+test('health does not regenerate during a pause', () => {
+  const s = playing(); s.players[3].health = 50; s.phase = 'goal'; s.phaseTicks = 100;
+  runTicks(s, 30);
+  expect(s.players[3].health).toBe(50);
+});
+test('a Dazed player at 34.9 health stops being Dazed after regenerating past 35', () => {
+  const s = playing(); s.players[3].health = 34.99;
+  expect(isDazed(s.players[3])).toBe(true);
+  runTicks(s, 2);
+  expect(isDazed(s.players[3])).toBe(false);
+});
+test.each([
+  ['lunging', { kind: 'lunging', hit: 'shoulder' }],
+  ['recovering', { kind: 'recovering', hit: 'shoulder', landed: false }],
+  ['hurt (stumble)', { kind: 'hurt', tier: 'stumble', variant: 0 }],
+] as const)('a human whose controlled player is %s can PASS to switch to the nearest standing teammate', (_n, status) => {
+  const s = playing(); s.ball.owner = null; s.ball.pos = { x: 150, y: 30 }; s.ball.vel = { x: 0, y: 0 };
+  const me = s.players[2]; s.controlled[0] = 2; me.pos = { x: 150, y: 30 };
+  setStatus(me, status, 50);
+  runTicks(s, 1, [pad({ pass: true }), neutralPad()]);
+  expect(s.controlled[0]).not.toBe(2);
+  expect([1, 3, 4]).toContain(s.controlled[0]);
 });

@@ -1,4 +1,4 @@
-import type { HitType, MatchState, PlayerState } from './types';
+import type { HitType, MatchState, PlayerState, TeamId } from './types';
 import {
   BIG_HIT_CHARGE_TICKS, BIG_HIT_MAX_HOLD_TICKS, CPU_HIT_COOLDOWN_TICKS, HIT_COOLDOWN_TICKS, HIT_LANDED_RECOVER_TICKS, HITS,
   LATE_HIT_COOLDOWN_TICKS, TURBO_COST,
@@ -15,8 +15,14 @@ function cooldownAfter(state: MatchState, p: PlayerState, ticks: number): number
   return state.config.human[p.team] ? ticks : Math.max(ticks, CPU_HIT_COOLDOWN_TICKS);
 }
 
+/** The computer's hit cooldown is team-wide: a hit launched by one of its players holds the whole team back. */
+function holdComputerTeam(state: MatchState, team: TeamId): void {
+  for (const q of state.players) if (q.team === team) q.hitCooldown = Math.max(q.hitCooldown, CPU_HIT_COOLDOWN_TICKS);
+}
+
 /** Starts the lunge: the facing is fixed here (the intent's heading if any, else the team's attack direction). */
-function launch(p: PlayerState, hit: HitType, intent: BrainIntent): void {
+function launch(state: MatchState, p: PlayerState, hit: HitType, intent: BrainIntent): void {
+  if (!state.config.human[p.team]) holdComputerTeam(state, p.team);
   const heading = { x: intent.moveX, y: intent.moveY };
   if (!isZero(heading)) p.facing = norm(heading);
   if (isZero(p.facing)) p.facing = { x: attackDir(p.team), y: 0 };
@@ -37,12 +43,12 @@ export function updateAttack(state: MatchState, p: PlayerState, intent: BrainInt
   if (p.status.kind === 'charging') {
     const stillHis = isHumanControlled(state, p);
     if (state.ball.owner === p.id || !stillHis) setStatus(p, { kind: 'free' }, 0); // picked the ball up, or control moved on: no hit
-    else if (!intent.hitHeld || p.statusTick >= BIG_HIT_MAX_HOLD_TICKS) launch(p, releasedHit(state, p), intent);
+    else if (!intent.hitHeld || p.statusTick >= BIG_HIT_MAX_HOLD_TICKS) launch(state, p, releasedHit(state, p), intent);
     return;
   }
   // hitPress is an edge, so a button held through a hurt spell or a kickoff never starts a charge
   if (p.status.kind !== 'free' || p.hitCooldown > 0 || state.ball.owner === p.id) return;
-  if (intent.hit) launch(p, intent.hit, intent);
+  if (intent.hit) launch(state, p, intent.hit, intent);
   else if (intent.hitPress) setStatus(p, { kind: 'charging' }, 0);
 }
 

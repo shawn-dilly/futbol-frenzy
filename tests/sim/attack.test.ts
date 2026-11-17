@@ -267,7 +267,7 @@ describe('lunging players and the ball', () => {
   });
 });
 
-describe('the computer side hits less often', () => {
+describe('the computer side hits less often, as a team', () => {
   const cpuTackler = () => {
     const s = createMatch({ seed: 1, halfSeconds: 120, human: [true, false] }); runTicks(s, 60);
     s.ball.owner = null; s.ball.pos = { x: 30, y: 10 };
@@ -276,18 +276,30 @@ describe('the computer side hits less often', () => {
     for (const p of s.players) if (p.team === 1 && p.id !== 7) p.pos = { x: 460, y: 10 };
     return { s, t, v };
   };
-  test('a brain hit that lands sets the cooldown to 240 (a late hit would only be 90)', () => {
+  test('a brain hit that lands sets the cooldown to 480 (a late hit would only be 90)', () => {
     const { s, t } = cpuTackler();
     updateAttack(s, t, { ...neutralIntent(), hit: 'shoulder' }); resolveContacts(s);
     expect(s.events).toContainEqual(expect.objectContaining({ type: 'hit', tackler: 7, late: true }));
     expect(t.hitCooldown).toBe(CPU_HIT_COOLDOWN_TICKS);
   });
-  test('a brain hit that misses sets the cooldown to 240', () => {
+  test('a brain hit that misses sets the cooldown to 480', () => {
     const { s, t, v } = cpuTackler(); v.pos = { x: 100, y: 100 };
     updateAttack(s, t, { ...neutralIntent(), hit: 'shoulder' });
     for (let i = 0; i < HITS.shoulder.lungeTicks; i++) { if (i > 0) tickStatus(t); applyMovement(s, t, neutralIntent()); resolveContacts(s); }
     expect(s.events).toContainEqual({ type: 'whiff', player: 7, hit: 'shoulder' });
     expect(t.hitCooldown).toBe(CPU_HIT_COOLDOWN_TICKS);
+  });
+  test('the cooldown constant is 480 ticks (8 s)', () => { expect(CPU_HIT_COOLDOWN_TICKS).toBe(480); });
+  test('launching a hit gives every teammate at least 480 cooldown, never lowering a longer one, and leaves the other team alone', () => {
+    const { s, t } = cpuTackler();
+    s.players[8].hitCooldown = 600; s.players[9].hitCooldown = 100;
+    updateAttack(s, t, { ...neutralIntent(), hit: 'shoulder' });
+    expect([5, 6, 7, 8, 9].map(i => s.players[i].hitCooldown)).toEqual([480, 480, 480, 600, 480]);
+    expect([0, 1, 2, 3, 4].map(i => s.players[i].hitCooldown)).toEqual([0, 0, 0, 0, 0]);
+  });
+  test('a human hit does not touch teammates cooldowns', () => {
+    const s = playing(); placeVictimAhead(s, 5); s.ball.owner = VICTIM;
+    hold(s, 1); expect(s.players[2].hitCooldown).toBe(0);
   });
   test('a human hit keeps the normal cooldown', () => {
     const s = playing(); placeVictimAhead(s, 5); s.ball.owner = VICTIM;

@@ -1,5 +1,5 @@
 import type { HurtTier, MatchState, PlayerState, Vec } from './types';
-import { HURT, LOOSE_BALL_SPEED } from './constants';
+import { HEALTH_REGEN_PER_TICK, HURT, LOOSE_BALL_SPEED, MAX_HEALTH } from './constants';
 import { nextRandom } from './rng';
 import { isDown, isHumanControlled, setStatus } from './status';
 import { switchControl } from './possession';
@@ -28,4 +28,11 @@ export function hurtPlayer(state: MatchState, victim: PlayerState, tier: HurtTie
     switchControl(state, victim.team);
   }
   return variant;
+}
+
+/** Once per play tick: everyone who is not hurt recovers a little health, up to MAX_HEALTH. */
+export function regenHealth(state: MatchState): void {
+  for (const p of state.players) {
+    if (p.status.kind !== 'hurt') p.health = Math.min(MAX_HEALTH, p.health + HEALTH_REGEN_PER_TICK);
+  }
 }

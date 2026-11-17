@@ -44,5 +44,6 @@ export const KNOCK_MIN_SPEED = 1; // units/s; knockback slower than this is zero
 export const MAX_HEALTH = 100, DAZED_HEALTH = 35, DAZED_SPEED_FACTOR = 0.8, DAZED_FUMBLE_CHANCE = 0.15;
 export const FUMBLE_COOLDOWN_TICKS = 20, HALFTIME_HEAL = 25;
 export const CPU_HIT_RANGE = 10; // units; the placeholder chaser shoulder-charges a carrier this close
-export const CPU_HIT_COOLDOWN_TICKS = 240; // ticks; the minimum hitCooldown after a computer-launched hit, landed or missed
+export const CPU_HIT_COOLDOWN_TICKS = 480; // ticks (8 s); when any computer player launches a hit, every player of that team waits at least this long
+export const HEALTH_REGEN_PER_TICK = 0.5 / 60; // health per tick (0.5 per second) for a player who is not hurt, during play only
 export const CPU_ENGAGE_RANGE = 24; // units; a ready chaser this close to the carrier stops jockeying (at JOCKEY_DIST from the ball) and closes in

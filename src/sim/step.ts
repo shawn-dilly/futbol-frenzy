@@ -7,6 +7,7 @@ import { resolveContacts, updateAttack } from './attack';
 import { neutralIntent } from './setup';
 import { canAct, isHumanControlled, tickStatus } from './status';
 import { decayRage } from './rage';
+import { regenHealth } from './hurt';
 import { kick, switchControl, tickKickCooldowns, updatePossession } from './possession';
 
 /** Pass/shoot/turbo are true only on the tick the button goes down. */
@@ -23,8 +24,10 @@ export function padToIntent(pad: PadInput, prev: PadInput): PlayerIntent {
 
 /** The one place a player's intent is decided: nothing if he cannot act, else the pad for a human team's controlled player, the brain for everyone else. */
 function intentFor(state: MatchState, p: PlayerState, inputs: [PadInput, PadInput]): BrainIntent {
-  if (!canAct(p)) return neutralIntent();
-  return isHumanControlled(state, p) ? padToIntent(inputs[p.team], state.prevInput[p.team]) : brainIntent(state, p);
+  const human = isHumanControlled(state, p);
+  const padIntent = human ? padToIntent(inputs[p.team], state.prevInput[p.team]) : null;
+  if (!canAct(p)) return padIntent ? { ...neutralIntent(), pass: padIntent.pass } : neutralIntent(); // PASS still switches control
+  return padIntent ?? brainIntent(state, p);
 }
 
 /** The kick a player asks for this tick, if any (a human pass without the ball is not a kick). */
@@ -43,7 +46,7 @@ function applyActions(state: MatchState, intents: BrainIntent[]): void {
   for (const p of state.players) {
     const req = kickRequest(state, p, intents[p.id]);
     if (req) kick(state, p, req.kind, req.aim);
-    else if (isHumanControlled(state, p) && intents[p.id].pass && state.ball.owner !== p.id) switchControl(state, p.team);
+    else if (isHumanControlled(state, p) && intents[p.id].pass && state.ball.owner !== p.id) switchControl(state, p.team, canAct(p) ? undefined : p.id);
   }
 }
 
@@ -59,11 +62,14 @@ function stepPlay(state: MatchState, inputs: [PadInput, PadInput]): TeamId | nul
   updatePossession(state);
   const scored = moveFreeBall(state);
   decayRage(state);
+  regenHealth(state);
   return scored;
 }
 
 /** Play is stopped (goal, halftime, full time): no hits, but a flattened player still finishes his animation and slide. */
 function stepPause(state: MatchState): void {
+  // a pause does not count toward the rage decay delay: push the last-hit ticks forward with the clock
+  if (state.phase !== 'fulltime') state.lastHitTick = [state.lastHitTick[0] + 1, state.lastHitTick[1] + 1];
   for (const p of state.players) {
     if (p.status.kind !== 'free') tickStatus(p);
     applyKnockOnly(p);

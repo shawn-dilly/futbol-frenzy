@@ -2,8 +2,9 @@ import { test, expect } from 'vitest';
 import { createMatch } from '../../src/sim/setup';
 import { addRage, decayRage, hitDamage, rageAfterHit, tierFor } from '../../src/sim/rage';
 import { RAGE_DECAY_DELAY_TICKS } from '../../src/sim/constants';
+import { runTicks } from '../helpers';
 
-const match = () => createMatch({ seed: 1, halfSeconds: 120, human: [true, false] });
+const match = () => createMatch({ seed: 1, halfSeconds: 120, human: [true, true] }); // nobody hits unless a test says so
 
 test('damage scales with rage and turbo', () => {
   expect(hitDamage('shoulder', 0, false)).toBeCloseTo(10, 9);
@@ -56,4 +57,20 @@ test('rage holds for 360 ticks after the last landed hit, then loses 2 over 60 t
   expect(s.rage[0]).toBeCloseTo(48, 9);
   for (let t = 60; t < 300; t++) { s.tick = 100 + RAGE_DECAY_DELAY_TICKS + t; decayRage(s); }
   expect(s.rage[1]).toBe(0);
+});
+
+test('pauses do not count toward the decay delay', () => {
+  const s = match(); runTicks(s, 60); s.rage = [50, 50]; s.lastHitTick = [s.tick, s.tick];
+  const start = s.tick;
+  runTicks(s, RAGE_DECAY_DELAY_TICKS - 10);
+  expect(s.rage).toEqual([50, 50]);
+  s.phase = 'goal'; s.phaseTicks = 1000;
+  runTicks(s, 500); // a long stoppage
+  expect(s.tick - start).toBeGreaterThan(RAGE_DECAY_DELAY_TICKS);
+  expect(s.rage).toEqual([50, 50]);
+  s.phase = 'play'; s.clockTicks = 100000;
+  runTicks(s, 10);
+  expect(s.rage[0]).toBe(50);
+  runTicks(s, 1);
+  expect(s.rage[0]).toBeLessThan(50);
 });

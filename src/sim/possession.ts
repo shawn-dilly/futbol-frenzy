@@ -82,8 +82,9 @@ export function kick(state: MatchState, p: PlayerState, kind: 'pass' | 'shot', a
 }
 
 /** The team's outfield player nearest the ball, preferring standing players (ties to the lower id). */
-export function nearestOutfield(state: MatchState, team: TeamId): number {
-  const candidates = standingOrAll(state.players.filter(p => p.team === team && p.role === 'out'));
+export function nearestOutfield(state: MatchState, team: TeamId, exclude?: number): number {
+  const others = state.players.filter(p => p.team === team && p.role === 'out' && p.id !== exclude);
+  const candidates = standingOrAll(others.length > 0 ? others : state.players.filter(p => p.team === team && p.role === 'out'));
   let best = candidates[0].id, bestDist = Infinity;
   for (const p of candidates) {
     const d = dist(p.pos, state.ball.pos);
@@ -92,7 +93,7 @@ export function nearestOutfield(state: MatchState, team: TeamId): number {
   return best;
 }
 
-/** Control goes to the team's nearest standing outfield player to the ball. */
-export function switchControl(state: MatchState, team: TeamId): void {
-  state.controlled[team] = nearestOutfield(state, team);
+/** Control goes to the team's nearest standing outfield player to the ball (never `exclude`, e.g. a player who cannot act). */
+export function switchControl(state: MatchState, team: TeamId, exclude?: number): void {
+  state.controlled[team] = nearestOutfield(state, team, exclude);
 }
