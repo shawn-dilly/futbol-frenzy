@@ -1,9 +1,6 @@
 export * from './types';
 export * from './constants';
 export * from './vec';
-export * from './rng';
-export * from './setup';
-export * from './movement';
-export * from './step';
-export * from './possession';
-export * from './flow';
+export { nextRandom } from './rng';
+export { createMatch, neutralPad, attackDir, goalCenter } from './setup';
+export { step } from './step';
