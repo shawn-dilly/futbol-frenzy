@@ -14,7 +14,8 @@ npm test             # Vitest unit tests
 npm run typecheck    # tsc --noEmit
 npm run build        # typecheck + production build to dist/
 npm run e2e          # Playwright smoke test, writes screenshots to artifacts/
-npm run android:apk  # build + Capacitor sync + debug APK
+npm run android:sync # build + copy web assets into android/ (run once after a fresh clone, before opening Android Studio)
+npm run android:apk  # the above + debug APK at android/app/build/outputs/apk/debug/ (needs JDK 21+, ANDROID_HOME set)
 ```
 
 ## Architecture rules
