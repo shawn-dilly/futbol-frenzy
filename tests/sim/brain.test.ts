@@ -13,7 +13,7 @@ describe('placeholder brain', () => {
     s.players[0].pos = { x: 12, y: 46 };
     const j = brainIntent(s, s.players[0]); expect(Math.hypot(j.moveX, j.moveY)).toBe(0);
   });
-  test('carrier heads for goal and shoots inside 120 units', () => {
+  test('carrier heads for goal and shoots inside CPU_SHOOT_RANGE', () => {
     const s = createMatch(cpu); runTicks(s, 60);
     expect(brainIntent(s, s.players[4]).moveX).toBeGreaterThan(0.9);
     s.players[4].pos = { x: 400, y: 62 };
