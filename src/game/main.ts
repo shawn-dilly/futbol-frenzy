@@ -10,6 +10,7 @@ new Phaser.Game({
   width: LOGICAL_WIDTH_PX,
   height: LOGICAL_HEIGHT_PX,
   pixelArt: true,
+  audio: { noAudio: true }, // all sound is our own Web Audio in src/audio
   parent: 'game',
   backgroundColor: '#16162a',
   scale: {

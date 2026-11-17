@@ -42,7 +42,7 @@ const SOUNDS: Record<SfxName, SoundSpec> = {
   },
 };
 
-const NOISE_SECONDS = 1;
+const NOISE_SECONDS = Math.max(...Object.values(SOUNDS).map((s) => s.noise?.durationS ?? 0));
 
 /** Maps a sim event to the sound it triggers, or null when it is silent. */
 export function sfxForEvent(e: SimEvent): SfxName | null {
@@ -63,28 +63,40 @@ export class Sfx {
 
   constructor(private readonly makeContext: () => AudioContext = () => new AudioContext()) {}
 
-  /** Call from a user gesture: creates and resumes the context once. If creation throws, a later call retries. */
+  /**
+   * Call from a user gesture. Creates the context once (never while muted) and asks it to resume;
+   * a context that is still not running is asked again on every later call. If creation throws, a later call retries.
+   */
   unlock(): void {
-    if (this.ctx) return;
+    if (this.muted) return;
+    if (this.ctx) { if (this.ctx.state !== 'running') this.resume(this.ctx); return; }
+    let ctx: AudioContext | null = null;
     try {
-      const ctx = this.makeContext();
+      ctx = this.makeContext();
       const master = ctx.createGain();
       master.gain.value = MASTER_GAIN;
       master.connect(ctx.destination);
-      void Promise.resolve(ctx.resume()).catch(() => {});
       this.ctx = ctx; this.master = master;
-    } catch { this.ctx = null; this.master = null; }
+      this.resume(ctx);
+    } catch {
+      this.ctx = null; this.master = null;
+      try { void Promise.resolve(ctx?.close()).catch(() => {}); } catch { /* nothing to release */ }
+    }
   }
 
   play(name: SfxName): void {
     const { ctx, master } = this;
-    if (this.muted || !ctx || !master) return;
+    if (this.muted || !ctx || !master || ctx.state !== 'running') return;
     try {
       const spec = SOUNDS[name];
       const now = ctx.currentTime;
       for (const tone of spec.tones) this.playTone(ctx, master, now, tone);
       if (spec.noise) this.playNoise(ctx, master, now, spec.noise);
     } catch { /* stay silent */ }
+  }
+
+  private resume(ctx: AudioContext): void {
+    try { void Promise.resolve(ctx.resume()).catch(() => {}); } catch { /* stay silent */ }
   }
 
   private playTone(ctx: AudioContext, out: AudioNode, now: number, t: ToneSpec): void {

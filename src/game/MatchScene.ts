@@ -50,10 +50,13 @@ export class MatchScene extends Phaser.Scene {
     this.input.keyboard?.on('keydown', (e: KeyboardEvent) => { if (!e.repeat) restart(); });
     // Browsers block audio until a gesture: the first press unlocks it (idempotent, so listening to every press is harmless).
     const unlock = () => this.sfx.unlock();
+    // pointerup too: on touch devices pointerdown comes from touchstart, which does not count as a gesture.
     this.input.on('pointerdown', unlock);
+    this.input.on('pointerup', unlock);
     this.input.keyboard?.on('keydown', unlock);
     this.events.once('shutdown', () => {
       this.input.off('pointerdown', unlock);
+      this.input.off('pointerup', unlock);
       this.input.keyboard?.off('keydown', unlock);
     });
     const onVisibility = () => { if (document.hidden) this.stepper.reset(); };
