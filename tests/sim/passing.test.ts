@@ -12,7 +12,8 @@ describe('a human can complete a pass after dribbling', () => {
   test.each([30, 60, 120])('dribble %i ticks then pass straight back', dribbleTicks => {
     const s = createMatch(matchConfig({ human: [true, false] }));
     runTicks(s, 60);
-    for (const q of s.players) if (q.team === 1) q.hitCooldown = Infinity; // the opponents only jockey; this test is about passing, not tackles
+    // this test is about passing: the opponents neither tackle nor pick up the ball
+    for (const q of s.players) if (q.team === 1) { q.hitCooldown = Infinity; q.kickCooldown = Infinity; }
     runTicks(s, dribbleTicks, [pad({ moveX: 1 }), neutralPad()]);
     expect(s.ball.owner).toBe(STRIKER);
     runTicks(s, 1, [pad({ moveX: -1, pass: true }), neutralPad()]);

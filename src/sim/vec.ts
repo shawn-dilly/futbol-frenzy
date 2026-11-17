@@ -22,4 +22,9 @@ export function angleBetween(a: Vec, b: Vec): number {
   const cos = (a.x * b.x + a.y * b.y) / (la * lb);
   return Math.acos(Math.min(1, Math.max(-1, cos)));
 }
+/** Rotates by `rad` radians, turning +x toward +y for a positive angle. */
+export function rotate(v: Vec, rad: number): Vec {
+  const c = Math.cos(rad), s = Math.sin(rad);
+  return { x: v.x * c - v.y * s, y: v.x * s + v.y * c };
+}
 export function clamp(v: number, lo: number, hi: number): number { return Math.min(hi, Math.max(lo, v)); }

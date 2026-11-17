@@ -14,7 +14,7 @@ export const PASS_CONE_RAD = Math.PI / 3;
 export const KICKOFF_PAUSE_TICKS = 60, GOAL_PAUSE_TICKS = 120, HALFTIME_PAUSE_TICKS = 180;
 export const KICKER_BEHIND_BALL = 6; // units behind the ball on the kicker's own side at kickoff
 export const DEFAULT_HALF_SECONDS = 120;
-export const CPU_SHOOT_RANGE = 90, GK_HOLD_TICKS = 30, GK_LINE_X = 12;
+export const GK_HOLD_TICKS = 30, GK_LINE_X = 12;
 export const ANCHOR_SHIFT_X = 0.35, ANCHOR_SHIFT_Y = 0.3;
 export const ARRIVE_DIST = 3; // units: closer than this to a stand-here target means stand still
 export const JOCKEY_DIST = 12; // units; a chaser holds this far from an opponent who has the ball
@@ -45,4 +45,9 @@ export const MAX_HEALTH = 100, DAZED_HEALTH = 35, DAZED_SPEED_FACTOR = 0.8, DAZE
 export const FUMBLE_COOLDOWN_TICKS = 20, HALFTIME_HEAL = 25;
 export const BRAIN_TAP_TICKS = 1; // a computer tap holds HIT for this many ticks
 export const HEALTH_REGEN_PER_TICK = 0.5 / 60; // health per tick (0.5 per second) for a player who is not hurt, during play only
-export const CPU_ENGAGE_RANGE = 24; // units; a ready chaser this close to the carrier stops jockeying (at JOCKEY_DIST from the ball) and closes in
+export const PRESS_TURBO_DIST = 40; // units; a presser farther than this from the carrier uses turbo
+export const COVER_DIST = JOCKEY_DIST * 2; // units; the cover stands this far from the ball on the line to his own goal
+export const MARK_DIST = 8; // units; a marker stands this far from his man, on the line to his own goal
+export const BIG_TARGET_SLOW_SPEED = RUN_SPEED / 2; // units/s; the computer charges a big hit at a target moving slower than this
+export const BRAIN_BIG_HOLD_EXTRA_TICKS = 2; // a computer holds a big-hit charge this long past BIG_HIT_CHARGE_TICKS
+export const CHARGE_ABORT_RANGE_FACTOR = 2; // a charging computer player releases once his target is farther than this x hitRange

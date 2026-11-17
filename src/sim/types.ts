@@ -31,6 +31,7 @@ export interface BrainMemory {
   aim: Vec; // kick aim (zero when unused)
   turbo: boolean; // press turbo when available
   holdHitUntil: number; // tick until which HIT stays held (big-hit charge); 0 = not holding
+  thinkOwner: number | null; // who had the ball when the plan was made (a change forces a re-think)
 }
 export type SimEvent =
   | { type: 'kick'; kind: 'pass' | 'shot'; player: number }

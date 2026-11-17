@@ -18,11 +18,13 @@ function ownSpeed(p: PlayerState): number {
   return base * (isDazed(p) ? DAZED_SPEED_FACTOR : 1) * (p.status.kind === 'charging' ? CHARGE_MOVE_FACTOR : 1);
 }
 
+/** The nearest point to `v` where a player can stand. */
+export function clampToPitch(v: Vec): Vec {
+  return { x: clamp(v.x, PLAYER_RADIUS, FIELD_W - PLAYER_RADIUS), y: clamp(v.y, PLAYER_RADIUS, FIELD_H - PLAYER_RADIUS) };
+}
+
 function displace(p: PlayerState, perSecond: Vec): void {
-  p.pos = {
-    x: clamp(p.pos.x + perSecond.x / TICK_HZ, PLAYER_RADIUS, FIELD_W - PLAYER_RADIUS),
-    y: clamp(p.pos.y + perSecond.y / TICK_HZ, PLAYER_RADIUS, FIELD_H - PLAYER_RADIUS),
-  };
+  p.pos = clampToPitch({ x: p.pos.x + perSecond.x / TICK_HZ, y: p.pos.y + perSecond.y / TICK_HZ });
 }
 
 function decayKnock(p: PlayerState): void {

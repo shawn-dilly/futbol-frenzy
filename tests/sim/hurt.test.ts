@@ -1,16 +1,17 @@
 import { test, expect } from 'vitest';
-import { createMatch, goalCenter, neutralPad, placeForKickoff } from '../../src/sim/setup';
+import { createMatch, neutralPad, placeForKickoff } from '../../src/sim/setup';
 import { hurtPlayer, isDazed } from '../../src/sim/hurt';
 import { setStatus } from '../../src/sim/status';
 import { pickPassTarget, switchControl, updatePossession } from '../../src/sim/possession';
 import { brainIntent } from '../../src/sim/brain';
+import { assignRoles } from '../../src/sim/brainRoles';
 import { nextRandom } from '../../src/sim/rng';
 import { step } from '../../src/sim/step';
 import {
-  DAZED_FUMBLE_CHANCE, FIELD_H, FUMBLE_COOLDOWN_TICKS, HALFTIME_HEAL, HURT, JOCKEY_DIST, LOOSE_BALL_SPEED, PLAYER_RADIUS,
+  DAZED_FUMBLE_CHANCE, FIELD_H, FUMBLE_COOLDOWN_TICKS, HALFTIME_HEAL, HURT, LOOSE_BALL_SPEED, PLAYER_RADIUS,
   HEALTH_REGEN_PER_TICK, MAX_HEALTH, RAGE_CONCEDE_GAIN, TURBO_SPEED,
 } from '../../src/sim/constants';
-import { add, norm, scale, sub } from '../../src/sim/vec';
+import { norm, sub } from '../../src/sim/vec';
 import type { MatchState, PadInput } from '../../src/sim/types';
 import { runTicks, matchConfig } from '../helpers';
 
@@ -143,13 +144,13 @@ test('switchControl skips downed players, and falls back when all are down', () 
   knockDown(s, 1); knockDown(s, 3); knockDown(s, 4);
   switchControl(s, 0); expect(s.controlled[0]).toBe(2);
 });
-test('the brain picks the nearest standing outfielder as chaser', () => {
-  const s = fresh();
-  expect(brainIntent(s, s.players[7]).moveX).toBe(0); // 9 is the chaser, 7 holds its anchor
+test('the brain picks the nearest standing outfielder as presser', () => {
+  const s = fresh(); // team 0 (the human) has the ball at kickoff: team 1 defends
+  expect(assignRoles(s, 1)).toEqual(['keeper', 'cover', 'marker', 'marker', 'presser']);
   knockDown(s, 9);
+  expect(assignRoles(s, 1)).toEqual(['keeper', 'cover', 'presser', 'marker', 'support']);
   const intent = brainIntent(s, s.players[7]);
-  const jockey = add(s.ball.pos, scale(norm(sub(goalCenter(1), s.ball.pos)), JOCKEY_DIST));
-  const d = norm(sub(jockey, s.players[7].pos));
+  const d = norm(sub(s.players[s.ball.owner!].pos, s.players[7].pos));
   expect(intent.moveX).toBeCloseTo(d.x, 9); expect(intent.moveY).toBeCloseTo(d.y, 9);
 });
 

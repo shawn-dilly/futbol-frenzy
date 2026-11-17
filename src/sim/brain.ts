@@ -1,17 +1,18 @@
-import type { MatchState, PlayerIntent, PlayerState, Vec } from './types';
+import type { BrainMemory, BrainRole, MatchState, PlayerIntent, PlayerState, Vec } from './types';
 import {
-  ANCHOR_SHIFT_X, ARRIVE_DIST, BRAIN_TAP_TICKS, CPU_ENGAGE_RANGE, ANCHOR_SHIFT_Y, CPU_SHOOT_RANGE, FIELD_H, FIELD_MID_Y, FIELD_W, GK_HOLD_TICKS,
-  GK_LINE_X, GOAL_HALF, JOCKEY_DIST, PLAYER_RADIUS, SHOT_Y_MARGIN,
+  ARRIVE_DIST, BIG_HIT_CHARGE_TICKS, BRAIN_BIG_HOLD_EXTRA_TICKS, BRAIN_TAP_TICKS, CHARGE_ABORT_RANGE_FACTOR, FIELD_MID_Y, FIELD_W,
+  GK_HOLD_TICKS, GK_LINE_X, GOAL_HALF, SHOT_Y_MARGIN, TURBO_COST,
 } from './constants';
 import { goalCenter, neutralIntent, otherTeam } from './setup';
-import { LEVELS } from './levels';
+import { LEVELS, type LevelSpec } from './levels';
 import { nextRandom } from './rng';
-import { nearestOutfield } from './possession';
-import { add, clamp, dist, norm, scale, sub } from './vec';
+import { ballSide, roleOf } from './brainRoles';
+import { planDefence, shiftedAnchor, type Plan } from './brainDefend';
+import { clamp, dist, norm, sub } from './vec';
 
 export type BrainIntent = PlayerIntent & { kick?: 'pass' | 'shot'; aim?: Vec };
 
-const PITCH_CENTER_X = FIELD_W / 2;
+const ZERO: Vec = { x: 0, y: 0 };
 
 const move = (p: PlayerState, target: Vec): BrainIntent => {
   const d = norm(sub(target, p.pos));
@@ -22,74 +23,107 @@ const move = (p: PlayerState, target: Vec): BrainIntent => {
 const moveOrHold = (p: PlayerState, target: Vec): BrainIntent =>
   dist(p.pos, target) < ARRIVE_DIST ? move(p, p.pos) : move(p, target);
 
-/**
- * The HIT button for a brain-driven player this tick, kept in his memory: a hold set by `startHoldTicks` runs
- * from this tick until `holdHitUntil`. `hitPress` is the first tick of a hold, and a hold never starts on the
- * tick after one ended, so a tap is always one tick down and at least one tick up.
- */
-function hitButtons(state: MatchState, p: PlayerState, startHoldTicks: number | null): Pick<PlayerIntent, 'hitPress' | 'hitHeld'> {
-  const mem = state.brain[p.id];
-  if (mem.holdHitUntil > state.tick) return { hitPress: false, hitHeld: true };
-  if (startHoldTicks === null || mem.holdHitUntil >= state.tick) return { hitPress: false, hitHeld: false };
-  mem.holdHitUntil = state.tick + startHoldTicks;
-  return { hitPress: true, hitHeld: true };
+// ---- plans for the roles with no defending in them (Task 3 replaces the own-ball and keeper ones) ----
+
+/** The carrier runs at goal and shoots from inside the level's shootRange, aiming at a random point of the goal mouth. */
+function planCarrier(state: MatchState, p: PlayerState, level: LevelSpec): Plan {
+  const goal = goalCenter(otherTeam(p.team));
+  if (dist(p.pos, goal) > level.shootRange) return { target: goal };
+  const aimY = FIELD_MID_Y + (nextRandom(state) * 2 - 1) * (GOAL_HALF - SHOT_Y_MARGIN);
+  return { target: goal, action: 'shot', aim: sub({ x: goal.x, y: aimY }, state.ball.pos) };
 }
 
-function isChaser(state: MatchState, p: PlayerState): boolean {
-  if (p.role !== 'out') return false;
+/** The keeper holds the ball for GK_HOLD_TICKS and then passes (his next think is on that tick); otherwise he tracks the ball along his line. */
+function planKeeper(state: MatchState, p: PlayerState): Plan {
+  if (state.ball.owner === p.id) {
+    const wait = GK_HOLD_TICKS - state.ball.ownerTicks;
+    return wait > 0 ? { target: { ...p.pos }, thinkAt: state.tick + wait } : { target: { ...p.pos }, action: 'pass' };
+  }
+  const lineX = p.team === 0 ? GK_LINE_X : FIELD_W - GK_LINE_X;
+  return { target: { x: lineX, y: clamp(state.ball.pos.y, FIELD_MID_Y - GOAL_HALF, FIELD_MID_Y + GOAL_HALF) } };
+}
+
+function planFor(state: MatchState, p: PlayerState, role: BrainRole, level: LevelSpec): Plan {
+  switch (role) {
+    case 'keeper': return planKeeper(state, p);
+    case 'carrier': return planCarrier(state, p, level);
+    case 'presser': case 'cover': case 'marker': return planDefence(state, p, role, level);
+    case 'chaser': case 'receiver': return { target: { ...state.ball.pos } };
+    default: return { target: shiftedAnchor(state, p) };
+  }
+}
+
+// ---- thinking ----
+
+function think(state: MatchState, p: PlayerState, mem: BrainMemory): void {
+  const level = LEVELS[state.config.level[p.team]], role = roleOf(state, p);
+  Object.assign(mem, {
+    thinkAt: state.tick + level.reactionTicks, role, target: { ...p.pos }, action: 'none', aim: { ...ZERO }, turbo: false,
+    thinkOwner: state.ball.owner,
+  }, planFor(state, p, role, level));
+}
+
+/** Time to re-think: the plan is due, the player gained or lost the ball, or the ball changed team (or became loose / free). */
+function needsThink(state: MatchState, p: PlayerState, mem: BrainMemory): boolean {
   const owner = state.ball.owner;
-  if (owner !== null && state.players[owner].team === p.team) return false;
-  if (state.config.human[p.team]) return false; // the controlled player is the chaser
-  return nearestOutfield(state, p.team) === p.id;
+  if (state.tick >= mem.thinkAt) return true;
+  if ((mem.thinkOwner === p.id) !== (owner === p.id)) return true;
+  return ballSide(state, p.team, mem.thinkOwner) !== ballSide(state, p.team, owner);
 }
 
-function anchorTarget(state: MatchState, p: PlayerState): Vec {
-  const b = state.ball.pos;
-  return {
-    x: clamp(p.anchor.x + (b.x - PITCH_CENTER_X) * ANCHOR_SHIFT_X, PLAYER_RADIUS, FIELD_W - PLAYER_RADIUS),
-    y: clamp(p.anchor.y + (b.y - FIELD_MID_Y) * ANCHOR_SHIFT_Y, PLAYER_RADIUS, FIELD_H - PLAYER_RADIUS),
-  };
+// ---- replaying the plan ----
+
+function endHold(mem: BrainMemory): void {
+  mem.holdHitUntil = 0;
+  mem.aim = { ...ZERO };
 }
 
-/** Where a chaser stands against a carried ball: JOCKEY_DIST from it, on the line toward the chaser's own goal. */
-function jockeyTarget(state: MatchState, p: PlayerState): Vec {
-  const ball = state.ball.pos;
-  return add(ball, scale(norm(sub(goalCenter(p.team), ball)), JOCKEY_DIST));
+/** Where a charging player is heading: the carrier he is after if the other team still has the ball, else his planned spot. */
+function chargeTarget(state: MatchState, p: PlayerState, mem: BrainMemory): Vec {
+  const owner = state.ball.owner;
+  return owner !== null && state.players[owner].team !== p.team ? state.players[owner].pos : mem.target;
 }
 
-/** Placeholder computer brain; M3 replaces this. Move vectors are unit length or zero; never turbo. */
+/** A charge that cannot complete is released as whatever it becomes (target out of reach), or ends (he has the ball). */
+function settleHold(state: MatchState, p: PlayerState, mem: BrainMemory, level: LevelSpec): void {
+  if (state.ball.owner === p.id) endHold(mem);
+  else if (state.tick < mem.holdHitUntil && dist(p.pos, chargeTarget(state, p, mem)) > CHARGE_ABORT_RANGE_FACTOR * level.hitRange) mem.holdHitUntil = state.tick;
+}
+
+function startHold(state: MatchState, mem: BrainMemory, ticks: number): void {
+  mem.holdHitUntil = state.tick + ticks;
+}
+
+/** One tick of the stored plan: move toward the target, press each stored button once, and run a hit hold to its release. */
+function replay(state: MatchState, p: PlayerState, mem: BrainMemory): BrainIntent {
+  if (mem.holdHitUntil > 0) {
+    const releasing = state.tick >= mem.holdHitUntil;
+    const intent = releasing ? { ...neutralIntent(), moveX: mem.aim.x, moveY: mem.aim.y } : moveOrHold(p, chargeTarget(state, p, mem));
+    if (releasing) endHold(mem);
+    return { ...intent, hitHeld: !releasing };
+  }
+  const intent: BrainIntent = moveOrHold(p, mem.target);
+  intent.turbo = mem.turbo && p.turboTicks === 0 && state.turbo[p.team] >= TURBO_COST;
+  const action = mem.action;
+  mem.action = 'none'; // a stored button is pressed once
+  if (action === 'tap' || action === 'chargeBig') {
+    startHold(state, mem, action === 'tap' ? BRAIN_TAP_TICKS : BIG_HIT_CHARGE_TICKS + BRAIN_BIG_HOLD_EXTRA_TICKS);
+    return { ...intent, hitPress: true, hitHeld: true };
+  }
+  if ((action === 'pass' || action === 'shot') && state.ball.owner === p.id) { // a plan for a ball he no longer has is dropped
+    return { ...intent, kick: action, aim: { ...mem.aim } };
+  }
+  return intent;
+}
+
+/**
+ * The computer's intent for one player this tick. He re-thinks when `state.tick >= thinkAt` or the ball situation changed
+ * for him, and otherwise replays the stored plan. (A player who cannot act has his memory reset by `step`.)
+ */
 export function brainIntent(state: MatchState, p: PlayerState): BrainIntent {
-  const ball = state.ball;
-  const hasBall = ball.owner === p.id;
-
-  if (p.role === 'gk') {
-    if (hasBall) {
-      const intent = move(p, p.pos);
-      return ball.ownerTicks >= GK_HOLD_TICKS ? { ...intent, kick: 'pass' } : intent;
-    }
-    const lineX = p.team === 0 ? GK_LINE_X : FIELD_W - GK_LINE_X;
-    const y = clamp(ball.pos.y, FIELD_MID_Y - GOAL_HALF, FIELD_MID_Y + GOAL_HALF);
-    return moveOrHold(p, { x: lineX, y });
-  }
-
-  if (hasBall) {
-    const goal = goalCenter(otherTeam(p.team));
-    const intent = move(p, goal);
-    if (dist(p.pos, goal) > CPU_SHOOT_RANGE) return intent;
-    const aimY = FIELD_MID_Y + (nextRandom(state) * 2 - 1) * (GOAL_HALF - SHOT_Y_MARGIN);
-    return { ...intent, kick: 'shot', aim: sub({ x: goal.x, y: aimY }, ball.pos) };
-  }
-
-  if (ball.owner === null && ball.passTarget === p.id) return move(p, ball.pos);
-  if (isChaser(state, p)) {
-    if (ball.owner === null) return move(p, ball.pos);
-    const carrier = state.players[ball.owner];
-    const gap = dist(p.pos, carrier.pos);
-    if (p.hitCooldown === 0 && gap <= CPU_ENGAGE_RANGE) { // a ready chaser stops jockeying and goes in
-      const wantsHit = gap <= LEVELS[state.config.level[p.team]].hitRange;
-      return { ...move(p, carrier.pos), ...hitButtons(state, p, wantsHit ? BRAIN_TAP_TICKS : null) };
-    }
-    return moveOrHold(p, jockeyTarget(state, p));
-  }
-  return moveOrHold(p, anchorTarget(state, p));
+  const mem = state.brain[p.id];
+  const level = LEVELS[state.config.level[p.team]];
+  if (mem.holdHitUntil > 0) settleHold(state, p, mem, level); // a hit in progress is not re-planned
+  else if (needsThink(state, p, mem)) think(state, p, mem);
+  return replay(state, p, mem);
 }

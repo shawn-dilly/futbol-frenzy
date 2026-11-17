@@ -372,15 +372,21 @@ describe('outside play', () => {
   }
 });
 
-describe('the placeholder computer side', () => {
-  test('a chaser takes the ball off a stationary carrier within 600 ticks', () => {
-    const s = createMatch(matchConfig({ human: [true, false] }));
-    runTicks(s, 60);
-    let taken = false;
-    for (let t = 0; t < 600 && !taken; t++) {
-      runTicks(s, 1);
-      taken = s.events.some(e => e.type === 'hit' && e.tackler >= 5) && (s.ball.owner === null || s.ball.owner >= 5);
-    }
-    expect(taken).toBe(true);
-  });
+describe('the computer side', () => {
+  // The human (team 0) stands still with the ball. A presser must dispossess him: an approach, a first hit, and one
+  // retry after a whiff (a miss costs the team its level's cooldown), plus slack for the ball to change hands.
+  const APPROACH_TICKS = 300;
+  for (const level of LEVEL_ORDER) {
+    test(`a presser takes the ball off a stationary carrier within the level's budget (${level})`, () => {
+      const s = createMatch(matchConfig({ human: [true, false], level: [level, level] }));
+      runTicks(s, 60);
+      const budget = APPROACH_TICKS + 2 * LEVELS[level].teamHitCooldownTicks;
+      let taken = false;
+      for (let t = 0; t < budget && !taken; t++) {
+        runTicks(s, 1);
+        taken = s.events.some(e => e.type === 'hit' && e.tackler >= 5) && (s.ball.owner === null || s.ball.owner >= 5);
+      }
+      expect(taken).toBe(true);
+    });
+  }
 });

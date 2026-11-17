@@ -40,6 +40,6 @@ test('createMatch gives all ten players blank memory, and a kickoff resets it', 
   for (const m of s.brain) expect(m).toEqual(blankMemory());
 });
 test('blankMemory is a fresh object each call', () => {
-  expect(blankMemory()).toEqual({ thinkAt: 0, role: 'support', target: { x: 0, y: 0 }, action: 'none', aim: { x: 0, y: 0 }, turbo: false, holdHitUntil: 0 });
+  expect(blankMemory()).toEqual({ thinkAt: 0, role: 'support', target: { x: 0, y: 0 }, action: 'none', aim: { x: 0, y: 0 }, turbo: false, holdHitUntil: 0, thinkOwner: null });
   expect(blankMemory().target).not.toBe(blankMemory().target);
 });

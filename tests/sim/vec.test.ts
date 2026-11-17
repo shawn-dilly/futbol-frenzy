@@ -1,5 +1,5 @@
 import { test, expect } from 'vitest';
-import { add, sub, scale, len, dist, norm, clampLen, angleBetween, clamp } from '../../src/sim/vec';
+import { add, sub, scale, len, dist, norm, clampLen, angleBetween, clamp, rotate } from '../../src/sim/vec';
 
 test('add, sub, scale return new vectors and leave inputs alone', () => {
   const a = { x: 1, y: 2 }, b = { x: 3, y: 5 };
@@ -31,4 +31,11 @@ test('angleBetween with a zero vector is 0', () => {
 });
 test('clamp limits a number to a range', () => {
   expect(clamp(5, 0, 10)).toBe(5); expect(clamp(-1, 0, 10)).toBe(0); expect(clamp(11, 0, 10)).toBe(10);
+});
+test('rotate turns +x toward +y for a positive angle and keeps length', () => {
+  const r = rotate({ x: 1, y: 0 }, Math.PI / 2);
+  expect(r.x).toBeCloseTo(0, 12); expect(r.y).toBeCloseTo(1, 12);
+  const q = rotate({ x: 3, y: 4 }, 0.7);
+  expect(len(q)).toBeCloseTo(5, 12);
+  expect(rotate({ x: 3, y: 4 }, 0)).toEqual({ x: 3, y: 4 });
 });
