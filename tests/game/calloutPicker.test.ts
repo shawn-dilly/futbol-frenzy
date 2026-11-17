@@ -2,7 +2,7 @@ import { describe, expect, test } from 'vitest';
 import type { Callout } from '../../src/content/callouts';
 import { seededRandom } from '../../src/content/shuffleBag';
 import { PAL } from '../../src/art/palette';
-import { CalloutPicker, calloutStyle, calloutVisible } from '../../src/game/calloutPicker';
+import { CalloutPicker, calloutDrawKey, calloutStyle, calloutVisible } from '../../src/game/calloutPicker';
 
 const LINES: Callout[] = [
   { id: 'a', text: 'A', tiers: ['knockdown'] },
@@ -42,11 +42,39 @@ describe('CalloutPicker', () => {
     for (let i = 0; i < 100; i++) { const id = picker.pick('knockdown', 'shoulder')!.id; expect(id).not.toBe(prev); prev = id; }
   });
 
-  test('tiers rotate independently', () => {
-    const picker = new CalloutPicker(LINES, seededRandom(5));
-    const first = picker.pick('knockdown', 'shoulder')!.id;
-    picker.pick('wipeout', 'shoulder');
-    expect(picker.pick('knockdown', 'shoulder')!.id).not.toBe(first);
+  test('tiers rotate independently: a draw in one tier does not use up the other tier\'s bag', () => {
+    const two: Callout[] = [
+      { id: 'k1', text: 'K1', tiers: ['knockdown'] }, { id: 'k2', text: 'K2', tiers: ['knockdown'] },
+      { id: 'w1', text: 'W1', tiers: ['wipeout'] }, { id: 'w2', text: 'W2', tiers: ['wipeout'] },
+    ];
+    const picker = new CalloutPicker(two, seededRandom(5));
+    const seen = new Set<string>();
+    for (let i = 0; i < 6; i++) { seen.add(picker.pick('knockdown', 'shoulder')!.id); seen.add(picker.pick('wipeout', 'shoulder')!.id); }
+    expect(seen).toEqual(new Set(['k1', 'k2', 'w1', 'w2']));
+    // Interleaved draws still alternate within each tier (one shared bag would repeat or starve one tier).
+    const ks: string[] = [];
+    for (let i = 0; i < 6; i++) { ks.push(picker.pick('knockdown', 'shoulder')!.id); picker.pick('wipeout', 'shoulder'); }
+    ks.forEach((id, i) => { if (i > 0) expect(id).not.toBe(ks[i - 1]); });
+    expect(new Set(ks.slice(0, 2))).toEqual(new Set(['k1', 'k2']));
+  });
+});
+
+describe('calloutDrawKey', () => {
+  test('nothing shown, or not visible, gives an empty key', () => {
+    expect(calloutDrawKey(null, 10)).toBe('');
+    expect(calloutDrawKey({ text: 'CRUNCH!', tier: 'knockdown', tick: 0 }, 60)).toBe('');
+    expect(calloutDrawKey({ text: 'CRUNCH!', tier: 'overTheTop', tick: 0 }, 6)).toBe(''); // blink off
+  });
+  test('same text at another tier has another key, so a replacement is restyled', () => {
+    const kd = calloutDrawKey({ text: 'CRUNCH!', tier: 'knockdown', tick: 0 }, 1);
+    const wo = calloutDrawKey({ text: 'CRUNCH!', tier: 'wipeout', tick: 0 }, 1);
+    expect(kd).not.toBe('');
+    expect(wo).not.toBe(kd);
+  });
+  test('a different text has a different key; the same callout keeps its key while visible', () => {
+    const a = { text: 'A', tier: 'wipeout' as const, tick: 0 };
+    expect(calloutDrawKey(a, 1)).toBe(calloutDrawKey(a, 50));
+    expect(calloutDrawKey({ ...a, text: 'B' }, 1)).not.toBe(calloutDrawKey(a, 1));
   });
 });
 

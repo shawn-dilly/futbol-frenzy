@@ -16,8 +16,13 @@ const FONT: Record<string, string> = {
   '7': '111001001001001', '8': '111101111101111', '9': '111101111001111', '!': '010010010000010',
   ':': '000010000010000', '-': '000000111000000', '.': '000000000000010', "'": '010010000000000',
   '/': '001001010100100', '>': '100010001010100', '+': '000010111010000', '?': '111001011000010',
-  '<': '001010100010001', ' ': '000000000000000',
+  '<': '001010100010001', ',': '000000000010100', ' ': '000000000000000',
 };
+
+/** Height in pixels of one line of text at `scale`. */
+export function textHeight(scale = 1): number {
+  return GLYPH_H * scale;
+}
 
 export function textWidth(s: string, scale = 1): number {
   return s.length === 0 ? 0 : s.length * GLYPH_ADVANCE * scale - scale;
@@ -53,4 +58,14 @@ export function wrapText(s: string, maxWidth: number, scale = 1): string[] {
     else lines.push(word);
   }
   return lines;
+}
+
+/** Gap between stacked lines, in glyph pixels (multiplied by the scale). */
+const LINE_GAP = 2;
+
+/** Top y of each of `lineCount` stacked lines so the block is vertically centred on `centerY`. */
+export function centeredLineTops(lineCount: number, scale: number, centerY: number): number[] {
+  const step = (GLYPH_H + LINE_GAP) * scale;
+  const blockH = lineCount * step - LINE_GAP * scale;
+  return Array.from({ length: lineCount }, (_, i) => centerY - blockH / 2 + i * step);
 }

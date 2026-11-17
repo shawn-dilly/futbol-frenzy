@@ -34,14 +34,13 @@ describe('ShuffleBag', () => {
     for (let i = 0; i < 50; i++) { const v = bag.next(['a', 'b']); expect(v).not.toBe(prev); prev = v; }
   });
 
-  test('weight 3 puts three copies in each cycle', () => {
+  test('weight 3 puts three copies per cycle: over 10 cycles the counts stay in proportion', () => {
     const bag = new ShuffleBag<string>(seededRandom(4));
     const items = ['heavy', 'x', 'y', 'z'];
-    for (let cycle = 0; cycle < 3; cycle++) {
-      const drawn = Array.from({ length: 6 }, () => bag.next(items, (s) => (s === 'heavy' ? 3 : 1)));
-      expect(drawn.filter((s) => s === 'heavy').length).toBe(3);
-      for (const s of ['x', 'y', 'z']) expect(drawn.filter((d) => d === s).length).toBe(1);
-    }
+    const drawn = Array.from({ length: 60 }, () => bag.next(items, (s) => (s === 'heavy' ? 3 : 1)));
+    const count = (v: string) => drawn.filter((d) => d === v).length;
+    expect(count('heavy')).toBeGreaterThanOrEqual(24); expect(count('heavy')).toBeLessThanOrEqual(36);
+    for (const v of ['x', 'y', 'z']) { expect(count(v)).toBeGreaterThanOrEqual(8); expect(count(v)).toBeLessThanOrEqual(12); }
   });
 
   test('a single item repeats without hanging', () => {
@@ -65,5 +64,20 @@ describe('ShuffleBag', () => {
   test('throws when nothing is eligible', () => {
     const bag = new ShuffleBag<number>(seededRandom(8));
     expect(() => bag.next([1, 2], undefined, () => false)).toThrow('ShuffleBag: no items to draw from');
+  });
+
+  test('never repeats back to back even when only copies of the last item remain', () => {
+    const items = ['heavy', 'x'];
+    for (let seed = 0; seed < 50; seed++) {
+      const bag = new ShuffleBag<string>(seededRandom(seed));
+      let prev = '';
+      for (let i = 0; i < 200; i++) { const v = bag.next(items, (s) => (s === 'heavy' ? 2 : 1)); expect(v).not.toBe(prev); prev = v; }
+    }
+  });
+
+  test('a weight below 1 throws', () => {
+    const bag = new ShuffleBag<string>(seededRandom(9));
+    expect(() => bag.next(['a'], () => 0)).toThrow('ShuffleBag: weight must be at least 1');
+    expect(() => bag.next(['a'], () => 0.4)).toThrow('ShuffleBag: weight must be at least 1');
   });
 });

@@ -6,7 +6,7 @@ import { TouchControls } from '../input/TouchControls';
 import { CALLOUTS } from '../content/callouts';
 import { seededRandom } from '../content/shuffleBag';
 import { CalloutBanner } from './CalloutBanner';
-import { CalloutPicker } from './calloutPicker';
+import { CALLOUT_SEED_SALT, CalloutPicker } from './calloutPicker';
 import { Hud } from './Hud';
 import { MatchView } from './MatchView';
 import { FixedStepper } from './loop';
@@ -47,7 +47,7 @@ export class MatchScene extends Phaser.Scene {
     const params = parseMatchParams(window.location.search);
     this.sfx.muted = params.mute;
     this.state = createMatch({ seed: this.seed, halfSeconds: params.halfSeconds, human: [!params.demo, false] });
-    this.callouts = new CalloutPicker(CALLOUTS, seededRandom(this.seed));
+    this.callouts = new CalloutPicker(CALLOUTS, seededRandom(this.seed ^ CALLOUT_SEED_SALT));
     window.__ff = { state: this.state, showCallout: (tier, hit) => this.showCallout(tier, hit) };
     this.view = new MatchView(this);
     this.hud = new Hud(this);
@@ -104,11 +104,16 @@ export class MatchScene extends Phaser.Scene {
       const sound = sfxForEvent(e);
       if (sound) this.sfx.play(sound);
       if (e.type === 'hit') this.showCallout(e.tier, e.hit);
-      else if (e.type === 'goal') this.hud.showBanner('GOAL!', GOAL_BANNER_TICKS, this.state.tick);
-      else if (e.type === 'whistle' && e.what === 'halftime') this.hud.showBanner('HALF TIME', HALFTIME_PAUSE_TICKS, this.state.tick);
-      else if (e.type === 'whistle' && e.what === 'fulltime') {
-        this.fulltimeTick = this.state.tick;
-        this.hud.showFullTime(this.state.tick);
+      else if (e.type === 'goal') {
+        this.calloutBanner.clear();
+        this.hud.showBanner('GOAL!', GOAL_BANNER_TICKS, this.state.tick);
+      } else if (e.type === 'whistle') {
+        this.calloutBanner.clear();
+        if (e.what === 'halftime') this.hud.showBanner('HALF TIME', HALFTIME_PAUSE_TICKS, this.state.tick);
+        else if (e.what === 'fulltime') {
+          this.fulltimeTick = this.state.tick;
+          this.hud.showFullTime(this.state.tick);
+        }
       }
     }
   }

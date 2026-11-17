@@ -203,8 +203,8 @@ export function atlasLayout(): { key: string; x: number; y: number }[]; // wraps
 export interface Callout { id: string; text: string; tiers: HurtTier[]; hitTypes?: HitType[]; weight?: number; audio?: string }
 export const CALLOUTS: Callout[];
 // src/content/shuffleBag.ts  (generic, no game types)
-export class ShuffleBag<T> { constructor(random: () => number); next(items: readonly T[], weightOf?: (t: T) => number): T }
-//   every item is returned once before any repeats; the first draw of a refilled bag is never the item just returned (when there are 2+ items); weight w puts w copies in the bag
+export class ShuffleBag<T> { constructor(random: () => number); next(items: readonly T[], weightOf?: (t: T) => number, eligible?: (t: T) => boolean): T }
+//   every item is returned once before any repeats; the first draw of a refilled bag is never the item just returned (when there are 2+ items); weight w puts w copies in the bag (w < 1 throws); `eligible` skips items for this draw only, they stay in the bag; never the same item twice running when another eligible item exists (refills early if needed)
 // src/game/calloutPicker.ts
 export class CalloutPicker { constructor(callouts: readonly Callout[], random: () => number); pick(tier: HurtTier, hit: HitType): Callout | null }
 //   one bag per tier; null for a tier with no eligible line; a hitTypes-restricted line is skipped (stays in the bag) when the hit type does not match

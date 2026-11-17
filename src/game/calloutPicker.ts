@@ -24,6 +24,15 @@ export function calloutVisible(shownTick: number, nowTick: number, style: Pick<C
   return !style.flash || Math.floor(elapsed / FLASH_HALF_PERIOD_TICKS) % 2 === 0;
 }
 
+/** What is on screen: '' when nothing is visible, otherwise a key that changes whenever the pixels would (text or tier/style). */
+export function calloutDrawKey(shown: { text: string; tier: HurtTier; tick: number } | null, nowTick: number): string {
+  if (!shown || !calloutVisible(shown.tick, nowTick, calloutStyle(shown.tier))) return '';
+  return `${shown.tier}|${shown.text}`;
+}
+
+/** XORed into the match seed so callout choices do not replay the sim's own random sequence. */
+export const CALLOUT_SEED_SALT = 0x5ca11047;
+
 /** Chooses the callout for a hit: one shuffle bag per tier so lines rotate and never repeat back to back. */
 export class CalloutPicker {
   private readonly bags = new Map<HurtTier, ShuffleBag<Callout>>();

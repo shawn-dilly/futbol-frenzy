@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'vitest';
 import { CALLOUTS } from '../../src/content/callouts';
-import { hasGlyph, wrapText } from '../../src/art/pixelFont';
+import { hasGlyph, textWidth, wrapText } from '../../src/art/pixelFont';
 import { calloutStyle } from '../../src/game/calloutPicker';
 import { CALLOUT_MAX_W } from '../../src/game/layout';
 import { HURT_TIERS } from '../../src/sim';
@@ -31,14 +31,34 @@ describe('CALLOUTS', () => {
     }
   });
 
-  test('every text is upper case, uses only glyphs the font has, and wraps to fit the screen at its tier scale', () => {
+  test('every text is upper case and uses only glyphs the font has', () => {
     for (const c of CALLOUTS) {
       expect(c.text, c.id).toBe(c.text.toUpperCase());
       for (const ch of c.text) expect(hasGlyph(ch), `${c.id}: '${ch}'`).toBe(true);
+    }
+  });
+
+  test('every text wraps into at most 2 lines, each at most 312 px wide, at the scale of every tier it lists', () => {
+    for (const c of CALLOUTS) {
       for (const tier of c.tiers) {
-        const lines = wrapText(c.text, CALLOUT_MAX_W, calloutStyle(tier).scale);
-        expect(lines.length, `${c.id} @ ${tier}`).toBeLessThanOrEqual(MAX_LINES);
+        const { scale } = calloutStyle(tier);
+        const lines = wrapText(c.text, CALLOUT_MAX_W, scale);
+        expect(lines.length, `${c.id} @ ${tier}`).toBeLessThanOrEqual(2);
+        for (const line of lines) expect(textWidth(line, scale), `${c.id} @ ${tier}`).toBeLessThanOrEqual(CALLOUT_MAX_W);
       }
+    }
+  });
+
+  test('at least two lines are long enough to need two lines at scale 2', () => {
+    const wraps = CALLOUTS.filter((c) => wrapText(c.text, CALLOUT_MAX_W, 2).length === 2);
+    expect(wraps.length).toBeGreaterThanOrEqual(2);
+  });
+
+  test('ids are the text in kebab-case, the pool has 40+ lines, and no weight is below 1', () => {
+    expect(CALLOUTS.length).toBeGreaterThanOrEqual(40);
+    for (const c of CALLOUTS) {
+      expect(c.id).toBe(c.text.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, ''));
+      expect(c.weight ?? 1).toBeGreaterThanOrEqual(1);
     }
   });
 });
