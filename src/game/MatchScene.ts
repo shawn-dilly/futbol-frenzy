@@ -8,7 +8,8 @@ import { seededRandom } from '../content/shuffleBag';
 import { CalloutBanner } from './CalloutBanner';
 import { CALLOUT_SEED_SALT, CalloutPicker } from './calloutPicker';
 import { Hud } from './Hud';
-import { EFFECT_SEED_SALT, HIT_FEEDBACK, chargeFill, craterLandTicks, flashAlpha } from './hitFeedback';
+import { EFFECT_SEED_SALT, HIT_FEEDBACK, craterLandTicks, flashAlpha } from './hitFeedback';
+import { bigHitReady, chargeFill, chargeJustStarted } from './indicators';
 import { MatchView } from './MatchView';
 import { FixedStepper } from './loop';
 import { parseMatchParams } from './params';
@@ -37,6 +38,8 @@ export class MatchScene extends Phaser.Scene {
   private flashStartMs = -Infinity;
   /** Hit-stop ticks asked for by the events of the step just run; update() hands them to the stepper. */
   private freezeTicks = 0;
+  /** Whether the human's controlled player was charging on the previous step, to play the charge sound once per charge. */
+  private wasCharging = false;
   /** Craters waiting for their victim to land: the sim tick they appear on, and who lands. */
   private pendingCraters: { tick: number; victim: number }[] = [];
   private seed = 0;
@@ -55,6 +58,7 @@ export class MatchScene extends Phaser.Scene {
     this.fulltimeTick = null;
     this.pendingCraters = [];
     this.freezeTicks = 0;
+    this.wasCharging = false;
     this.flashStartMs = -Infinity;
     const params = parseMatchParams(window.location.search);
     this.sfx.muted = params.mute;
@@ -99,9 +103,10 @@ export class MatchScene extends Phaser.Scene {
       step(this.state, this.readPads());
       this.handleEvents(this.state.events);
       this.landCraters();
+      this.playChargeSound();
       if (this.freezeTicks > 0) {
-        // Hit-stop: the steps this frame still owes are frozen too, so the pause is exact.
-        this.stepper.freeze(this.freezeTicks + (steps - i - 1));
+        // Hit-stop: the rest of this frame's steps are dropped and count towards the pause.
+        this.stepper.freeze(this.freezeTicks, steps - i - 1);
         this.freezeTicks = 0;
         break;
       }
@@ -114,7 +119,18 @@ export class MatchScene extends Phaser.Scene {
     this.hud.sync(this.state);
     this.calloutBanner.sync(this.state.tick);
     this.flash.setAlpha(flashAlpha(this.nowMs - this.flashStartMs));
-    this.touch?.draw(chargeFill(this.state.players[this.state.controlled[0]]));
+    if (this.touch) {
+      const me = this.state.players[this.state.controlled[0]];
+      this.touch.draw(chargeFill(me), bigHitReady(me, this.state.turbo[0]));
+    }
+  }
+
+  /** The charge sound starts when the human's player starts charging a hit. */
+  private playChargeSound(): void {
+    if (!this.state.config.human[0]) return;
+    const me = this.state.players[this.state.controlled[0]];
+    if (chargeJustStarted(this.wasCharging, me)) this.sfx.play('charge');
+    this.wasCharging = me.status.kind === 'charging';
   }
 
   /** Team 0 is the human (touch and keyboard, absent in demo mode); team 1 is always the CPU. */
@@ -150,6 +166,7 @@ export class MatchScene extends Phaser.Scene {
     this.view.shake(fb.shakePx, fb.shakeMs, this.nowMs);
     this.freezeTicks = Math.max(this.freezeTicks, fb.freezeTicks);
     if (fb.flash) this.flashStartMs = this.nowMs;
+    if (fb.stars) this.view.addStarBurst({ ...this.state.players[e.victim].pos }, this.nowMs);
     const landTicks = craterLandTicks(e.tier, e.variant);
     if (landTicks !== null) this.pendingCraters.push({ tick: this.state.tick + landTicks, victim: e.victim });
     this.showCallout(e.tier, e.hit);

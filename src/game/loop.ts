@@ -21,8 +21,12 @@ export class FixedStepper {
     return steps - skipped;
   }
 
-  /** Hit-stop: the next `ticks` steps are consumed without running, so time never piles up into a burst afterwards. */
-  freeze(ticks: number): void { this.frozenSteps += ticks; }
+  /**
+   * Hit-stop of `ticks` sim steps, asked for while a frame is running. `owedSteps` are the steps of that frame the caller
+   * has not run and will drop; they count towards the pause, so it is exactly `ticks` whatever the frame rate.
+   * Frozen steps are consumed without running, so time never piles up into a burst afterwards.
+   */
+  freeze(ticks: number, owedSteps = 0): void { this.frozenSteps += Math.max(0, ticks - owedSteps); }
 
   reset(): void { this.accumulatorMs = 0; this.frozenSteps = 0; }
 }

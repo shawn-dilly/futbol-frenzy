@@ -1,7 +1,7 @@
 import { PAL } from '../art/palette';
 import { drawText, type RectFn } from '../art/pixelFont';
 import { FIELD_H, FIELD_MID_Y, FIELD_W, GOAL_HALF } from '../sim';
-import { FIELD_TOP, PITCH_TEX_ORIGIN_X, PITCH_TEX_W, SCREEN_H } from './layout';
+import { FIELD_TOP, PITCH_TEX_H, PITCH_TEX_ORIGIN_X, PITCH_TEX_W } from './layout';
 
 const CROWD_DOTS = 672;
 const CROWD_TOP = 13, CROWD_DEPTH = 20, CROWD_DOT_PX = 2;
@@ -73,13 +73,13 @@ function drawEnd(rect: RectFn, dir: 1 | -1): void {
   }
 }
 
-/** Draws the static scrolling background (crowd, ad boards, grass, markings, goals) onto a PITCH_TEX_W x SCREEN_H canvas. */
+/** Draws the static scrolling background (crowd, ad boards, grass, markings, goals) onto a PITCH_TEX_W x PITCH_TEX_H canvas. */
 export function drawPitch(rect: RectFn): void {
-  rect(0, 0, PITCH_TEX_W, SCREEN_H, PAL.navy);
+  rect(0, 0, PITCH_TEX_W, PITCH_TEX_H, PAL.navy);
   drawCrowdAndBoards(rect);
   const firstStripe = Math.floor(-PITCH_TEX_ORIGIN_X / STRIPE_W);
   for (let i = firstStripe; i * STRIPE_W < PITCH_TEX_W - PITCH_TEX_ORIGIN_X; i++) {
-    rect(PITCH_TEX_ORIGIN_X + i * STRIPE_W, GRASS_TOP, STRIPE_W, SCREEN_H - GRASS_TOP, Math.abs(i) % 2 ? PAL.g1 : PAL.g2);
+    rect(PITCH_TEX_ORIGIN_X + i * STRIPE_W, GRASS_TOP, STRIPE_W, PITCH_TEX_H - GRASS_TOP, Math.abs(i) % 2 ? PAL.g1 : PAL.g2);
   }
   rect(PITCH_TEX_ORIGIN_X, FIELD_TOP, FIELD_W, 1, PAL.line);
   rect(PITCH_TEX_ORIGIN_X, FIELD_TOP + FIELD_H - 1, FIELD_W, 1, PAL.line);
@@ -89,16 +89,20 @@ export function drawPitch(rect: RectFn): void {
   drawEnd(rect, -1);
 }
 
-/** Over-the-top crater decal: a dark oval with a deeper hole, drawn on its own small texture. */
-const CRATER_ROW_WIDTHS = [10, 14, 16, 14, 10];
-const CRATER_RIM_INSET = 2; // px between the rim edge and the hole, each side
-export const CRATER_W = Math.max(...CRATER_ROW_WIDTHS);
-export const CRATER_H = CRATER_ROW_WIDTHS.length;
+/** Over-the-top crater decal: the dark outline of a spread-eagled player pressed into the grass, on its own small texture. */
+export const CRATER_W = 21;
+export const CRATER_H = 9;
+/** Left half and the centre, as [x, y, w, h]; the right half is the mirror image. */
+const CRATER_SHAPE: [number, number, number, number][] = [
+  [9, 0, 3, 2], // head
+  [8, 2, 5, 4], // torso
+  [2, 2, 6, 2], [0, 1, 2, 3], // arm and hand, thrown out and up
+  [7, 6, 2, 2], [4, 7, 3, 2], // leg kicked out sideways
+];
 
 export function drawCrater(rect: RectFn): void {
-  CRATER_ROW_WIDTHS.forEach((w, row) => {
-    rect((CRATER_W - w) / 2, row, w, 1, PAL.dk);
-    const hole = w - 2 * CRATER_RIM_INSET;
-    if (row > 0 && row < CRATER_H - 1) rect((CRATER_W - hole) / 2, row, hole, 1, PAL.ink);
-  });
+  for (const [x, y, w, h] of CRATER_SHAPE) {
+    rect(x, y, w, h, PAL.ink);
+    rect(CRATER_W - x - w, y, w, h, PAL.ink);
+  }
 }

@@ -1,7 +1,6 @@
-import { ANIMATIONS, hurtAnimKey } from '../content/animations';
+import { ANIMATIONS, airTicks, hurtAnimKey } from '../content/animations';
 import type { SfxName } from '../content/sounds';
-import { blinkOn } from './layout';
-import { BIG_HIT_CHARGE_TICKS, DAZED_HEALTH, type HurtTier, type PlayerState } from '../sim';
+import type { HurtTier } from '../sim';
 
 /** Mixed into the match seed for the presentation's own random stream (shake), keeping it apart from the sim and the callouts. */
 export const EFFECT_SEED_SALT = 0x5ba4e000;
@@ -31,6 +30,19 @@ export function shakeOffset(elapsedMs: number, shakePx: number, shakeMs: number,
   return { x: Math.round(size * (random() * 2 - 1)), y: Math.round(size * (random() * 2 - 1)) };
 }
 
+/** A running screen shake: when it began (real ms), its starting size and its length. */
+export interface Shake { startMs: number; px: number; ms: number }
+
+/** Pixels of shake still left in `shake` at `nowMs`. */
+export function shakeRemainingPx(shake: Shake, nowMs: number): number {
+  return Math.max(0, shake.px * (1 - (nowMs - shake.startMs) / shake.ms));
+}
+
+/** What a new shake does to a running one: the stronger of the two (by what is left) carries on. */
+export function strongerShake(current: Shake | null, next: Shake, nowMs: number): Shake {
+  return current && shakeRemainingPx(current, nowMs) > shakeRemainingPx(next, nowMs) ? current : next;
+}
+
 /** White flash on an over-the-top hit: starts at its peak and fades out over FLASH_MS. */
 export const FLASH_MS = 200;
 export const FLASH_PEAK_ALPHA = 0.85;
@@ -46,19 +58,19 @@ export const CRATER_VARIANT = 2;
 export function craterLandTicks(tier: HurtTier, variant: number): number | null {
   if (tier !== CRATER_TIER || variant !== CRATER_VARIANT) return null;
   const def = ANIMATIONS[hurtAnimKey(tier, variant)];
-  return (def.airFrames ?? 0) * def.ticksPerFrame;
+  return airTicks(def);
 }
 
-/** 0..1 progress of a big-hit charge (1 = charged enough for a big hit); 0 when not charging. */
-export function chargeFill(p: PlayerState): number {
-  if (p.status.kind !== 'charging') return 0;
-  return Math.min(1, p.statusTick / BIG_HIT_CHARGE_TICKS);
-}
+/** The star burst of an over-the-top hit: `count` stars fly out from the victim, slowing down, over `ms`. */
+export const STAR_BURST = { count: 6, ms: 400, radiusPx: 16 } as const;
 
-/** Ticks each phase of the Dazed marker's blink lasts. */
-export const DAZED_BLINK_TICKS = 12;
-
-/** Whether the Dazed marker (two yellow pixels over the head) is lit on this match tick. */
-export function dazedMarkerVisible(p: PlayerState, matchTick: number): boolean {
-  return p.health < DAZED_HEALTH && blinkOn(matchTick, DAZED_BLINK_TICKS);
+/** Whole-pixel offsets from the burst centre of each star `elapsedMs` after the hit; empty once the burst is over. */
+export function starOffsets(elapsedMs: number): { x: number; y: number }[] {
+  const t = elapsedMs / STAR_BURST.ms;
+  if (t >= 1) return [];
+  const reach = STAR_BURST.radiusPx * (1 - (1 - t) * (1 - t)); // ease out
+  return Array.from({ length: STAR_BURST.count }, (_, i) => {
+    const angle = (i / STAR_BURST.count) * 2 * Math.PI - Math.PI / 2; // first star straight up
+    return { x: Math.round(reach * Math.cos(angle)) || 0, y: Math.round(reach * Math.sin(angle)) || 0 };
+  });
 }

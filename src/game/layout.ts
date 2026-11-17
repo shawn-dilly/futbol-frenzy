@@ -1,3 +1,4 @@
+import { HIT_FEEDBACK } from './hitFeedback';
 import { RAGE_MAX, TICK_HZ, TURBO_COST, type Phase, type Vec } from '../sim';
 
 export const SCREEN_W = 320;
@@ -22,10 +23,21 @@ export function formatClock(clockTicks: number): string {
   return `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}`;
 }
 
-/** Width of the pre-drawn scrolling pitch texture: the whole camera travel plus one screen. */
-export const PITCH_TEX_W = CAMERA_MAX_X - CAMERA_MIN_X + SCREEN_W;
+/** Height in pixels of the top bar, which also hides the gap a screen shake opens above the pitch. */
+export const HUD_BAR_H = 11;
+
+/** Extra pitch drawn past each screen edge (left, right, bottom): the biggest shake, so shaking never shows the background. */
+export const PITCH_MARGIN_PX = Math.max(...Object.values(HIT_FEEDBACK).map(f => f.shakePx));
+/** Size of the pre-drawn scrolling pitch texture: the whole camera travel plus one screen, plus the shake margin. */
+export const PITCH_TEX_W = CAMERA_MAX_X - CAMERA_MIN_X + SCREEN_W + 2 * PITCH_MARGIN_PX;
+export const PITCH_TEX_H = SCREEN_H + PITCH_MARGIN_PX;
 /** Texture x of world x 0. */
-export const PITCH_TEX_ORIGIN_X = -CAMERA_MIN_X;
+export const PITCH_TEX_ORIGIN_X = -CAMERA_MIN_X + PITCH_MARGIN_PX;
+
+/** Screen position of the pitch image's top-left for a camera x and this frame's shake offset. */
+export function pitchImagePos(camX: number, shake: { x: number; y: number }): { x: number; y: number } {
+  return { x: -PITCH_TEX_ORIGIN_X - camX + shake.x, y: shake.y };
+}
 
 /** Ticks the GOAL! banner stays up. */
 export const GOAL_BANNER_TICKS = 90;

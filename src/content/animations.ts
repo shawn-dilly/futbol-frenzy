@@ -16,6 +16,11 @@ export interface AnimDef {
 /** Ticks at the end of a hurt or recovering status spent getting back up. */
 export const GETUP_TICKS = 12;
 
+/** Ticks of air time: the leading airborne frames, after which the body lands. */
+export function airTicks(def: AnimDef): number {
+  return (def.airFrames ?? 0) * def.ticksPerFrame;
+}
+
 export function hurtAnimKey(tier: HurtTier, variant: number): string {
   return `hurt_${tier}_${variant}`;
 }

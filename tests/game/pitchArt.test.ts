@@ -8,6 +8,7 @@ test('the crater decal is drawn inside its own bounds, symmetric left to right',
   for (const [x, y, w, h] of rects) {
     expect(x).toBeGreaterThanOrEqual(0); expect(x + w).toBeLessThanOrEqual(CRATER_W);
     expect(y).toBeGreaterThanOrEqual(0); expect(y + h).toBeLessThanOrEqual(CRATER_H);
-    expect(2 * x + w).toBe(CRATER_W); // centred in its row
   }
+  const keys = new Set(rects.map(([x, y, w, h]) => `${x},${y},${w},${h}`));
+  for (const [x, y, w, h] of rects) expect(keys.has(`${CRATER_W - x - w},${y},${w},${h}`)).toBe(true); // mirror image
 });

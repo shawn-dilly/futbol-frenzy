@@ -4,18 +4,20 @@ import { PAL } from '../art/palette';
 import { drawText } from '../art/pixelFont';
 import type { MatchState } from '../sim';
 import {
-  DEPTH, RAGE_FLASH_TICKS, SCREEN_H, SCREEN_W, TEAM_NAMES, TURBO_PIPS, blinkOn, canRestart, formatClock, fullTimeLines, isRageFlashing, rageBarWidth, turboPips,
+  DEPTH, HUD_BAR_H, RAGE_FLASH_TICKS, SCREEN_H, SCREEN_W, TEAM_NAMES, TURBO_PIPS, blinkOn, canRestart, formatClock, fullTimeLines, isRageFlashing, rageBarWidth, turboPips,
 } from './layout';
 
 const HUD_KEY = 'hud';
-const BAR_H = 11;
 const BADGE = { y: 2, size: 7 }, TEXT_Y = 3;
 const LEFT = { badgeX: 4, nameX: 14, scoreX: 46 };
 const RIGHT = { badgeX: 309, nameRightX: 304, scoreX: 270 };
 const PIP = { count: TURBO_PIPS, w: 6, h: 4, gap: 2, y: 174 };
-/** Rage meters hang under the top bar, each starting at its team's badge edge: a 1 px ink frame round a pur fill that flashes white when nearly full. */
-const RAGE = { y: BAR_H + 1, maxPx: 60, h: 3, frame: 1, leftX: LEFT.badgeX, rightEdgeX: RIGHT.badgeX + BADGE.size };
-const RAGE_FILL = PAL.pur, RAGE_FLASH = PAL.wht;
+/**
+ * Rage meters hang under the top bar, each starting at its team's badge edge: a white outline round an ink well and a pur fill
+ * that flashes white when nearly full, with a small RAGE label on the inner side.
+ */
+const RAGE = { y: HUD_BAR_H + 1, maxPx: 60, h: 3, frame: 1, leftX: LEFT.badgeX, rightEdgeX: RIGHT.badgeX + BADGE.size, labelGap: 3, label: 'RAGE' };
+const RAGE_FILL = PAL.pur, RAGE_FLASH = PAL.wht, RAGE_OUTLINE = PAL.wht, RAGE_WELL = PAL.ink;
 const PIP_UNLIT = PAL.dk;
 const BANNER = { y: 56, shadowDx: 1, shadowDy: 1 };
 /** Text scale and the y step to the next line, per banner line (the first is the title). */
@@ -63,7 +65,7 @@ export class Hud {
     const ctx = this.texture.context;
     ctx.clearRect(0, 0, SCREEN_W, SCREEN_H);
     const rect = canvasRect(ctx);
-    rect(0, 0, SCREEN_W, BAR_H, PAL.ink);
+    rect(0, 0, SCREEN_W, HUD_BAR_H, PAL.ink);
     rect(LEFT.badgeX, BADGE.y, BADGE.size, BADGE.size, PAL.red);
     drawText(rect, TEAM_NAMES[0], LEFT.nameX, TEXT_Y, PAL.wht);
     drawText(rect, String(score[0]), LEFT.scoreX, TEXT_Y, PAL.yel);
@@ -74,7 +76,12 @@ export class Hud {
     rage.forEach((r, team) => {
       const frameW = RAGE.maxPx + 2 * RAGE.frame;
       const x = team === 0 ? RAGE.leftX : RAGE.rightEdgeX - frameW; // the right meter mirrors the left: it fills from the screen edge
-      rect(x, RAGE.y, frameW, RAGE.h + 2 * RAGE.frame, PAL.ink);
+      const frameH = RAGE.h + 2 * RAGE.frame;
+      rect(x, RAGE.y, frameW, frameH, RAGE_OUTLINE);
+      rect(x + RAGE.frame, RAGE.y + RAGE.frame, RAGE.maxPx, RAGE.h, RAGE_WELL);
+      const labelX = team === 0 ? x + frameW + RAGE.labelGap : x - RAGE.labelGap;
+      drawText(rect, RAGE.label, labelX + 1, RAGE.y + 1, PAL.ink, 1, team === 0 ? 'l' : 'r');
+      drawText(rect, RAGE.label, labelX, RAGE.y, PAL.wht, 1, team === 0 ? 'l' : 'r');
       rect(team === 0 ? x + RAGE.frame : x + RAGE.frame + RAGE.maxPx - r.px, RAGE.y + RAGE.frame, r.px, RAGE.h, r.flashOn ? RAGE_FLASH : RAGE_FILL);
     });
     const pipsW = PIP.count * PIP.w + (PIP.count - 1) * PIP.gap;

@@ -1,11 +1,8 @@
 import { expect, test } from 'vitest';
 import {
-  CRATER_TIER, CRATER_VARIANT, DAZED_BLINK_TICKS, FLASH_MS, FLASH_PEAK_ALPHA, HIT_FEEDBACK,
-  chargeFill, craterLandTicks, dazedMarkerVisible, flashAlpha, shakeOffset,
+  CRATER_TIER, CRATER_VARIANT, FLASH_MS, FLASH_PEAK_ALPHA, HIT_FEEDBACK, STAR_BURST,
+  craterLandTicks, flashAlpha, shakeOffset, shakeRemainingPx, starOffsets, strongerShake,
 } from '../../src/game/hitFeedback';
-import { BIG_HIT_CHARGE_TICKS, DAZED_HEALTH, MAX_HEALTH, createMatch, type PlayerState } from '../../src/sim';
-
-const player = (): PlayerState => createMatch({ seed: 1, halfSeconds: 120, human: [true, false] }).players[4];
 
 test('hit feedback per tier', () => {
   expect(HIT_FEEDBACK.stumble).toEqual({ sounds: ['thud'], shakePx: 1, shakeMs: 80, freezeTicks: 0, flash: false, stars: false });
@@ -44,25 +41,26 @@ test('only the over-the-top crater variant leaves a crater, landing when the air
   expect(craterLandTicks('wipeout', 2)).toBeNull();
 });
 
-test('charge fill grows over BIG_HIT_CHARGE_TICKS and is zero when not charging', () => {
-  const p = player();
-  expect(chargeFill(p)).toBe(0);
-  p.status = { kind: 'charging' };
-  p.statusTick = 0; expect(chargeFill(p)).toBe(0);
-  p.statusTick = BIG_HIT_CHARGE_TICKS / 2; expect(chargeFill(p)).toBe(0.5);
-  p.statusTick = BIG_HIT_CHARGE_TICKS; expect(chargeFill(p)).toBe(1);
-  p.statusTick = BIG_HIT_CHARGE_TICKS * 2; expect(chargeFill(p)).toBe(1);
-  p.status = { kind: 'free' }; p.statusTick = 10; expect(chargeFill(p)).toBe(0);
+test('remaining shake falls linearly to zero', () => {
+  const sh = { startMs: 100, px: 6, ms: 400 };
+  expect([100, 300, 500, 900].map(t => shakeRemainingPx(sh, t))).toEqual([6, 3, 0, 0]);
+});
+test('a new shake replaces the running one only when it has more left', () => {
+  const big = { startMs: 0, px: 6, ms: 400 }, small = { startMs: 100, px: 1, ms: 80 }, mid = { startMs: 300, px: 4, ms: 250 };
+  expect(strongerShake(big, small, 100)).toBe(big); // a stumble does not cut an over-the-top shake short
+  expect(strongerShake(small, big, 100)).toBe(big);
+  expect(strongerShake(big, mid, 300)).toBe(mid); // big has 1.5 left, mid has 4
+  expect(strongerShake(null, small, 100)).toBe(small);
+  expect(strongerShake({ startMs: 0, px: 2, ms: 50 }, small, 1000)).toBe(small); // the old one is long over
 });
 
-test('the dazed marker blinks only on a dazed player', () => {
-  const p = player();
-  p.health = MAX_HEALTH;
-  expect(dazedMarkerVisible(p, 0)).toBe(false);
-  p.health = DAZED_HEALTH; expect(dazedMarkerVisible(p, 0)).toBe(false);
-  p.health = DAZED_HEALTH - 1;
-  expect(dazedMarkerVisible(p, 0)).toBe(true);
-  expect(dazedMarkerVisible(p, DAZED_BLINK_TICKS - 1)).toBe(true);
-  expect(dazedMarkerVisible(p, DAZED_BLINK_TICKS)).toBe(false);
-  expect(dazedMarkerVisible(p, DAZED_BLINK_TICKS * 2)).toBe(true);
+test('the star burst flies out from the centre, slows down, and ends', () => {
+  expect(STAR_BURST.ms).toBe(400);
+  expect(starOffsets(0)).toEqual(Array.from({ length: STAR_BURST.count }, () => ({ x: 0, y: 0 })));
+  // half way: eased reach is 16 x 0.75 = 12; star 0 is straight up, star 3 straight down
+  const mid = starOffsets(200);
+  expect(mid[0]).toEqual({ x: 0, y: -12 }); expect(mid[3]).toEqual({ x: 0, y: 12 });
+  expect(mid[1]).toEqual({ x: 10, y: -6 });
+  expect(starOffsets(399)[0].y).toBe(-16);
+  expect(starOffsets(400)).toEqual([]); expect(starOffsets(5000)).toEqual([]);
 });

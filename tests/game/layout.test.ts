@@ -1,6 +1,7 @@
 import { expect, test } from 'vitest';
+import { HIT_FEEDBACK } from '../../src/game/hitFeedback';
 import {
-  DEPTH, RAGE_FLASH_AT, arcLift, blinkOn, isRageFlashing, rageBarWidth, FULLTIME_RESTART_DELAY_TICKS, TEAM_NAMES, canRestart, cameraTarget, fullTimeLines, formatClock, nextFlip, turboPips, worldToScreen,
+  DEPTH, HUD_BAR_H, CAMERA_MAX_X, CAMERA_MIN_X, PITCH_MARGIN_PX, PITCH_TEX_H, PITCH_TEX_W, RAGE_FLASH_AT, SCREEN_H, SCREEN_W, pitchImagePos, arcLift, blinkOn, isRageFlashing, rageBarWidth, FULLTIME_RESTART_DELAY_TICKS, TEAM_NAMES, canRestart, cameraTarget, fullTimeLines, formatClock, nextFlip, turboPips, worldToScreen,
 } from '../../src/game/layout';
 
 test('camera follows the ball and stops at both ends', () => {
@@ -61,4 +62,17 @@ test('rage flashes from RAGE_FLASH_AT up', () => {
 });
 test('blinkOn alternates on and off every period, starting on', () => {
   expect([0, 5, 6, 11, 12].map(t => blinkOn(t, 6))).toEqual([true, true, false, false, true]);
+});
+
+test('the pitch image has a margin as wide as the biggest shake, so no edge shows while shaking', () => {
+  expect(PITCH_MARGIN_PX).toBe(Math.max(...Object.values(HIT_FEEDBACK).map(f => f.shakePx)));
+  for (const camX of [CAMERA_MIN_X, CAMERA_MAX_X]) {
+    for (const dx of [-PITCH_MARGIN_PX, PITCH_MARGIN_PX]) {
+      const { x } = pitchImagePos(camX, { x: dx, y: 0 });
+      expect(x, `left, cam ${camX}, shake ${dx}`).toBeLessThanOrEqual(0);
+      expect(x + PITCH_TEX_W, `right, cam ${camX}, shake ${dx}`).toBeGreaterThanOrEqual(SCREEN_W);
+    }
+  }
+  expect(pitchImagePos(0, { x: 0, y: -PITCH_MARGIN_PX }).y + PITCH_TEX_H).toBeGreaterThanOrEqual(SCREEN_H); // bottom
+  expect(PITCH_MARGIN_PX).toBeLessThanOrEqual(HUD_BAR_H); // a shake down leaves a gap only under the top bar
 });

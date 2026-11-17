@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'vitest';
-import { ANIMATIONS, GETUP_TICKS, hurtAnimKey, type ColorRole, type Px } from '../../src/content/animations';
+import { ANIMATIONS, GETUP_TICKS, airTicks, hurtAnimKey, type ColorRole, type Px } from '../../src/content/animations';
 import { FRAME_H, FRAME_W, ORIGIN_X, ORIGIN_Y } from '../../src/art/sprites';
 import { HURT, HURT_TIERS, type HitType, type PlayerState, type PlayerStatus } from '../../src/sim';
 import { createMatch } from '../../src/sim/setup';
@@ -121,4 +121,9 @@ describe('animation data', () => {
     expect(stars(0)).not.toBe('[]');
     expect(stars(0)).not.toBe(stars(1));
   });
+});
+
+test('airTicks is airFrames x ticksPerFrame, 0 without air time', () => {
+  expect(airTicks(ANIMATIONS.hurt_overTheTop_2)).toBe(60);
+  expect(airTicks({ frames: [], ticksPerFrame: 9, loop: false })).toBe(0);
 });

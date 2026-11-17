@@ -2,13 +2,14 @@ import Phaser from 'phaser';
 import { canvasRect } from '../art/canvasRect';
 import { PAL } from '../art/palette';
 import { ORIGIN_X, ORIGIN_Y, frameIndex, frameKey } from '../art/sprites';
-import { ANIMATIONS } from '../content/animations';
+import { ANIMATIONS, airTicks } from '../content/animations';
 import type { MatchState, PlayerState, TeamId, Vec } from '../sim';
 import { animFor } from './playerAnim';
 import { ATLAS_KEY, BALL_KEY, BALL_PX } from './BootScene';
-import { DEPTH, PITCH_TEX_ORIGIN_X, PITCH_TEX_W, SCREEN_H, arcLift, cameraTarget, nextFlip, worldToScreen } from './layout';
+import { DEPTH, PITCH_TEX_H, PITCH_TEX_W, arcLift, cameraTarget, nextFlip, pitchImagePos, worldToScreen } from './layout';
 import { CRATER_H, CRATER_W, drawCrater, drawPitch } from './pitchArt';
-import { dazedMarkerVisible, shakeOffset } from './hitFeedback';
+import { STAR_BURST, shakeOffset, starOffsets, strongerShake, type Shake } from './hitFeedback';
+import { dazedMarkerVisible } from './indicators';
 
 const PITCH_KEY = 'pitch';
 const CRATER_KEY = 'crater';
@@ -23,7 +24,10 @@ const GOALKEEPER_KIT_OFFSET = 2;
 /** Dazed marker: two yellow pixels this far above the feet, and this far either side of the body centre. */
 const DAZED = { above: 24, dxLeft: -3, dxRight: 2, color: MARKER.color };
 
-interface Shake { startMs: number; px: number; ms: number }
+/** Star pixels: this big, this far above the feet at the burst centre. */
+const STAR = { size: 2, centerAbove: 8, color: MARKER.color };
+
+interface StarBurst { pos: Vec; startMs: number; stars: Phaser.GameObjects.Rectangle[] }
 interface Crater { pos: Vec; image: Phaser.GameObjects.Image }
 
 interface PlayerView { sprite: Phaser.GameObjects.Image; shadow: Phaser.GameObjects.Rectangle; dazed: Phaser.GameObjects.Rectangle[]; flip: boolean }
@@ -36,6 +40,7 @@ export class MatchView {
   private readonly markers: Phaser.GameObjects.Rectangle[];
   private players: PlayerView[] = [];
   private readonly craters: Crater[] = [];
+  private readonly bursts: StarBurst[] = [];
   private camX: number | null = null;
   private shaking: Shake | null = null;
   /** Whole-pixel shake offset for this frame, applied to everything drawn in the world (never to the HUD or controls). */
@@ -43,7 +48,7 @@ export class MatchView {
 
   /** `random` feeds the shake; it is the presentation's own generator, never the sim's. */
   constructor(private readonly scene: Phaser.Scene, private readonly random: () => number) {
-    const tex = scene.textures.createCanvas(PITCH_KEY, PITCH_TEX_W, SCREEN_H);
+    const tex = scene.textures.createCanvas(PITCH_KEY, PITCH_TEX_W, PITCH_TEX_H);
     if (!tex) throw new Error('pitch texture could not be created');
     drawPitch(canvasRect(tex.context));
     tex.refresh();
@@ -58,9 +63,16 @@ export class MatchView {
     scene.events.once('shutdown', () => { scene.textures.remove(PITCH_KEY); scene.textures.remove(CRATER_KEY); });
   }
 
-  /** Starts a screen shake of `px` pixels dying away over `ms`, timed in real milliseconds so it runs through a hit-stop. */
+  /** Starts a screen shake of `px` pixels dying away over `ms`, timed in real milliseconds so it runs through a hit-stop; the stronger of it and a running shake carries on. */
   shake(px: number, ms: number, nowMs: number): void {
-    this.shaking = { startMs: nowMs, px, ms };
+    this.shaking = strongerShake(this.shaking, { startMs: nowMs, px, ms }, nowMs);
+  }
+
+  /** A short burst of yellow stars flying out from a world position (an over-the-top hit). */
+  addStarBurst(pos: Vec, nowMs: number): void {
+    const stars = Array.from({ length: STAR_BURST.count }, () =>
+      this.scene.add.rectangle(0, 0, STAR.size, STAR.size, STAR.color).setOrigin(0.5, 0.5).setDepth(DEPTH.marker));
+    this.bursts.push({ pos, startMs: nowMs, stars });
   }
 
   /** Leaves a crater decal on the pitch at a world position; it stays until clearCraters(). */
@@ -78,7 +90,8 @@ export class MatchView {
     const target = cameraTarget(state.ball.pos.x);
     this.camX = this.camX === null ? target : this.camX + (target - this.camX) * CAMERA_EASE;
     const camX = Math.round(this.camX);
-    this.pitch.setPosition(-PITCH_TEX_ORIGIN_X - camX + this.offset.x, this.offset.y);
+    const pitchAt = pitchImagePos(camX, this.offset);
+    this.pitch.setPosition(pitchAt.x, pitchAt.y);
     if (this.players.length === 0) this.players = state.players.map(p => this.createPlayerView(p));
 
     this.markers.forEach(m => m.setVisible(false));
@@ -87,9 +100,20 @@ export class MatchView {
     const b = this.screenPos(state.ball.pos, camX);
     this.ball.setPosition(Math.round(b.x) - BALL_CENTER_PX, Math.round(b.y)).setDepth(state.ball.pos.y + DEPTH.ball);
     this.ballShadow.setPosition(Math.round(b.x) - BALL_CENTER_PX, Math.round(b.y));
+    this.syncBursts(camX, nowMs);
     for (const c of this.craters) {
       const at = this.screenPos(c.pos, camX);
       c.image.setPosition(Math.round(at.x), Math.round(at.y));
+    }
+  }
+
+  private syncBursts(camX: number, nowMs: number): void {
+    for (let i = this.bursts.length - 1; i >= 0; i--) {
+      const { pos, startMs, stars } = this.bursts[i];
+      const offsets = starOffsets(nowMs - startMs);
+      if (offsets.length === 0) { stars.forEach(r => r.destroy()); this.bursts.splice(i, 1); continue; }
+      const at = this.screenPos(pos, camX);
+      stars.forEach((r, k) => r.setPosition(Math.round(at.x) + offsets[k].x, Math.round(at.y) - STAR.centerAbove + offsets[k].y));
     }
   }
 
@@ -122,7 +146,7 @@ export class MatchView {
     view.flip = nextFlip(view.flip, p.facing.x);
     const { key, tick } = animFor(p, state.tick);
     const def = ANIMATIONS[key];
-    const lift = arcLift(def.arcHeight, tick, (def.airFrames ?? 0) * def.ticksPerFrame);
+    const lift = arcLift(def.arcHeight, tick, airTicks(def));
     view.sprite
       .setFrame(frameKey(kit, key, frameIndex(key, tick)))
       .setFlipX(view.flip)

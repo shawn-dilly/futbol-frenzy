@@ -1,5 +1,6 @@
 import type { Callout } from '../content/callouts';
 import { ShuffleBag } from '../content/shuffleBag';
+import { blinkOn } from './layout';
 import { PAL } from '../art/palette';
 import type { HitType, HurtTier } from '../sim';
 
@@ -21,7 +22,7 @@ export function calloutStyle(tier: HurtTier): CalloutStyle { return STYLES[tier]
 export function calloutVisible(shownTick: number, nowTick: number, style: Pick<CalloutStyle, 'flash' | 'ticks'>): boolean {
   const elapsed = nowTick - shownTick;
   if (elapsed >= style.ticks) return false;
-  return !style.flash || Math.floor(elapsed / FLASH_HALF_PERIOD_TICKS) % 2 === 0;
+  return !style.flash || blinkOn(elapsed, FLASH_HALF_PERIOD_TICKS);
 }
 
 /** What is on screen: '' when nothing is visible, otherwise a key that changes whenever the pixels would (text or tier/style). */
