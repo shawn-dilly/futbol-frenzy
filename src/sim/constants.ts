@@ -17,7 +17,7 @@ export const DEFAULT_HALF_SECONDS = 120;
 export const GK_HOLD_TICKS = 30, GK_LINE_X = 12;
 export const ANCHOR_SHIFT_X = 0.35, ANCHOR_SHIFT_Y = 0.3;
 export const ARRIVE_DIST = 3; // units: closer than this to a stand-here target means stand still
-export const JOCKEY_DIST = 12; // units; a chaser holds this far from an opponent who has the ball
+export const JOCKEY_DIST = 12; // units; the unit COVER_DIST is built from (the cover stands twice this far from the ball)
 export const SHOT_Y_MARGIN = 3; // units kept between a CPU shot's aim point and the post
 export const FORMATION: Vec[] = [ // team 0; team 1 mirrors x -> FIELD_W - x. Index 0 is the keeper.
   { x: 12, y: 62 }, { x: 100, y: 62 }, { x: 160, y: 28 }, { x: 160, y: 96 }, { x: 220, y: 62 },
@@ -50,4 +50,5 @@ export const COVER_DIST = JOCKEY_DIST * 2; // units; the cover stands this far f
 export const MARK_DIST = 8; // units; a marker stands this far from his man, on the line to his own goal
 export const BIG_TARGET_SLOW_SPEED = RUN_SPEED / 2; // units/s; the computer charges a big hit at a target moving slower than this
 export const BRAIN_BIG_HOLD_EXTRA_TICKS = 2; // a computer holds a big-hit charge this long past BIG_HIT_CHARGE_TICKS
+export const PURSUIT_LEAD_MAX_TICKS = 45; // a presser aims ahead of the carrier by at most this many ticks of travel
 export const CHARGE_ABORT_RANGE_FACTOR = 2; // a charging computer player releases once his target is farther than this x hitRange

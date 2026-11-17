@@ -1,6 +1,7 @@
 import type { BrainMemory, BrainRole, MatchState, PlayerState, Vec } from './types';
 import {
-  ANCHOR_SHIFT_X, ANCHOR_SHIFT_Y, BIG_TARGET_SLOW_SPEED, COVER_DIST, FIELD_MID_Y, FIELD_W, MARK_DIST, PRESS_TURBO_DIST, TURBO_COST,
+  ANCHOR_SHIFT_X, ANCHOR_SHIFT_Y, BIG_TARGET_SLOW_SPEED, COVER_DIST, FIELD_MID_Y, FIELD_W, MARK_DIST, PRESS_TURBO_DIST, PURSUIT_LEAD_MAX_TICKS, RUN_SPEED, TICK_HZ,
+  TURBO_COST,
 } from './constants';
 import type { LevelSpec } from './levels';
 import { clampToPitch } from './movement';
@@ -8,12 +9,18 @@ import { markedOpponent } from './brainRoles';
 import { nextRandom } from './rng';
 import { goalCenter } from './setup';
 import { isDown } from './status';
-import { add, dist, len, norm, rotate, scale, sub } from './vec';
+import { add, dist, len, nearestTo, norm, scale, sub } from './vec';
 
 export type Plan = Partial<BrainMemory>;
 
 /** A plan that only moves: go to `target`, press nothing. */
-const walkTo = (target: Vec, turbo = false): Plan => ({ target, action: 'none', turbo });
+const walkTo = (target: Vec, turbo = false, targetPlayer: number | null = null): Plan => ({ target, action: 'none', turbo, targetPlayer });
+
+/** Where to run to catch `target`: his position plus his velocity times the time to reach him at run speed (at most PURSUIT_LEAD_MAX_TICKS of his travel), kept on the pitch. */
+export function interceptPoint(chaser: PlayerState, target: PlayerState): Vec {
+  const seconds = Math.min(dist(chaser.pos, target.pos) / RUN_SPEED, PURSUIT_LEAD_MAX_TICKS / TICK_HZ);
+  return clampToPitch(add(target.pos, scale(target.vel, seconds)));
+}
 
 /** Linear blend from the formation spot (positioning 0) to the computed smart spot (1), kept on the pitch. */
 export function smartSpot(anchor: Vec, smart: Vec, positioning: number): Vec {
@@ -35,27 +42,23 @@ const mayHit = (state: MatchState, p: PlayerState): boolean => !state.config.hum
 /**
  * The plan for going in on `target` if he is within hitRange, else null. The hit is big (charged) against a slow
  * target or a keeper when the level and the meter allow, else a slide (turbo burst running or startable), else a
- * shoulder. `aim` is the lunge heading: the direction to the target turned by a random error within the level's.
+ * shoulder. The lunge heading is worked out at the release (live direction to the target turned by `aimError`, drawn here).
  */
 function planHit(state: MatchState, p: PlayerState, target: PlayerState, level: LevelSpec): Plan | null {
   if (!mayHit(state, p) || dist(p.pos, target.pos) > level.hitRange) return null;
-  const aim = rotate(norm(sub(target.pos, p.pos)), (nextRandom(state) * 2 - 1) * level.hitAimErrorRad);
+  const aimError = (nextRandom(state) * 2 - 1) * level.hitAimErrorRad;
   const hasMeter = state.turbo[p.team] >= TURBO_COST;
   const slow = target.role === 'gk' || len(target.vel) < BIG_TARGET_SLOW_SPEED;
-  if (level.hitTypes.includes('big') && hasMeter && slow) return { target: { ...target.pos }, action: 'chargeBig', aim, turbo: false };
+  if (level.hitTypes.includes('big') && hasMeter && slow) return { target: { ...target.pos }, targetPlayer: target.id, action: 'chargeBig', aimError, turbo: false };
   const slide = level.hitTypes.includes('slide') && (p.turboTicks > 0 || (level.usesTurbo && hasMeter));
-  return { target: { ...target.pos }, action: 'tap', aim, turbo: slide };
+  return { target: { ...target.pos }, targetPlayer: target.id, action: 'tap', aimError, turbo: slide };
 }
 
 /** A marker or cover with an opponent (not the carrier) in range goes for him, per the level's lateHitChance. */
 function planLateHit(state: MatchState, p: PlayerState, level: LevelSpec): Plan | null {
   if (level.lateHitChance <= 0 || !mayHit(state, p)) return null;
-  let victim: PlayerState | null = null, best = level.hitRange;
-  for (const q of state.players) { // ascending id: ties go to the lower id
-    if (q.team === p.team || q.role !== 'out' || q.id === state.ball.owner || isDown(q)) continue;
-    const d = dist(q.pos, p.pos);
-    if (d <= best && (victim === null || d < best)) { victim = q; best = d; }
-  }
+  const others = state.players.filter(q => q.team !== p.team && q.role === 'out' && q.id !== state.ball.owner && !isDown(q));
+  const victim = nearestTo(others, p.pos, level.hitRange); // ascending id: ties go to the lower id
   if (!victim || nextRandom(state) >= level.lateHitChance) return null;
   return planHit(state, p, victim, level);
 }
@@ -69,10 +72,10 @@ export function planDefence(state: MatchState, p: PlayerState, role: BrainRole, 
   switch (role) {
     case 'presser':
       return planHit(state, p, carrier, level)
-        ?? walkTo({ ...carrier.pos }, level.usesTurbo && dist(p.pos, carrier.pos) > PRESS_TURBO_DIST);
+        ?? walkTo(interceptPoint(p, carrier), level.usesTurbo && dist(p.pos, carrier.pos) > PRESS_TURBO_DIST, carrier.id);
     case 'cover': {
       const ball = state.ball.pos;
-      return planLateHit(state, p, level) ?? walkTo(clampToPitch(add(ball, scale(norm(sub(goal, ball)), COVER_DIST))));
+      return planHit(state, p, carrier, level) ?? planLateHit(state, p, level) ?? walkTo(clampToPitch(add(ball, scale(norm(sub(goal, ball)), COVER_DIST))));
     }
     case 'marker': {
       const man = markedOpponent(state, p);

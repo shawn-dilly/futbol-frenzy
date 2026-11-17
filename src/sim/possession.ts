@@ -3,7 +3,7 @@ import {
   BALL_RADIUS, DRIBBLE_OFFSET, FIELD_H, FIELD_W, KICK_ANIM_TICKS, KICK_COOLDOWN_TICKS, PASS_CONE_RAD,
   PASS_SPEED, PICKUP_MAX_BALL_SPEED, DAZED_FUMBLE_CHANCE, FUMBLE_COOLDOWN_TICKS, PICKUP_RADIUS, SHOT_SPEED,
 } from './constants';
-import { add, angleBetween, clamp, dist, isZero, len, norm, scale, sub } from './vec';
+import { add, angleBetween, clamp, dist, isZero, len, nearestTo, norm, scale, sub } from './vec';
 import { goalCenter, otherTeam } from './setup';
 import { nextRandom } from './rng';
 import { canAct, isDazed, setStatus, standingOrAll } from './status';
@@ -85,12 +85,7 @@ export function kick(state: MatchState, p: PlayerState, kind: 'pass' | 'shot', a
 export function nearestOutfield(state: MatchState, team: TeamId, exclude?: number): number {
   const others = state.players.filter(p => p.team === team && p.role === 'out' && p.id !== exclude);
   const candidates = standingOrAll(others.length > 0 ? others : state.players.filter(p => p.team === team && p.role === 'out'));
-  let best = candidates[0].id, bestDist = Infinity;
-  for (const p of candidates) {
-    const d = dist(p.pos, state.ball.pos);
-    if (d < bestDist) { best = p.id; bestDist = d; }
-  }
-  return best;
+  return nearestTo(candidates, state.ball.pos)!.id; // candidates is never empty
 }
 
 /** Control goes to the team's nearest standing outfield player to the ball (never `exclude`, e.g. a player who cannot act). */

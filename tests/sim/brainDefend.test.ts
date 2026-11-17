@@ -1,9 +1,8 @@
 import { describe, expect, test } from 'vitest';
 import { createMatch } from '../../src/sim/setup';
-import { planDefence, shiftedAnchor, smartSpot } from '../../src/sim/brainDefend';
+import { interceptPoint, planDefence, shiftedAnchor, smartSpot } from '../../src/sim/brainDefend';
 import { LEVELS, type LevelSpec } from '../../src/sim/levels';
-import { angleBetween, norm, sub } from '../../src/sim/vec';
-import { TURBO_COST, RUN_SPEED } from '../../src/sim/constants';
+import { PURSUIT_LEAD_MAX_TICKS, TICK_HZ, TURBO_COST, RUN_SPEED } from '../../src/sim/constants';
 import type { MatchState } from '../../src/sim/types';
 import { matchConfig, runTicks } from '../helpers';
 
@@ -38,6 +37,25 @@ describe('shiftedAnchor', () => {
   test('the formation anchor moved toward the ball', () => {
     const s = scene(); // player 7 anchors at (320, 28); ball (307, 62)
     expect(shiftedAnchor(s, s.players[7])).toEqual({ x: 320 + (307 - 240) * 0.35, y: 28 });
+  });
+});
+
+describe('pursuit', () => {
+  test('the presser aims ahead of a moving carrier by distance / RUN_SPEED of his travel', () => {
+    const s = scene(); s.players[6].pos = { x: 330, y: 62 }; s.players[4].vel = { x: 0, y: 30 }; // 30 away: 0.5 s
+    expect(planDefence(s, s.players[6], 'presser', LEVELS.pro)).toMatchObject({ target: { x: 300, y: 77 }, targetPlayer: 4 });
+  });
+  test('the lead is capped at PURSUIT_LEAD_MAX_TICKS of travel', () => {
+    const s = scene(); s.players[6].pos = { x: 400, y: 62 }; s.players[4].vel = { x: 30, y: 0 }; // 100 away would be 1.67 s; capped at 0.75 s
+    expect(interceptPoint(s.players[6], s.players[4])).toEqual({ x: 300 + 30 * PURSUIT_LEAD_MAX_TICKS / TICK_HZ, y: 62 });
+  });
+  test('the intercept point is kept on the pitch', () => {
+    const s = scene(); s.players[4].pos = { x: 300, y: 120 }; s.players[4].vel = { x: 0, y: 60 }; s.players[6].pos = { x: 340, y: 100 };
+    expect(interceptPoint(s.players[6], s.players[4])).toEqual({ x: 300, y: 120 });
+  });
+  test('a stationary carrier is aimed at where he stands', () => {
+    const s = scene();
+    expect(interceptPoint(s.players[6], s.players[4])).toEqual({ x: 300, y: 62 });
   });
 });
 
@@ -120,26 +138,29 @@ describe('hit choice', () => {
     s.config.human = [false, true];
     expect(press(s, LEVELS.pro).action).toBe('none');
   });
-  describe('lunge heading', () => {
-    const heading = (s: MatchState, level: LevelSpec) => planDefence(s, s.players[6], 'presser', level).aim!;
-    test('is the direction to the target within +-hitAimErrorRad, and varies', () => {
+  describe('lunge heading error', () => {
+    const plan = (s: MatchState, level: LevelSpec) => planDefence(s, s.players[6], 'presser', level);
+    test('is drawn once within +-hitAimErrorRad, varies, and names the target', () => {
       const s = scene(); s.players[6].pos = { x: 306, y: 66 };
-      const dir = norm(sub(s.players[4].pos, s.players[6].pos));
       let widest = 0;
       for (let seed = 1; seed <= 300; seed++) {
         s.rng = seed;
-        const a = heading(s, lvl({ hitAimErrorRad: 0.3 }));
-        expect(Math.hypot(a.x, a.y)).toBeCloseTo(1, 9);
-        const err = angleBetween(a, dir);
-        expect(err).toBeLessThanOrEqual(0.3 + 1e-9); widest = Math.max(widest, err);
+        const p = plan(s, lvl({ hitAimErrorRad: 0.3 }));
+        expect(Math.abs(p.aimError!)).toBeLessThanOrEqual(0.3); widest = Math.max(widest, Math.abs(p.aimError!));
+        expect(p.targetPlayer).toBe(4);
       }
       expect(widest).toBeGreaterThan(0.25);
     });
-    test('is exactly the direction to the target when the error is 0', () => {
+    test('is exactly 0 when the level has none', () => {
       const s = scene(); s.players[6].pos = { x: 306, y: 66 };
-      const dir = norm(sub(s.players[4].pos, s.players[6].pos)), a = heading(s, lvl({ hitAimErrorRad: 0 }));
-      expect(a.x).toBeCloseTo(dir.x, 12); expect(a.y).toBeCloseTo(dir.y, 12);
+      expect(Math.abs(plan(s, lvl({ hitAimErrorRad: 0 })).aimError!)).toBe(0);
     });
+  });
+  test('the cover also goes for the carrier when he is within hitRange', () => {
+    const s = scene(); s.players[8].pos = { x: 300 + LEVELS.pro.hitRange, y: 62 };
+    expect(planDefence(s, s.players[8], 'cover', LEVELS.pro)).toMatchObject({ action: 'tap', targetPlayer: 4, target: { x: 300, y: 62 } });
+    s.players[8].pos = { x: 300 + LEVELS.pro.hitRange + 1, y: 62 };
+    expect(planDefence(s, s.players[8], 'cover', LEVELS.pro).action).toBe('none');
   });
   test('a plan that does not hit draws no random number', () => {
     const s = scene(); const rng = s.rng;
@@ -176,7 +197,7 @@ describe('late hits', () => {
     expect(plan().action).toBe('none');
     s.players[8].hitCooldown = 0; s.config.human = [false, true];
     expect(plan().action).toBe('none');
-    s.config.human = [false, false]; s.ball.owner = 1; // he has the ball now: a presser's job, not a late hit
-    expect(plan().action).toBe('none');
+    s.config.human = [false, false]; s.ball.owner = 1; // he has the ball now: not a late hit (a cover would go for him as the carrier)
+    expect(planDefence(s, s.players[8], 'marker', lvl({ lateHitChance: 1 })).action).toBe('none');
   });
 });

@@ -32,6 +32,8 @@ export interface BrainMemory {
   turbo: boolean; // press turbo when available
   holdHitUntil: number; // tick until which HIT stays held (big-hit charge); 0 = not holding
   thinkOwner: number | null; // who had the ball when the plan was made (a change forces a re-think)
+  targetPlayer: number | null; // the player the plan moves at or hits (steered at live each tick); null = go to `target`
+  aimError: number; // radians: the lunge heading error, drawn once at think and applied to the live direction at release
 }
 export type SimEvent =
   | { type: 'kick'; kind: 'pass' | 'shot'; player: number }

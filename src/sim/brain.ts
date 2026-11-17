@@ -7,8 +7,9 @@ import { goalCenter, neutralIntent, otherTeam } from './setup';
 import { LEVELS, type LevelSpec } from './levels';
 import { nextRandom } from './rng';
 import { ballSide, roleOf } from './brainRoles';
-import { planDefence, shiftedAnchor, type Plan } from './brainDefend';
-import { clamp, dist, norm, sub } from './vec';
+import { interceptPoint, planDefence, shiftedAnchor, type Plan } from './brainDefend';
+import { isHumanTeammate } from './status';
+import { clamp, dist, norm, rotate, sub } from './vec';
 
 export type BrainIntent = PlayerIntent & { kick?: 'pass' | 'shot'; aim?: Vec };
 
@@ -59,7 +60,7 @@ function think(state: MatchState, p: PlayerState, mem: BrainMemory): void {
   const level = LEVELS[state.config.level[p.team]], role = roleOf(state, p);
   Object.assign(mem, {
     thinkAt: state.tick + level.reactionTicks, role, target: { ...p.pos }, action: 'none', aim: { ...ZERO }, turbo: false,
-    thinkOwner: state.ball.owner,
+    thinkOwner: state.ball.owner, targetPlayer: null, aimError: 0,
   }, planFor(state, p, role, level));
 }
 
@@ -75,19 +76,23 @@ function needsThink(state: MatchState, p: PlayerState, mem: BrainMemory): boolea
 
 function endHold(mem: BrainMemory): void {
   mem.holdHitUntil = 0;
-  mem.aim = { ...ZERO };
+  mem.aimError = 0;
 }
 
-/** Where a charging player is heading: the carrier he is after if the other team still has the ball, else his planned spot. */
-function chargeTarget(state: MatchState, p: PlayerState, mem: BrainMemory): Vec {
-  const owner = state.ball.owner;
-  return owner !== null && state.players[owner].team !== p.team ? state.players[owner].pos : mem.target;
+/** Where the plan's target is right now: the player it names (live), else the planned spot. */
+function targetNow(state: MatchState, mem: BrainMemory): Vec {
+  return mem.targetPlayer === null ? mem.target : state.players[mem.targetPlayer].pos;
+}
+
+/** Where to move while walking the plan: toward the intercept point of the player it names (live), else the planned spot. */
+function walkTarget(state: MatchState, p: PlayerState, mem: BrainMemory): Vec {
+  return mem.targetPlayer === null ? mem.target : interceptPoint(p, state.players[mem.targetPlayer]);
 }
 
 /** A charge that cannot complete is released as whatever it becomes (target out of reach), or ends (he has the ball). */
 function settleHold(state: MatchState, p: PlayerState, mem: BrainMemory, level: LevelSpec): void {
   if (state.ball.owner === p.id) endHold(mem);
-  else if (state.tick < mem.holdHitUntil && dist(p.pos, chargeTarget(state, p, mem)) > CHARGE_ABORT_RANGE_FACTOR * level.hitRange) mem.holdHitUntil = state.tick;
+  else if (state.tick < mem.holdHitUntil && dist(p.pos, targetNow(state, mem)) > CHARGE_ABORT_RANGE_FACTOR * level.hitRange) mem.holdHitUntil = state.tick;
 }
 
 function startHold(state: MatchState, mem: BrainMemory, ticks: number): void {
@@ -98,12 +103,13 @@ function startHold(state: MatchState, mem: BrainMemory, ticks: number): void {
 function replay(state: MatchState, p: PlayerState, mem: BrainMemory): BrainIntent {
   if (mem.holdHitUntil > 0) {
     const releasing = state.tick >= mem.holdHitUntil;
-    const intent = releasing ? { ...neutralIntent(), moveX: mem.aim.x, moveY: mem.aim.y } : moveOrHold(p, chargeTarget(state, p, mem));
+    const heading = rotate(norm(sub(targetNow(state, mem), p.pos)), mem.aimError); // the lunge goes where the target is now, off by the drawn error
+    const intent = releasing ? { ...neutralIntent(), moveX: heading.x, moveY: heading.y } : moveOrHold(p, targetNow(state, mem));
     if (releasing) endHold(mem);
     return { ...intent, hitHeld: !releasing };
   }
-  const intent: BrainIntent = moveOrHold(p, mem.target);
-  intent.turbo = mem.turbo && p.turboTicks === 0 && state.turbo[p.team] >= TURBO_COST;
+  const intent: BrainIntent = moveOrHold(p, walkTarget(state, p, mem));
+  intent.turbo = mem.turbo && !isHumanTeammate(state, p) && p.turboTicks === 0 && state.turbo[p.team] >= TURBO_COST;
   const action = mem.action;
   mem.action = 'none'; // a stored button is pressed once
   if (action === 'tap' || action === 'chargeBig') {

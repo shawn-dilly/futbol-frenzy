@@ -1,5 +1,5 @@
 import { test, expect } from 'vitest';
-import { add, sub, scale, len, dist, norm, clampLen, angleBetween, clamp, rotate } from '../../src/sim/vec';
+import { add, sub, scale, len, dist, norm, clampLen, angleBetween, clamp, rotate, nearestTo } from '../../src/sim/vec';
 
 test('add, sub, scale return new vectors and leave inputs alone', () => {
   const a = { x: 1, y: 2 }, b = { x: 3, y: 5 };
@@ -38,4 +38,12 @@ test('rotate turns +x toward +y for a positive angle and keeps length', () => {
   const q = rotate({ x: 3, y: 4 }, 0.7);
   expect(len(q)).toBeCloseTo(5, 12);
   expect(rotate({ x: 3, y: 4 }, 0)).toEqual({ x: 3, y: 4 });
+});
+test('nearestTo picks the nearest item within maxDist, ties to the earlier, null for none', () => {
+  const items = [{ id: 'a', pos: { x: 10, y: 0 } }, { id: 'b', pos: { x: -10, y: 0 } }, { id: 'c', pos: { x: 3, y: 4 } }];
+  expect(nearestTo(items, { x: 0, y: 0 })?.id).toBe('c');
+  expect(nearestTo(items.slice(0, 2), { x: 0, y: 0 })?.id).toBe('a');
+  expect(nearestTo(items, { x: 0, y: 0 }, 5)?.id).toBe('c');
+  expect(nearestTo(items.slice(0, 2), { x: 0, y: 0 }, 9.9)).toBeNull();
+  expect(nearestTo([], { x: 0, y: 0 })).toBeNull();
 });

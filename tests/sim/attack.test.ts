@@ -136,15 +136,22 @@ describe('one hit path for the computer', () => {
   test('a computer player holding HIT for 30 ticks with a full meter launches big and pays TURBO_COST', () => {
     const s = cpuPlaying(); const p = s.players[7]; s.turbo[1] = 1;
     updateAttack(s, p, PRESS); expect(p.status).toEqual({ kind: 'charging' });
-    for (let i = 0; i < BIG_HIT_CHARGE_TICKS; i++) { tickStatus(p); updateAttack(s, p, HELD); }
+    for (let i = 0; i < BIG_HIT_CHARGE_TICKS - 1; i++) { tickStatus(p); updateAttack(s, p, HELD); }
     expect(p.status).toEqual({ kind: 'charging' });
-    tickStatus(p); updateAttack(s, p, RELEASE);
+    tickStatus(p); updateAttack(s, p, RELEASE); // released with exactly BIG_HIT_CHARGE_TICKS of charge
     expect(p.status).toEqual({ kind: 'lunging', hit: 'big' }); expect(s.turbo[1]).toBeCloseTo(1 - TURBO_COST, 9);
+  });
+  test('one tick short of BIG_HIT_CHARGE_TICKS the same release is a shoulder and keeps the meter', () => {
+    const s = cpuPlaying(); const p = s.players[7]; s.turbo[1] = 1;
+    updateAttack(s, p, PRESS);
+    for (let i = 0; i < BIG_HIT_CHARGE_TICKS - 2; i++) { tickStatus(p); updateAttack(s, p, HELD); }
+    tickStatus(p); updateAttack(s, p, RELEASE);
+    expect(p.status).toEqual({ kind: 'lunging', hit: 'shoulder' }); expect(s.turbo[1]).toBe(1);
   });
   test('with an empty meter the same hold launches a shoulder', () => {
     const s = cpuPlaying(); const p = s.players[7]; s.turbo[1] = 0;
     updateAttack(s, p, PRESS);
-    for (let i = 0; i < BIG_HIT_CHARGE_TICKS; i++) { tickStatus(p); updateAttack(s, p, HELD); }
+    for (let i = 0; i < BIG_HIT_CHARGE_TICKS - 1; i++) { tickStatus(p); updateAttack(s, p, HELD); }
     tickStatus(p); updateAttack(s, p, RELEASE);
     expect(p.status).toEqual({ kind: 'lunging', hit: 'shoulder' }); expect(s.turbo[1]).toBe(0);
   });
@@ -373,16 +380,15 @@ describe('outside play', () => {
 });
 
 describe('the computer side', () => {
-  // The human (team 0) stands still with the ball. A presser must dispossess him: an approach, a first hit, and one
-  // retry after a whiff (a miss costs the team its level's cooldown), plus slack for the ball to change hands.
-  const APPROACH_TICKS = 300;
+  // The human (team 0) stands still with the ball. A presser must dispossess him within this many ticks at every level
+  // (an approach, a first hit, and for the slow levels a retry after a whiff, which costs the team its cooldown).
+  const STEAL_BUDGET_TICKS = 600;
   for (const level of LEVEL_ORDER) {
-    test(`a presser takes the ball off a stationary carrier within the level's budget (${level})`, () => {
+    test(`a presser takes the ball off a stationary carrier within 600 ticks (${level})`, () => {
       const s = createMatch(matchConfig({ human: [true, false], level: [level, level] }));
       runTicks(s, 60);
-      const budget = APPROACH_TICKS + 2 * LEVELS[level].teamHitCooldownTicks;
       let taken = false;
-      for (let t = 0; t < budget && !taken; t++) {
+      for (let t = 0; t < STEAL_BUDGET_TICKS && !taken; t++) {
         runTicks(s, 1);
         taken = s.events.some(e => e.type === 'hit' && e.tackler >= 5) && (s.ball.owner === null || s.ball.owner >= 5);
       }

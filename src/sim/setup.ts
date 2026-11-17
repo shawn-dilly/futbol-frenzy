@@ -29,7 +29,7 @@ export function neutralIntent(): PlayerIntent {
 }
 
 export function blankMemory(): BrainMemory {
-  return { thinkAt: 0, role: 'support', target: { x: 0, y: 0 }, action: 'none', aim: { x: 0, y: 0 }, turbo: false, holdHitUntil: 0, thinkOwner: null };
+  return { thinkAt: 0, role: 'support', target: { x: 0, y: 0 }, action: 'none', aim: { x: 0, y: 0 }, turbo: false, holdHitUntil: 0, thinkOwner: null, targetPlayer: null, aimError: 0 };
 }
 
 function makePlayer(team: TeamId, index: number): PlayerState {

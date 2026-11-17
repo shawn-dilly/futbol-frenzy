@@ -1,7 +1,7 @@
 import { expect, test } from 'vitest';
 import { createMatch, neutralPad } from '../../src/sim/setup';
 import { step } from '../../src/sim/step';
-import type { Level, MatchState, PadInput } from '../../src/sim/types';
+import type { MatchState, PadInput } from '../../src/sim/types';
 import { runTicks, matchConfig } from '../helpers';
 
 const cpu = matchConfig({ seed: 7, human: [false, false] });
@@ -72,7 +72,7 @@ test.each([1, 2, 3, 4, 5])('a 2 x 120 s CPU-v-CPU match with seed %i has hits an
 });
 
 test('a CPU-v-CPU match at different levels per team is identical twice over and survives a JSON round trip', () => {
-  const config = { ...cpu, halfSeconds: 30, level: ['rookie', 'psycho'] as [Level, Level] };
+  const config = matchConfig({ seed: 7, human: [false, false], halfSeconds: 30, level: ['rookie', 'psycho'] });
   const a = createMatch(config), b = createMatch(config);
   runTicks(a, SPLIT_TICKS); runTicks(b, SPLIT_TICKS);
   const copy: MatchState = JSON.parse(JSON.stringify(b));

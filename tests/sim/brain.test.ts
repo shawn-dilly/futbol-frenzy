@@ -3,9 +3,11 @@ import { blankMemory, createMatch, goalCenter, neutralPad, placeForKickoff } fro
 import { hurtPlayer } from '../../src/sim/hurt';
 import { brainIntent, type BrainIntent } from '../../src/sim/brain';
 import { ARRIVE_DIST, BIG_HIT_CHARGE_TICKS, BRAIN_BIG_HOLD_EXTRA_TICKS, ANCHOR_SHIFT_X, ANCHOR_SHIFT_Y, FIELD_MID_Y, GK_HOLD_TICKS } from '../../src/sim/constants';
-import { norm, sub } from '../../src/sim/vec';
+import { norm, rotate, sub } from '../../src/sim/vec';
+import { interceptPoint } from '../../src/sim/brainDefend';
 import { LEVELS, LEVEL_ORDER } from '../../src/sim/levels';
 import { step } from '../../src/sim/step';
+import { canAct } from '../../src/sim/status';
 import type { MatchState, PlayerState } from '../../src/sim/types';
 import { runTicks, matchConfig } from '../helpers';
 
@@ -116,9 +118,9 @@ describe('think cadence', () => {
     expect(s.brain[6].thinkAt - s.tick).toBe(LEVELS.psycho.reactionTicks);
     expect(s.brain[3].thinkAt - s.tick).toBe(LEVELS.rookie.reactionTicks);
   });
-  test('the player gaining the ball forces a re-think', () => {
-    const s = pressScene(); s.ball.owner = null; s.ball.pos = { x: 335, y: 66 }; rethink(s, 6);
-    expect(s.brain[6].role).toBe('chaser');
+  test('the player gaining the ball forces a re-think, with the ball staying on his own team', () => {
+    const s = pressScene(); s.ball.owner = 8; rethink(s, 6);
+    expect(s.brain[6].role).toBe('support');
     s.ball.owner = 6; s.tick += 1; brainIntent(s, s.players[6]);
     expect(s.brain[6].role).toBe('carrier');
   });
@@ -146,22 +148,27 @@ describe('think cadence', () => {
     s.ball.owner = 1; s.tick += 1; brainIntent(s, s.players[6]);
     expect(s.brain[6]).toEqual(plan);
   });
-  test('getting up after a knockdown starts from blank memory and thinks at once', () => {
+  test('a flattened computer player has blank memory for as long as he is down', () => {
     const s = playing(); const p = s.players[7];
     s.brain[7] = { ...s.brain[7], thinkAt: 500, action: 'chargeBig', holdHitUntil: s.tick + 40, turbo: true };
     hurtPlayer(s, p, 'knockdown', { x: 1, y: 0 }, 30);
     runTicks(s, 1);
     expect(s.brain[7]).toEqual(blankMemory());
   });
-  test('a plan made before a flattening never fires: no stale kick, no stale hit', () => {
-    const s = playing(); s.ball.owner = null; s.ball.pos = { x: 30, y: 10 };
+  test('a plan made before a flattening never fires: no charge, no stale hit, and he thinks afresh on getting up', () => {
+    const s = playing(); s.ball.owner = null; s.ball.pos = { x: 30, y: 10 }; // nothing for him to hit
     const p = s.players[7];
-    setStatusCharging(p);
-    s.brain[7].holdHitUntil = s.tick + 1000; s.brain[7].action = 'chargeBig';
+    s.brain[7] = { ...blankMemory(), role: 'presser', thinkAt: s.tick + 100000, action: 'chargeBig', targetPlayer: 4, thinkOwner: 4 };
     hurtPlayer(s, p, 'knockdown', { x: 1, y: 0 }, 30);
-    runTicks(s, 200);
+    let downTicks = 0, gotUp = false;
+    for (let t = 0; t < 400; t++) {
+      runTicks(s, 1);
+      expect(p.status.kind).not.toBe('charging'); expect(p.status.kind).not.toBe('lunging');
+      if (!canAct(p)) { downTicks += 1; expect(s.brain[7]).toEqual(blankMemory()); }
+      else if (!gotUp) { gotUp = true; expect(s.brain[7].thinkAt).toBeLessThan(s.tick + 1000); expect(s.brain[7].action).toBe('none'); }
+    }
+    expect(downTicks).toBeGreaterThan(50); expect(gotUp).toBe(true);
     expect(s.events.some(e => e.type === 'whiff' && e.player === 7)).toBe(false);
-    expect(s.brain[7].holdHitUntil).toBeLessThan(s.tick + 1000);
   });
   test('a stored shot is dropped once the player no longer has the ball', () => {
     const s = playing(); s.ball.owner = 3; // team 0, not player 4
@@ -186,7 +193,6 @@ describe('think cadence', () => {
     for (const m of s.brain) expect(m).toEqual(blankMemory());
   });
 });
-function setStatusCharging(p: PlayerState): void { p.status = { kind: 'charging' }; p.statusTick = 10; p.statusTicks = 0; }
 
 describe('hitting', () => {
   const pressed = (level: 'rookie' | 'pro' | 'bruiser' | 'psycho', dx: number) => {
@@ -203,26 +209,36 @@ describe('hitting', () => {
     }
     expect(seen).toEqual(['PH', '--', '--', '--']);
   });
-  test('just outside hitRange he closes in without hitting; hitRange is his own team level', () => {
+  test('just outside hitRange he closes in without hitting', () => {
     const out = pressed('pro', PRO.hitRange + 1);
     expect(out.i.hitPress).toBe(false); towards(out.i, out.s.players[6].pos, out.s.players[4].pos);
     expect(pressed('rookie', LEVELS.rookie.hitRange + 1).i.hitPress).toBe(false);
     expect(pressed('rookie', LEVELS.rookie.hitRange).i.hitPress).toBe(true);
-    expect(pressed('psycho', LEVELS.rookie.hitRange + 1).i.hitPress).toBe(true);
   });
-  test('the launch tick steers along the planned heading', () => {
-    const { s } = pressed('pro', PRO.hitRange); const heading = s.brain[6].aim;
-    expect(Math.hypot(heading.x, heading.y)).toBeCloseTo(1, 9);
+  test('hitRange is read from the level of the presser\'s own team', () => {
+    const gap = LEVELS.rookie.hitRange + 1; // inside psycho range, outside rookie range
+    for (const [level, presses] of [[['psycho', 'rookie'], false], [['rookie', 'psycho'], true]] as const) {
+      const s = pressScene(matchConfig({ human: [false, false], level: [...level] }));
+      s.players[6].pos = { x: 300 + gap, y: 62 };
+      expect(rethink(s, 6).hitPress).toBe(presses);
+    }
+  });
+  test('the launch tick steers along the live direction to the target, turned by the stored error', () => {
+    const { s } = pressed('pro', PRO.hitRange);
+    expect(s.brain[6].targetPlayer).toBe(4);
+    s.players[4].pos = { x: 309 + 5, y: 62 + 3 }; // the carrier moves after the press
+    const { aimError } = s.brain[6]; expect(aimError).not.toBe(0);
     s.tick += 1; const release = brainIntent(s, s.players[6]);
-    expect(release.hitHeld).toBe(false); expect(release.moveX).toBeCloseTo(heading.x, 12); expect(release.moveY).toBeCloseTo(heading.y, 12);
+    const want = rotate(norm(sub(s.players[4].pos, s.players[6].pos)), aimError);
+    expect(release.hitHeld).toBe(false); expect(release.moveX).toBeCloseTo(want.x, 12); expect(release.moveY).toBeCloseTo(want.y, 12);
   });
   test('a slide plan presses turbo with the tap', () => {
     const { i } = pressed('pro', PRO.hitRange);
     expect(i.turbo).toBe(true); expect(i.hitPress).toBe(true);
   });
-  test('a big-hit charge holds HIT for BIG_HIT_CHARGE_TICKS + 2 ticks and then releases once, steering along the heading', () => {
+  test('a big-hit charge holds HIT for BIG_HIT_CHARGE_TICKS + 2 ticks and then releases once', () => {
     const { s, i } = pressed('bruiser', 9);
-    const t0 = s.tick, hold = BIG_HIT_CHARGE_TICKS + BRAIN_BIG_HOLD_EXTRA_TICKS, heading = { ...s.brain[6].aim };
+    const t0 = s.tick, hold = BIG_HIT_CHARGE_TICKS + BRAIN_BIG_HOLD_EXTRA_TICKS;
     expect(i.hitPress).toBe(true); expect(i.hitHeld).toBe(true);
     expect(s.brain[6].action).toBe('none'); expect(s.brain[6].holdHitUntil).toBe(t0 + hold);
     for (let k = 1; k < hold; k++) {
@@ -231,8 +247,26 @@ describe('hitting', () => {
     }
     s.tick = t0 + hold; const release = brainIntent(s, s.players[6]);
     expect(release.hitHeld).toBe(false); expect(release.hitPress).toBe(false);
-    expect(release.moveX).toBeCloseTo(heading.x, 12); expect(release.moveY).toBeCloseTo(heading.y, 12);
     expect(s.brain[6].holdHitUntil).toBe(0);
+  });
+  test('a charger whose carrier moved to the other side releases pointing at the carrier where he is now', () => {
+    const real = LEVELS.bruiser.hitAimErrorRad; LEVELS.bruiser.hitAimErrorRad = 0;
+    try {
+      const { s } = pressed('bruiser', 9);
+      expect(s.brain[6].action).toBe('none'); expect(s.brain[6].holdHitUntil).toBeGreaterThan(s.tick);
+      s.players[4].pos = { x: 330, y: 62 }; // was at x = 300, behind the charger; now ahead of him (charger at x = 309)
+      s.tick = s.brain[6].holdHitUntil - 1; brainIntent(s, s.players[6]);
+      s.tick += 1; const release = brainIntent(s, s.players[6]);
+      expect(release.hitHeld).toBe(false); expect(release.moveX).toBeCloseTo(1, 12); expect(release.moveY).toBeCloseTo(0, 12);
+    } finally { LEVELS.bruiser.hitAimErrorRad = real; }
+  });
+  test('while closing in, the presser steers at the carrier where he is now, not where he was at the think', () => {
+    const s = pressScene(); rethink(s, 6);
+    s.players[4].pos = { x: 300, y: 20 }; s.tick += 1; // inside the reaction window: no re-think
+    const i = brainIntent(s, s.players[6]);
+    expect(s.brain[6].target).toEqual({ x: 300, y: 62 });
+    const lead = interceptPoint(s.players[6], s.players[4]);
+    towards(i, s.players[6].pos, lead);
   });
   test('a charge whose target ran out of range is released at once, and one that got the ball ends', () => {
     const { s } = pressed('bruiser', 9);
@@ -257,6 +291,24 @@ describe('hitting', () => {
     }
     expect(pressesByTeam0.length).toBeGreaterThan(1000);
     expect(pressesByTeam0.some(Boolean)).toBe(false);
+  });
+});
+
+describe('a human team\'s brain teammates', () => {
+  test('never press turbo, though a computer presser 60 units away does', () => {
+    const cpuSide = pressScene(); cpuSide.players[6].pos = { x: 360, y: 62 }; cpuSide.players[7].pos = { x: 440, y: 20 };
+    expect(rethink(cpuSide, 6).turbo).toBe(true);
+    const humanSide = pressScene(matchConfig({ human: [false, true] })); humanSide.players[6].pos = { x: 360, y: 62 }; humanSide.players[7].pos = { x: 440, y: 20 }; humanSide.controlled[1] = 9;
+    const i = rethink(humanSide, 6);
+    expect(humanSide.brain[6].turbo).toBe(true); expect(i.turbo).toBe(false);
+  });
+  test('none of them ever has a turbo burst in a whole match against the computer', () => {
+    const s = playing(matchConfig({ seed: 9, human: [true, false] }));
+    for (let t = 0; t < 3000; t++) {
+      step(s, [neutralPad(), neutralPad()]);
+      for (const p of s.players) if (p.team === 0 && s.controlled[0] !== p.id) expect(p.turboTicks).toBe(0);
+    }
+    expect(s.turbo[0]).toBe(1);
   });
 });
 

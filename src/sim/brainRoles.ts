@@ -1,7 +1,7 @@
 import type { BrainRole, MatchState, PlayerState, TeamId, Vec } from './types';
 import { goalCenter } from './setup';
 import { isHumanControlled, standingOrAll } from './status';
-import { add, dist, scale } from './vec';
+import { add, nearestTo, scale } from './vec';
 
 /** Who has the ball, seen from `team`: its own player, the other team's player, or nobody. */
 export type BallSide = 'own' | 'other' | 'loose';
@@ -9,16 +9,6 @@ export type BallSide = 'own' | 'other' | 'loose';
 export function ballSide(state: MatchState, team: TeamId, owner: number | null = state.ball.owner): BallSide {
   if (owner === null) return 'loose';
   return state.players[owner].team === team ? 'own' : 'other';
-}
-
-/** The player nearest `to` (ties to the earlier one in the list), or null for an empty list. */
-function nearest(players: PlayerState[], to: Vec): PlayerState | null {
-  let best: PlayerState | null = null, bestDist = Infinity;
-  for (const p of players) {
-    const d = dist(p.pos, to);
-    if (d < bestDist) { best = p; bestDist = d; }
-  }
-  return best;
 }
 
 const teamMembers = (state: MatchState, team: TeamId): PlayerState[] => state.players.filter(p => p.team === team);
@@ -40,12 +30,12 @@ export function assignRoles(state: MatchState, team: TeamId): BrainRole[] {
   if (owner === null) {
     const receiver = pool.find(p => p.id === state.ball.passTarget);
     if (receiver) give(receiver, 'receiver');
-    else if (!state.config.human[team]) give(nearest(free, state.ball.pos), 'chaser'); // on a human team the human is the chaser
+    else if (!state.config.human[team]) give(nearestTo(free, state.ball.pos), 'chaser'); // on a human team the human is the chaser
   } else if (owner.team === team) {
     give(pool.find(p => p.id === owner.id) ?? null, 'carrier');
   } else {
-    const presser = nearest(free, owner.pos);
-    const cover = nearest(free.filter(p => p !== presser), scale(add(owner.pos, goalCenter(team)), 0.5));
+    const presser = nearestTo(free, owner.pos);
+    const cover = nearestTo(free.filter(p => p !== presser), scale(add(owner.pos, goalCenter(team)), 0.5));
     give(presser, 'presser'); give(cover, 'cover');
     for (const p of free) if (p !== presser && p !== cover) give(p, 'marker');
   }
@@ -68,7 +58,7 @@ export function markedOpponent(state: MatchState, p: PlayerState): PlayerState |
   const opponents = standingOrAll(state.players.filter(q => q.team !== p.team && q.role === 'out' && q.id !== carrierId));
   const taken = new Set<number>();
   for (const marker of members.filter((_, i) => roles[i] === 'marker')) {
-    const man = nearest(opponents.filter(q => !taken.has(q.id)), marker.pos);
+    const man = nearestTo(opponents.filter(q => !taken.has(q.id)), marker.pos);
     if (man) taken.add(man.id);
     if (marker === p) return man;
   }

@@ -7,8 +7,8 @@ import { hurtPlayer } from './hurt';
 import { LEVELS } from './levels';
 import { hitDamage, rageAfterHit, tierFor } from './rage';
 import { attackDir } from './setup';
-import { isDown, isHumanControlled, setStatus } from './status';
-import { dist, isZero, norm } from './vec';
+import { isDown, isHumanTeammate, setStatus } from './status';
+import { isZero, nearestTo, norm } from './vec';
 
 /** How long a computer team waits between hits (its level's value). */
 const teamCooldown = (state: MatchState, team: TeamId): number => LEVELS[state.config.level[team]].teamHitCooldownTicks;
@@ -44,27 +44,20 @@ function releasedHit(state: MatchState, p: PlayerState): HitType {
 /** Charge start, release and launch for one player this tick. */
 export function updateAttack(state: MatchState, p: PlayerState, intent: PlayerIntent): void {
   if (p.status.kind === 'charging') {
-    const controlMoved = state.config.human[p.team] && !isHumanControlled(state, p);
-    if (state.ball.owner === p.id || controlMoved) setStatus(p, { kind: 'free' }, 0); // picked the ball up, or a human's control moved on: no hit
+    if (state.ball.owner === p.id || isHumanTeammate(state, p)) setStatus(p, { kind: 'free' }, 0); // picked the ball up, or a human's control moved on: no hit
     else if (!intent.hitHeld || p.statusTick >= BIG_HIT_MAX_HOLD_TICKS) launch(state, p, releasedHit(state, p), intent);
     return;
   }
   // hitPress is an edge, so a button held through a hurt spell or a kickoff never starts a charge
   if (p.status.kind !== 'free' || p.hitCooldown > 0 || state.ball.owner === p.id) return;
-  if (state.config.human[p.team] && !isHumanControlled(state, p)) return; // a human's teammates never start a hit
+  if (isHumanTeammate(state, p)) return; // a human's teammates never start a hit
   if (intent.hitPress) setStatus(p, { kind: 'charging' }, 0);
 }
 
 /** The nearest opponent within reach who is not down and was not hurt earlier this tick. */
 function findVictim(state: MatchState, tackler: PlayerState, reach: number): PlayerState | null {
-  let best: PlayerState | null = null, bestDist = Infinity;
-  for (const q of state.players) { // ascending id: ties go to the lower id
-    if (q.team === tackler.team || isDown(q)) continue;
-    if (q.status.kind === 'hurt' && q.statusTick === 0) continue;
-    const d = dist(q.pos, tackler.pos);
-    if (d <= reach && d < bestDist) { best = q; bestDist = d; }
-  }
-  return best;
+  const candidates = state.players.filter(q => q.team !== tackler.team && !isDown(q) && !(q.status.kind === 'hurt' && q.statusTick === 0));
+  return nearestTo(candidates, tackler.pos, reach); // ascending id: ties go to the lower id
 }
 
 function land(state: MatchState, tackler: PlayerState, victim: PlayerState, hit: HitType): void {

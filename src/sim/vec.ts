@@ -27,4 +27,13 @@ export function rotate(v: Vec, rad: number): Vec {
   const c = Math.cos(rad), s = Math.sin(rad);
   return { x: v.x * c - v.y * s, y: v.x * s + v.y * c };
 }
+/** The item whose `pos` is nearest `to` and within `maxDist` (inclusive); ties go to the earlier item. Null if none. */
+export function nearestTo<T extends { pos: Vec }>(items: readonly T[], to: Vec, maxDist = Infinity): T | null {
+  let best: T | null = null, bestDist = Infinity;
+  for (const item of items) {
+    const d = dist(item.pos, to);
+    if (d <= maxDist && d < bestDist) { best = item; bestDist = d; }
+  }
+  return best;
+}
 export function clamp(v: number, lo: number, hi: number): number { return Math.min(hi, Math.max(lo, v)); }
