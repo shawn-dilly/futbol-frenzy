@@ -50,6 +50,13 @@ export class Sfx {
     }
   }
 
+  /** Release the context when its owning scene shuts down. */
+  dispose(): void {
+    const ctx = this.ctx;
+    this.ctx = null; this.master = null; this.noiseBuffer = null; this.lastPlayedS.clear();
+    try { void Promise.resolve(ctx?.close()).catch(() => {}); } catch { /* already closed */ }
+  }
+
   play(name: SfxName): void {
     const { ctx, master } = this;
     if (this.muted || !ctx || !master || ctx.state !== 'running') return;

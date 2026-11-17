@@ -155,3 +155,14 @@ test('a sound requested again inside its minimum gap makes no nodes; after the g
 test('every sound has a positive minimum gap', () => {
   for (const [name, spec] of Object.entries(SOUNDS)) expect(spec.minGapS, name).toBeGreaterThan(0);
 });
+
+test('dispose closes the owned context once and allows a fresh context', () => {
+  const first = fakeContext(); const second = fakeContext(); let made = 0;
+  const s = new Sfx(() => (++made === 1 ? first.ctx : second.ctx));
+  s.unlock(); s.play('goal'); s.dispose(); s.dispose();
+  expect(first.log.closed).toBe(1);
+  s.play('goal'); expect(first.log.oscillators).toBe(3);
+  s.unlock(); s.play('goal');
+  expect(made).toBe(2); expect(second.log.oscillators).toBe(3);
+  s.dispose(); expect(second.log.closed).toBe(1);
+});

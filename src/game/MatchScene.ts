@@ -50,7 +50,7 @@ export class MatchScene extends Phaser.Scene {
   private seed = 0;
   /** Sim tick of the full-time whistle, null until it blows. */
   private fulltimeTick: number | null = null;
-  /** One instance for the scene's lifetime so a restart keeps the unlocked audio context. */
+  /** Audio resources are released on each shutdown. */
   private readonly sfx = new Sfx();
 
   constructor() { super('match'); }
@@ -73,12 +73,13 @@ export class MatchScene extends Phaser.Scene {
     this.state = createMatch({ seed: this.seed, halfSeconds: params.halfSeconds, human: [!params.demo, false], level: [params.level2 ?? params.level, params.level] });
     this.replay = createReplayRecord(this.state.config);
     this.callouts = new CalloutPicker(CALLOUTS, seededRandom(this.seed ^ CALLOUT_SEED_SALT));
+    let active = true;
     const hook: NonNullable<Window["__ff"]> = {
       state: this.state,
-      pause: () => this.pause(),
-      resume: () => this.resume(),
+      pause: () => { if (active) this.pause(); },
+      resume: () => { if (active) this.resume(); },
       replay: () => structuredClone(this.replay),
-      showCallout: (tier, hit) => { const c = this.callouts.pick(tier, hit); if (c) this.calloutBanner.show(c.text, tier, this.state.tick); },
+      showCallout: (tier, hit) => { if (!active) return; const c = this.callouts.pick(tier, hit); if (c) this.calloutBanner.show(c.text, tier, this.state.tick); },
       calloutText: () => this.calloutBanner.visibleText(this.state.tick),
     };
     window.__ff = hook;
@@ -105,6 +106,8 @@ export class MatchScene extends Phaser.Scene {
     this.input.on('pointerup', unlock);
     this.input.keyboard?.on('keydown', unlock);
     this.events.once('shutdown', () => {
+      active = false;
+      this.sfx.dispose();
       this.input.off('pointerdown', restart);
       this.input.keyboard?.off('keydown', restartKey);
       this.clearControls();
