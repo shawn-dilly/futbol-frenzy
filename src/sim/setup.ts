@@ -1,8 +1,9 @@
 import type { MatchConfig, MatchState, PadInput, PlayerState, TeamId, Vec } from './types';
 import {
-  FIELD_MID_Y, FIELD_W, FORMATION, KICKER_BEHIND_BALL, KICKOFF_PAUSE_TICKS, TICK_HZ,
+  FIELD_MID_Y, FIELD_W, FORMATION, KICKER_BEHIND_BALL, KICKOFF_PAUSE_TICKS, MAX_HEALTH, TICK_HZ,
 } from './constants';
 import { dist } from './vec';
+import { setStatus } from './status';
 
 const KICKOFF_SPOT: Vec = { x: FIELD_W / 2, y: FIELD_MID_Y };
 const PLAYERS_PER_TEAM = FORMATION.length;
@@ -26,7 +27,9 @@ function makePlayer(team: TeamId, index: number): PlayerState {
   return {
     id: team * PLAYERS_PER_TEAM + index, team, role: index === KEEPER_INDEX ? 'gk' : 'out',
     pos: { ...anchor }, vel: { x: 0, y: 0 }, facing: { x: attackDir(team), y: 0 }, anchor,
-    kickCooldown: 0, turboTicks: 0, anim: 'idle', animTick: 0,
+    kickCooldown: 0, turboTicks: 0,
+    status: { kind: 'free' }, statusTick: 0, statusTicks: 0,
+    health: MAX_HEALTH, hitCooldown: 0, knock: { x: 0, y: 0 },
   };
 }
 
@@ -36,7 +39,8 @@ export function placeForKickoff(state: MatchState, kicking: TeamId): void {
     p.pos = { ...p.anchor };
     p.vel = { x: 0, y: 0 };
     p.facing = { x: attackDir(p.team), y: 0 };
-    p.kickCooldown = 0; p.turboTicks = 0; p.anim = 'idle'; p.animTick = 0;
+    p.kickCooldown = 0; p.turboTicks = 0; p.hitCooldown = 0; p.knock = { x: 0, y: 0 };
+    setStatus(p, { kind: 'free' }, 0);
   }
   state.ball = { pos: { ...KICKOFF_SPOT }, vel: { x: 0, y: 0 }, owner: null, ownerTicks: 0, passTarget: null };
 
@@ -67,7 +71,7 @@ export function createMatch(config: MatchConfig): MatchState {
   const state: MatchState = {
     config, tick: 0, rng: config.seed,
     phase: 'kickoff', phaseTicks: 0, half: 1, clockTicks: config.halfSeconds * TICK_HZ,
-    score: [0, 0], kickoffTeam: 0,
+    score: [0, 0], kickoffTeam: 0, rage: [0, 0], lastHitTick: [0, 0],
     players, ball: { pos: { ...KICKOFF_SPOT }, vel: { x: 0, y: 0 }, owner: null, ownerTicks: 0, passTarget: null },
     controlled: [0, 0], turbo: [1, 1],
     prevInput: [neutralPad(), neutralPad()], events: [],

@@ -13,7 +13,7 @@ const PITCH_CENTER_X = FIELD_W / 2;
 
 const move = (p: PlayerState, target: Vec): BrainIntent => {
   const d = norm(sub(target, p.pos));
-  return { moveX: d.x, moveY: d.y, pass: false, shoot: false, turbo: false };
+  return { moveX: d.x, moveY: d.y, pass: false, shoot: false, turbo: false, hitPress: false, hitHeld: false };
 };
 
 /** Like `move`, but stands still once within ARRIVE_DIST of the target. */

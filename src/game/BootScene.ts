@@ -1,8 +1,7 @@
 import Phaser from 'phaser';
 import { canvasRect } from '../art/canvasRect';
 import { KITS, PAL } from '../art/palette';
-import { ANIMS, FRAME_H, FRAME_W, atlasLayout, drawPlayerFrame, frameKey } from '../art/sprites';
-import type { AnimName } from '../sim';
+import { ANIMS, type AnimName, FRAME_H, FRAME_W, atlasLayout, drawPlayerFrame, frameKey } from '../art/sprites';
 
 export const ATLAS_KEY = 'atlas';
 export const BALL_KEY = 'ball';

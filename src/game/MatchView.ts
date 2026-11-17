@@ -1,8 +1,9 @@
 import Phaser from 'phaser';
 import { canvasRect } from '../art/canvasRect';
 import { PAL } from '../art/palette';
-import { ORIGIN_X, ORIGIN_Y, frameIndex, frameKey } from '../art/sprites';
+import { ANIMS, ORIGIN_X, ORIGIN_Y, type AnimName, frameIndex, frameKey } from '../art/sprites';
 import type { MatchState, PlayerState, TeamId } from '../sim';
+import { animFor } from './playerAnim';
 import { ATLAS_KEY, BALL_KEY, BALL_PX } from './BootScene';
 import { DEPTH, PITCH_TEX_ORIGIN_X, PITCH_TEX_W, SCREEN_H, cameraTarget, nextFlip, worldToScreen } from './layout';
 import { drawPitch } from './pitchArt';
@@ -16,6 +17,9 @@ const BALL_CENTER_PX = Math.floor(BALL_PX / 2); // sprite columns left of the ba
 const FLIP_OFFSET_PX = 1;
 const MARKER = { w: 3, h: 2, above: 20, color: Phaser.Display.Color.HexStringToColor(PAL.yel).color }; // px above the feet
 const GOALKEEPER_KIT_OFFSET = 2;
+
+/** Until Task 6 draws the new frames, a key the atlas lacks shows idle. */
+const drawable = (key: string): AnimName => (key in ANIMS ? (key as AnimName) : 'idle');
 
 interface PlayerView { sprite: Phaser.GameObjects.Image; shadow: Phaser.GameObjects.Rectangle; flip: boolean }
 
@@ -68,8 +72,10 @@ export class MatchView {
     const x = Math.round(s.x), y = Math.round(s.y);
     const kit = p.team + (p.role === 'gk' ? GOALKEEPER_KIT_OFFSET : 0);
     view.flip = nextFlip(view.flip, p.facing.x);
+    const { key, tick } = animFor(p, state.tick);
+    const anim = drawable(key);
     view.sprite
-      .setFrame(frameKey(kit, p.anim, frameIndex(p.anim, p.animTick)))
+      .setFrame(frameKey(kit, anim, frameIndex(anim, tick)))
       .setFlipX(view.flip)
       .setPosition(x - ORIGIN_X + (view.flip ? FLIP_OFFSET_PX : 0), y - ORIGIN_Y)
       .setDepth(p.pos.y);

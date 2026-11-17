@@ -40,9 +40,17 @@ test('createMatch leaves exactly one kickoff whistle event', () => {
 });
 test('placeForKickoff clears stale per-player state', () => {
   const s = createMatch(cfg);
-  for (const p of s.players) { p.kickCooldown = 9; p.turboTicks = 40; p.anim = 'kick'; p.animTick = 5; }
+  for (const p of s.players) { p.kickCooldown = 9; p.turboTicks = 40; p.hitCooldown = 7; p.knock = { x: 5, y: 5 }; p.health = 40; p.status = { kind: 'kicking' }; p.statusTick = 5; p.statusTicks = 12; }
   placeForKickoff(s, 0);
   for (const p of s.players) {
-    expect([p.kickCooldown, p.turboTicks, p.anim, p.animTick]).toEqual([0, 0, 'idle', 0]);
+    expect([p.kickCooldown, p.turboTicks, p.status, p.statusTick, p.statusTicks, p.hitCooldown, p.knock]).toEqual([0, 0, { kind: 'free' }, 0, 0, 0, { x: 0, y: 0 }]);
+    expect(p.health).toBe(40); // kickoff keeps health
   }
+});
+test('createMatch starts everyone free, at full health, and both teams with no rage', () => {
+  const s = createMatch(cfg);
+  for (const p of s.players) {
+    expect([p.status, p.statusTick, p.statusTicks, p.health, p.hitCooldown, p.knock]).toEqual([{ kind: 'free' }, 0, 0, 100, 0, { x: 0, y: 0 }]);
+  }
+  expect([s.rage, s.lastHitTick]).toEqual([[0, 0], [0, 0]]);
 });

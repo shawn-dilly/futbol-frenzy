@@ -21,7 +21,7 @@ test('runs at 60 units per second', () => {
   const s = playing(); const x0 = s.players[4].pos.x;
   runTicks(s, 60, [pad({ moveX: 1 }), neutralPad()]);
   expect(s.players[4].pos.x - x0).toBeCloseTo(60, 1);
-  expect(s.players[4].anim).toBe('run'); expect(s.players[4].facing).toEqual({ x: 1, y: 0 });
+  expect(s.players[4].vel).toEqual({ x: 60, y: 0 }); expect(s.players[4].facing).toEqual({ x: 1, y: 0 });
 });
 test('diagonal and oversized stick input is not faster', () => {
   const s = playing(); const p0 = { ...s.players[4].pos };

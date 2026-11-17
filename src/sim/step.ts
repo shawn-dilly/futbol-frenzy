@@ -3,6 +3,7 @@ import { applyMovement, updateTurboMeters } from './movement';
 import { moveFreeBall } from './ball';
 import { advanceFlow } from './flow';
 import { brainIntent, type BrainIntent } from './brain';
+import { tickStatus } from './status';
 import { kick, switchControl, tickKickCooldowns, updatePossession } from './possession';
 
 /** Pass/shoot/turbo are true only on the tick the button goes down. */
@@ -12,6 +13,8 @@ export function padToIntent(pad: PadInput, prev: PadInput): PlayerIntent {
     pass: pad.pass && !prev.pass,
     shoot: pad.shoot && !prev.shoot,
     turbo: pad.turbo && !prev.turbo,
+    hitPress: pad.hit && !prev.hit,
+    hitHeld: pad.hit,
   };
 }
 
@@ -45,6 +48,7 @@ function applyActions(state: MatchState, intents: BrainIntent[]): void {
 
 function stepPlay(state: MatchState, inputs: [PadInput, PadInput]): TeamId | null {
   tickKickCooldowns(state);
+  for (const p of state.players) tickStatus(p);
   const intents = state.players.map(p => intentFor(state, p, inputs));
   applyActions(state, intents);
   for (const p of state.players) applyMovement(state, p, intents[p.id]);

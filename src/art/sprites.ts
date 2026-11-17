@@ -1,6 +1,7 @@
-import type { AnimName } from '../sim';
 import { KITS, PAL, type Kit } from './palette';
 import type { RectFn } from './pixelFont';
+
+export type AnimName = 'idle' | 'run' | 'kick';
 
 export const FRAME_W = 24;
 export const FRAME_H = 20;

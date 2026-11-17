@@ -22,7 +22,7 @@ test('pass with no stick goes to the nearest teammate and leaves the passer', ()
   expect(s.ball.owner).toBeNull();
   expect(len(s.ball.vel)).toBeCloseTo(150 * 0.985, 0);
   expect(s.events).toContainEqual({ type: 'kick', kind: 'pass', player: 4 });
-  expect(s.players[4].anim).toBe('kick');
+  expect(s.players[4].status).toEqual({ kind: 'kicking' }); expect(s.players[4].statusTicks).toBe(12);
 });
 test('pass with the stick up-left picks the teammate in that direction', () => {
   expect(pickPassTarget(s, s.players[4], { x: -1, y: -0.6 })).toBe(2);
@@ -88,4 +88,11 @@ test('a keeper can trap a ball moving at shot speed', () => {
 test('the pickup speed limit is inclusive: 170 is trapped, 171 is not', () => {
   freeBallAt(9, 170); updatePossession(s); expect(s.ball.owner).toBe(9);
   freeBallAt(9, 171); updatePossession(s); expect(s.ball.owner).toBeNull();
+});
+test('a kicking status ends 12 ticks after the kick and the player is free again', () => {
+  runTicks(s, 1, [pad({ pass: true }), neutralPad()]);
+  runTicks(s, 11);
+  expect(s.players[4].status.kind).toBe('kicking');
+  runTicks(s, 1);
+  expect(s.players[4].status).toEqual({ kind: 'free' });
 });

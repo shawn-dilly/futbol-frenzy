@@ -1,7 +1,6 @@
 import { expect, test } from 'vitest';
 import { KITS } from '../../src/art/palette';
-import { ANIMS, POSES, FRAME_H, FRAME_W, atlasLayout, drawPlayerFrame, frameIndex, frameKey } from '../../src/art/sprites';
-import type { AnimName } from '../../src/sim';
+import { ANIMS, type AnimName, POSES, FRAME_H, FRAME_W, atlasLayout, drawPlayerFrame, frameIndex, frameKey } from '../../src/art/sprites';
 
 const grid = (anim: AnimName, f: number) => { const g = new Map<string, string>(); let out = false;
   drawPlayerFrame((x, y, w, h, c) => { for (let i = 0; i < w; i++) for (let j = 0; j < h; j++) {

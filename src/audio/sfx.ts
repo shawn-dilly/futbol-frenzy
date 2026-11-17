@@ -51,6 +51,7 @@ export function sfxForEvent(e: SimEvent): SfxName | null {
     case 'bounce': return 'bounce';
     case 'goal': return 'goal';
     case 'whistle': return 'whistle';
+    case 'hit': case 'whiff': return null; // sounds arrive with the hit feedback task
   }
 }
 

@@ -112,11 +112,11 @@ export type AnimKey = string;
 export function animFor(p: PlayerState, matchTick: number): { key: AnimKey; tick: number };
 ```
 
-- [ ] **Step 1:** Add all "Shared definitions" types and constants now (the whole block, so later tasks only add logic). `createMatch` / `placeForKickoff` set every player to `free`, `statusTick 0`, `statusTicks 0`, `health MAX_HEALTH` (createMatch only; kickoff keeps health), `hitCooldown 0`, `knock {0,0}`; `rage [0,0]`, `lastHitTick [0,0]`.
-- [ ] **Step 2:** Tests for `status.ts` with exact values: `setStatus` resets the counter; `tickStatus` returns to `free` exactly on tick `statusTicks` and never ends an open-ended status; `canAct` / `isDown` truth table over all six kinds and four tiers.
-- [ ] **Step 3:** `kick()` sets `kicking` for `KICK_ANIM_TICKS`; `stepPlay` calls `tickStatus` for every player once per tick (before intents). Remove `updateAnim`, `anim`, `animTick`.
-- [ ] **Step 4:** `animFor`: `free` → `run` when `vel` is non-zero else `idle`, with `tick = matchTick`; `kicking` → `kick`; `charging` → `charge`; `lunging` → `lunge_<hit>`; `recovering` → `recover_<hit>` when missed, `idle` when landed; `hurt` → `hurt_<tier>_<variant>`; all non-free use `tick = statusTick`. Unit-test every branch. Until Task 6 draws the new frames, `MatchView` falls back to `idle` for a key the atlas lacks (one helper, removed in Task 6).
-- [ ] **Step 5:** Full check, screenshot that the match still looks the same (run, kick), commit `refactor(sim): player status replaces anim; presentation derives the animation`.
+- [x] **Step 1:** Add all "Shared definitions" types and constants now (the whole block, so later tasks only add logic). `createMatch` / `placeForKickoff` set every player to `free`, `statusTick 0`, `statusTicks 0`, `health MAX_HEALTH` (createMatch only; kickoff keeps health), `hitCooldown 0`, `knock {0,0}`; `rage [0,0]`, `lastHitTick [0,0]`.
+- [x] **Step 2:** Tests for `status.ts` with exact values: `setStatus` resets the counter; `tickStatus` returns to `free` exactly on tick `statusTicks` and never ends an open-ended status; `canAct` / `isDown` truth table over all six kinds and four tiers.
+- [x] **Step 3:** `kick()` sets `kicking` for `KICK_ANIM_TICKS`; `stepPlay` calls `tickStatus` for every player once per tick (before intents). Remove `updateAnim`, `anim`, `animTick`.
+- [x] **Step 4:** `animFor`: `free` → `run` when `vel` is non-zero else `idle`, with `tick = matchTick`; `kicking` → `kick`; `charging` → `charge`; `lunging` → `lunge_<hit>`; `recovering` → `recover_<hit>` when missed, `idle` when landed; `hurt` → `hurt_<tier>_<variant>`; all non-free use `tick = statusTick`. Unit-test every branch. Until Task 6 draws the new frames, `MatchView` falls back to `idle` for a key the atlas lacks (one helper, removed in Task 6).
+- [x] **Step 5:** Full check, screenshot that the match still looks the same (run, kick), commit `refactor(sim): player status replaces anim; presentation derives the animation`.
 
 ### Task 3: Damage, tiers, rage, health
 

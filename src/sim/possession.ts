@@ -1,10 +1,11 @@
 import type { MatchState, PlayerState, TeamId, Vec } from './types';
 import {
-  BALL_RADIUS, DRIBBLE_OFFSET, FIELD_H, FIELD_W, KICK_COOLDOWN_TICKS, PASS_CONE_RAD,
+  BALL_RADIUS, DRIBBLE_OFFSET, FIELD_H, FIELD_W, KICK_ANIM_TICKS, KICK_COOLDOWN_TICKS, PASS_CONE_RAD,
   PASS_SPEED, PICKUP_MAX_BALL_SPEED, PICKUP_RADIUS, SHOT_SPEED,
 } from './constants';
 import { add, angleBetween, clamp, dist, len, norm, scale, sub } from './vec';
 import { goalCenter } from './setup';
+import { setStatus } from './status';
 
 const isZero = (v: Vec) => v.x === 0 && v.y === 0;
 
@@ -74,7 +75,7 @@ export function kick(state: MatchState, p: PlayerState, kind: 'pass' | 'shot', a
   }
   ball.owner = null;
   p.kickCooldown = KICK_COOLDOWN_TICKS;
-  p.anim = 'kick'; p.animTick = 0;
+  setStatus(p, { kind: 'kicking' }, KICK_ANIM_TICKS);
   state.events.push({ type: 'kick', kind, player: p.id });
 }
 
