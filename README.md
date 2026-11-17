@@ -65,4 +65,4 @@ npm run android:apk  # debug APK in android/app/build/outputs/apk/debug/
 - `src/art/`, `src/input/`, `src/audio/`, `src/game/` — drawing, controls, sound and the Phaser scenes. They read match state and never change it.
 - `android/` — the Capacitor wrapper.
 - `docs/superpowers/specs/` — the game design. `docs/superpowers/plans/` — one build plan per milestone, with progress ticked off.
-- `CLAUDE.md` and `.claude/agents/` — the rules and agents used to build the game with Claude Code.
+- `CLAUDE.md` — shared project standards and workflow. `AGENTS.md` is the Codex / T3 entry point; `.claude/agents/` contains the Claude Code role definitions.

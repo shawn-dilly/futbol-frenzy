@@ -43,7 +43,9 @@ Three layers. Each depends only on the ones above it in this list.
 ## Workflow
 
 - Work happens on a branch per milestone (`m1-playable-core`, ...), never directly on `main`.
-- One plan task at a time. The `ff-implementer` agent (Sonnet) builds it; the `ff-reviewer` agent (Opus) verifies it before the next task starts; `ff-playtester` (Sonnet) checks anything visual against the mockups.
+- One plan task at a time: implement against the brief, report the changes and checks, then have an independent reviewer verify the brief, diff, and standards before starting the next task. For visual work, inspect screenshots against the mockups and report what was observed.
+- In Claude Code, the roles are `ff-implementer` (Sonnet), `ff-reviewer` (Opus), and `ff-playtester` (Sonnet); their definitions live in `.claude/agents/`. In Codex / T3, follow the model and review mapping in `AGENTS.md`. Harness-specific agent definitions do not configure another harness.
+- Inspect and preserve unfinished work already in the working tree. Stage only the files for the authorized task; report conflicts or blocked checks.
 - **Progress lives in the plan file.** When a step is done, tick its checkbox (`- [x]`) in the same commit as the work. `docs/ROADMAP.md` shows milestone status; update it when a milestone starts or lands.
 - Commit after every task with a conventional message (`feat(sim): ...`, `test(e2e): ...`).
 - A task is not done until `npm test` passes and, for anything visual, a screenshot has been looked at.
