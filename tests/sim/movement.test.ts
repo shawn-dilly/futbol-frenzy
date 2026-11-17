@@ -1,0 +1,47 @@
+import { test, expect } from 'vitest';
+import { createMatch, neutralPad } from '../../src/sim/setup';
+import { dist } from '../../src/sim/vec';
+import type { PadInput } from '../../src/sim/types';
+import { runTicks } from '../helpers';
+
+const cfg = { seed: 1, halfSeconds: 120, human: [true, false] as [boolean, boolean] };
+const pad = (o: Partial<PadInput>) => ({ ...neutralPad(), ...o });
+const playing = () => { const s = createMatch(cfg); runTicks(s, 60); expect(s.phase).toBe('play'); return s; };
+test('nobody moves during the kickoff pause', () => {
+  const s = createMatch(cfg); const x0 = s.players[4].pos.x;
+  runTicks(s, 59, [pad({ moveX: 1 }), neutralPad()]);
+  expect(s.players[4].pos.x).toBe(x0);
+});
+test('nobody moves on the tick the countdown ends', () => {
+  const s = createMatch(cfg); const x0 = s.players[4].pos.x;
+  runTicks(s, 60, [pad({ moveX: 1 }), neutralPad()]);
+  expect(s.phase).toBe('play'); expect(s.players[4].pos.x).toBe(x0);
+});
+test('runs at 60 units per second', () => {
+  const s = playing(); const x0 = s.players[4].pos.x;
+  runTicks(s, 60, [pad({ moveX: 1 }), neutralPad()]);
+  expect(s.players[4].pos.x - x0).toBeCloseTo(60, 1);
+  expect(s.players[4].anim).toBe('run'); expect(s.players[4].facing).toEqual({ x: 1, y: 0 });
+});
+test('diagonal and oversized stick input is not faster', () => {
+  const s = playing(); const p0 = { ...s.players[4].pos };
+  runTicks(s, 30, [pad({ moveX: 3, moveY: -3 }), neutralPad()]);
+  expect(dist(s.players[4].pos, p0)).toBeCloseTo(30, 1);
+});
+test('turbo tap: one burst of 90 ticks at 92, costs a third, needs a new press', () => {
+  const s = playing(); const x0 = s.players[4].pos.x;
+  runTicks(s, 90, [pad({ moveX: 1, turbo: true }), neutralPad()]);   // held the whole time
+  expect(s.players[4].pos.x - x0).toBeCloseTo(92 * 1.5, 0);
+  expect(s.turbo[0]).toBeGreaterThan(0.66); expect(s.turbo[0]).toBeLessThan(0.8);
+  expect(s.players[4].turboTicks).toBe(0);
+});
+test('no burst when the meter is under a third', () => {
+  const s = playing(); s.turbo[0] = 0.2;
+  runTicks(s, 1, [pad({ moveX: 1, turbo: true }), neutralPad()]);
+  expect(s.players[4].turboTicks).toBe(0);
+});
+test('players stay on the pitch', () => {
+  const s = playing();
+  runTicks(s, 600, [pad({ moveX: -1, moveY: -1 }), neutralPad()]);
+  expect(s.players[4].pos).toEqual({ x: 4, y: 4 });
+});

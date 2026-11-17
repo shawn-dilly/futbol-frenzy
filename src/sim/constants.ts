@@ -10,6 +10,7 @@ export const BALL_FRICTION = 0.985, BALL_STOP_SPEED = 4, WALL_RESTITUTION = 0.7;
 export const PICKUP_RADIUS = 6, KICK_COOLDOWN_TICKS = 15, DRIBBLE_OFFSET = 7, KICK_ANIM_TICKS = 12;
 export const PASS_CONE_RAD = Math.PI / 3;
 export const KICKOFF_PAUSE_TICKS = 60, GOAL_PAUSE_TICKS = 120, HALFTIME_PAUSE_TICKS = 180;
+export const KICKER_BEHIND_BALL = 6; // units behind the ball on the kicker's own side at kickoff
 export const DEFAULT_HALF_SECONDS = 120;
 export const CPU_SHOOT_RANGE = 120, GK_HOLD_TICKS = 30, GK_LINE_X = 12;
 export const ANCHOR_SHIFT_X = 0.6, ANCHOR_SHIFT_Y = 0.3;

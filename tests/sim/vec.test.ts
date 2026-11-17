@@ -25,3 +25,7 @@ test('angleBetween is 0 for parallel and PI for opposite', () => {
   expect(angleBetween({ x: 1, y: 0 }, { x: -3, y: 0 })).toBeCloseTo(Math.PI);
   expect(angleBetween({ x: 1, y: 0 }, { x: 0, y: 1 })).toBeCloseTo(Math.PI / 2);
 });
+test('angleBetween with a zero vector is 0', () => {
+  expect(angleBetween({ x: 0, y: 0 }, { x: 1, y: 0 })).toBe(0);
+  expect(angleBetween({ x: 1, y: 0 }, { x: 0, y: 0 })).toBe(0);
+});

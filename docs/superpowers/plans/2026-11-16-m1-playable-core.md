@@ -246,7 +246,7 @@ export function padToIntent(pad: PadInput, prev: PadInput): PlayerIntent; // pas
 - `updateTurboMeters`: each team meter rises by `TURBO_REFILL_PER_TICK`, capped at 1.
 - `step` in this task: clear `state.events`; for each team where `config.human[team]` is true, the controlled player's intent is `padToIntent(inputs[team], state.prevInput[team])` and every other player's intent is all-zero (the brain arrives in Task 7); if `phase` is `'kickoff'`, count `phaseTicks` down and switch to `'play'` at 0 without moving anyone; if `'play'`, apply movement and turbo meters; store `prevInput`; `tick += 1`. Later tasks extend this function at the marked points; keep each phase's work in a small function.
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 ```ts
 // tests/sim/movement.test.ts
@@ -288,10 +288,10 @@ test('players stay on the pitch', () => {
 });
 ```
 
-- [ ] **Step 2:** Run `npm test`. Expected: FAIL.
-- [ ] **Step 3:** Implement `movement.ts`, `step.ts`, `runTicks`.
-- [ ] **Step 4:** Run `npm test`. Expected: PASS.
-- [ ] **Step 5:** Commit: `feat(sim): player movement, turbo bursts, step loop`.
+- [x] **Step 2:** Run `npm test`. Expected: FAIL.
+- [x] **Step 3:** Implement `movement.ts`, `step.ts`, `runTicks`.
+- [x] **Step 4:** Run `npm test`. Expected: PASS.
+- [x] **Step 5:** Commit: `feat(sim): player movement, turbo bursts, step loop`.
 
 ---
 

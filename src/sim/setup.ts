@@ -1,11 +1,10 @@
 import type { MatchConfig, MatchState, PadInput, PlayerState, TeamId, Vec } from './types';
 import {
-  FIELD_MID_Y, FIELD_W, FORMATION, KICKOFF_PAUSE_TICKS, TICK_HZ,
+  FIELD_MID_Y, FIELD_W, FORMATION, KICKER_BEHIND_BALL, KICKOFF_PAUSE_TICKS, TICK_HZ,
 } from './constants';
 import { dist } from './vec';
 
 const KICKOFF_SPOT: Vec = { x: FIELD_W / 2, y: FIELD_MID_Y };
-const KICKER_BEHIND_BALL = 6; // units behind the ball on the kicker's own side
 const PLAYERS_PER_TEAM = FORMATION.length;
 const KEEPER_INDEX = 0;
 const STRIKER_INDEX = PLAYERS_PER_TEAM - 1;
@@ -37,6 +36,7 @@ export function placeForKickoff(state: MatchState, kicking: TeamId): void {
     p.pos = { ...p.anchor };
     p.vel = { x: 0, y: 0 };
     p.facing = { x: attackDir(p.team), y: 0 };
+    p.kickCooldown = 0; p.turboTicks = 0; p.anim = 'idle'; p.animTick = 0;
   }
   state.ball = { pos: { ...KICKOFF_SPOT }, vel: { x: 0, y: 0 }, owner: null, ownerTicks: 0, passTarget: null };
 
