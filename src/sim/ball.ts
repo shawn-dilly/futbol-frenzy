@@ -28,8 +28,9 @@ export function moveFreeBall(state: MatchState): TeamId | null {
       }
     }
     ball.pos.x = crossedFromPitch ? 2 * lineX - ball.pos.x : lineX;
-    ball.vel.x *= -WALL_RESTITUTION;
-    state.events.push({ type: 'bounce' });
+    const moving = len(ball.vel) > 0;
+    ball.vel.x = (lineX === 0 ? 1 : -1) * Math.abs(ball.vel.x) * WALL_RESTITUTION;
+    if (moving) state.events.push({ type: 'bounce' });
   }
 
   const wallY = ball.pos.y < BALL_RADIUS ? BALL_RADIUS

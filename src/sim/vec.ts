@@ -21,3 +21,4 @@ export function angleBetween(a: Vec, b: Vec): number {
   const cos = (a.x * b.x + a.y * b.y) / (la * lb);
   return Math.acos(Math.min(1, Math.max(-1, cos)));
 }
+export function clamp(v: number, lo: number, hi: number): number { return Math.min(hi, Math.max(lo, v)); }

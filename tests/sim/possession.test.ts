@@ -60,3 +60,9 @@ test('a carried ball pushed against the goal line does not score or leave the pi
   runTicks(s, 60, [pad({ moveX: 1 }), neutralPad()]);
   expect(s.ball.pos.x).toBeLessThanOrEqual(478); expect(s.score).toEqual([0, 0]);
 });
+test('equal angles inside the cone go to the nearer teammate', () => {
+  expect(pickPassTarget(s, s.players[4], { x: -1, y: 0 })).toBe(1);
+});
+test('equal angles with the nearer teammate on the lower id still pick the nearer', () => {
+  expect(pickPassTarget(s, s.players[0], { x: 1, y: 0 })).toBe(1);
+});

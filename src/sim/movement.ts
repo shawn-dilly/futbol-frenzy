@@ -3,9 +3,7 @@ import {
   FIELD_H, FIELD_W, KICK_ANIM_TICKS, PLAYER_RADIUS, RUN_SPEED, TICK_HZ,
   TURBO_BURST_TICKS, TURBO_COST, TURBO_REFILL_PER_TICK, TURBO_SPEED,
 } from './constants';
-import { clampLen, norm, scale } from './vec';
-
-const clamp = (v: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, v));
+import { clamp, clampLen, norm, scale } from './vec';
 
 function startTurboIfPressed(state: MatchState, p: PlayerState, intent: PlayerIntent): void {
   if (!intent.turbo || p.turboTicks > 0 || state.turbo[p.team] < TURBO_COST) return;

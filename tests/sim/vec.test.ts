@@ -1,5 +1,5 @@
 import { test, expect } from 'vitest';
-import { add, sub, scale, len, dist, norm, clampLen, angleBetween } from '../../src/sim/vec';
+import { add, sub, scale, len, dist, norm, clampLen, angleBetween, clamp } from '../../src/sim/vec';
 
 test('add, sub, scale return new vectors and leave inputs alone', () => {
   const a = { x: 1, y: 2 }, b = { x: 3, y: 5 };
@@ -28,4 +28,7 @@ test('angleBetween is 0 for parallel and PI for opposite', () => {
 test('angleBetween with a zero vector is 0', () => {
   expect(angleBetween({ x: 0, y: 0 }, { x: 1, y: 0 })).toBe(0);
   expect(angleBetween({ x: 1, y: 0 }, { x: 0, y: 0 })).toBe(0);
+});
+test('clamp limits a number to a range', () => {
+  expect(clamp(5, 0, 10)).toBe(5); expect(clamp(-1, 0, 10)).toBe(0); expect(clamp(11, 0, 10)).toBe(10);
 });

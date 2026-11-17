@@ -21,7 +21,9 @@ test('move axes pass through unchanged', () => {
 test('step moves a free ball by its velocity', () => {
   const s = createMatch({ seed: 1, halfSeconds: 120, human: [true, false] });
   runTicks(s, 60);
-  s.ball.owner = null; s.ball.pos = { x: 240, y: 62 }; s.ball.vel = { x: 60, y: 0 };
+  s.ball.owner = null; s.ball.pos = { x: 300, y: 40 }; s.ball.vel = { x: 60, y: 0 };
   runTicks(s, 1);
-  expect(s.ball.pos.x - 240).toBeCloseTo(1, 5);
+  expect(s.ball.owner).toBeNull();
+  expect(s.ball.pos.x).toBeCloseTo(301, 5);
+  expect(s.ball.vel.x).toBeCloseTo(60 * 0.985, 5);
 });

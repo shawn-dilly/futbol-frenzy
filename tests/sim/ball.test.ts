@@ -67,3 +67,10 @@ test('a ball already beyond an end line is put back on the line with no goal and
   expect(s.ball.pos.x).toBeLessThanOrEqual(480);
   for (const v of [s.ball.pos.x, s.ball.pos.y, s.ball.vel.x, s.ball.vel.y]) expect(Number.isNaN(v)).toBe(false);
 });
+test('a ball beyond an end line is sent back into the pitch, never scoring', () => {
+  const s = freeBall();
+  s.ball.pos = { x: 481.3, y: 62 }; s.ball.vel = { x: -30, y: 0 };
+  expect(moveFreeBall(s)).toBeNull();
+  expect(s.ball.vel.x).toBeLessThan(0);
+  for (let i = 0; i < 10; i++) expect(moveFreeBall(s)).toBeNull();
+});

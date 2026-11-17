@@ -3,10 +3,9 @@ import {
   BALL_RADIUS, DRIBBLE_OFFSET, FIELD_H, FIELD_W, KICK_COOLDOWN_TICKS, PASS_CONE_RAD,
   PASS_SPEED, PICKUP_RADIUS, SHOT_SPEED,
 } from './constants';
-import { add, angleBetween, dist, norm, scale, sub } from './vec';
+import { add, angleBetween, clamp, dist, norm, scale, sub } from './vec';
 import { goalCenter } from './setup';
 
-const clamp = (v: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, v));
 const isZero = (v: Vec) => v.x === 0 && v.y === 0;
 
 /** Counts every player's kick cooldown down to a floor of 0. */
@@ -48,9 +47,11 @@ export function pickPassTarget(state: MatchState, passer: PlayerState, aim: Vec)
   const nearest = mates.reduce((a, b) => (dist(b.pos, passer.pos) < dist(a.pos, passer.pos) ? b : a));
   if (isZero(aim)) return nearest.id;
   let best: PlayerState | null = null, bestAngle = PASS_CONE_RAD;
-  for (const m of mates) {
+  for (const m of mates) { // ascending id: equal angle -> nearer, then lower id
     const angle = angleBetween(aim, sub(m.pos, passer.pos));
-    if (angle <= bestAngle) { best = m; bestAngle = angle; }
+    const better = best === null ? angle <= bestAngle
+      : angle < bestAngle || (angle === bestAngle && dist(m.pos, passer.pos) < dist(best.pos, passer.pos));
+    if (better) { best = m; bestAngle = angle; }
   }
   return (best ?? nearest).id;
 }
