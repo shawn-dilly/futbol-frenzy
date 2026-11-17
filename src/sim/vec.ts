@@ -37,3 +37,9 @@ export function nearestTo<T extends { pos: Vec }>(items: readonly T[], to: Vec, 
   return best;
 }
 export function clamp(v: number, lo: number, hi: number): number { return Math.min(hi, Math.max(lo, v)); }
+/** Distance from `p` to the segment a-b (to the nearer end point when `p` projects beyond it). */
+export function distToSegment(p: Vec, a: Vec, b: Vec): number {
+  const ab = sub(b, a), l2 = ab.x * ab.x + ab.y * ab.y;
+  const t = l2 === 0 ? 0 : clamp(((p.x - a.x) * ab.x + (p.y - a.y) * ab.y) / l2, 0, 1);
+  return dist(p, add(a, scale(ab, t)));
+}

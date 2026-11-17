@@ -3,6 +3,7 @@ import {
   CHARGE_MOVE_FACTOR, DAZED_SPEED_FACTOR, FIELD_H, FIELD_W, GK_SPEED, HITS, KNOCK_DECAY, KNOCK_MIN_SPEED, PLAYER_RADIUS, RUN_SPEED, TICK_HZ,
   TURBO_BURST_TICKS, TURBO_COST, TURBO_REFILL_PER_TICK, TURBO_SPEED,
 } from './constants';
+import { LEVELS } from './levels';
 import { isDazed } from './status';
 import { add, clamp, clampLen, len, norm, scale } from './vec';
 
@@ -13,8 +14,8 @@ function startTurboIfPressed(state: MatchState, p: PlayerState, intent: PlayerIn
 }
 
 /** Units per second a player runs at on his own: turbo, Dazed and charging all change it. */
-function ownSpeed(p: PlayerState): number {
-  const base = p.role === 'gk' ? GK_SPEED : p.turboTicks > 0 ? TURBO_SPEED : RUN_SPEED;
+function ownSpeed(state: MatchState, p: PlayerState): number {
+  const base = p.role === 'gk' ? GK_SPEED * LEVELS[state.config.level[p.team]].keeperSpeedFactor : p.turboTicks > 0 ? TURBO_SPEED : RUN_SPEED;
   return base * (isDazed(p) ? DAZED_SPEED_FACTOR : 1) * (p.status.kind === 'charging' ? CHARGE_MOVE_FACTOR : 1);
 }
 
@@ -43,7 +44,7 @@ export function applyMovement(state: MatchState, p: PlayerState, intent: PlayerI
   startTurboIfPressed(state, p, intent);
 
   const dir = clampLen({ x: intent.moveX, y: intent.moveY }, 1);
-  p.vel = p.status.kind === 'lunging' ? scale(p.facing, HITS[p.status.hit].lungeSpeed) : scale(dir, ownSpeed(p));
+  p.vel = p.status.kind === 'lunging' ? scale(p.facing, HITS[p.status.hit].lungeSpeed) : scale(dir, ownSpeed(state, p));
   displace(p, add(p.vel, p.knock)); // knockback is on top of the player's own movement
   decayKnock(p);
   if (dir.x !== 0 || dir.y !== 0) p.facing = norm(dir); // a lunge's facing is fixed: its intent is neutral

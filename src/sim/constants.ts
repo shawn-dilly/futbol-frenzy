@@ -52,3 +52,13 @@ export const BIG_TARGET_SLOW_SPEED = RUN_SPEED / 2; // units/s; the computer cha
 export const BRAIN_BIG_HOLD_EXTRA_TICKS = 2; // a computer holds a big-hit charge this long past BIG_HIT_CHARGE_TICKS
 export const PURSUIT_LEAD_MAX_TICKS = 45; // a presser aims ahead of the carrier by at most this many ticks of travel
 export const CHARGE_ABORT_RANGE_FACTOR = 2; // a charging computer player releases once his target is farther than this x hitRange
+export const LANE_HALF_WIDTH = 6; // units: a standing opponent this close to a pass or shot line blocks it
+export const PASS_BACK_LIMIT = 40; // units: the computer will not pass to a teammate farther from the opposing goal than the carrier by more than this
+export const DRIBBLE_SWERVE_RAD = 0.6; // radians: a dribbling computer carrier steers this far off the goal line, away from an opponent ahead
+export const DRIBBLE_SWERVE_PRESSURE_FACTOR = 1.5; // an opponent ahead within this x pressureDist makes the carrier swerve
+export const TURBO_SPACE_DIST = 30; // units: a computer carrier uses turbo only with no opponent ahead within this
+export const SUPPORT_AHEAD = 50, SUPPORT_BEHIND = 40; // units: channel runners stand this far ahead of the ball, the safe man this far behind it
+export const SUPPORT_GOAL_MARGIN = 30; // units: channel runners stay this far short of the opposing goal line
+export const SUPPORT_CHANNEL_Y: [number, number] = [28, 96]; // the two wide lanes runners take (the lower y first)
+export const LANE_SHIFT = 12; // units: a supporter with a blocked lane from the carrier slides this far in y, away from the blocker
+export const GK_CLAIM_DIST = 30; // units from his goal inside which a keeper leaves his line for a free ball when he is nearest

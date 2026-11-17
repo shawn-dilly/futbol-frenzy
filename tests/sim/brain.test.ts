@@ -2,8 +2,9 @@ import { describe, expect, test, vi } from 'vitest';
 import { blankMemory, createMatch, goalCenter, neutralPad, placeForKickoff } from '../../src/sim/setup';
 import { hurtPlayer } from '../../src/sim/hurt';
 import { brainIntent, type BrainIntent } from '../../src/sim/brain';
-import { ARRIVE_DIST, BIG_HIT_CHARGE_TICKS, BRAIN_BIG_HOLD_EXTRA_TICKS, ANCHOR_SHIFT_X, ANCHOR_SHIFT_Y, FIELD_MID_Y, GK_HOLD_TICKS } from '../../src/sim/constants';
+import { ARRIVE_DIST, BIG_HIT_CHARGE_TICKS, BRAIN_BIG_HOLD_EXTRA_TICKS, GK_HOLD_TICKS } from '../../src/sim/constants';
 import { norm, rotate, sub } from '../../src/sim/vec';
+import { planSupport } from '../../src/sim/brainAttack';
 import { interceptPoint } from '../../src/sim/brainDefend';
 import { LEVELS, LEVEL_ORDER } from '../../src/sim/levels';
 import { step } from '../../src/sim/step';
@@ -49,10 +50,13 @@ describe('the computer thinks', () => {
   test('the carrier heads for goal and shoots inside his level shootRange', () => {
     for (const level of LEVEL_ORDER) {
       const s = playing(matchConfig({ seed: 7, human: [false, false], level: [level, level] }));
+      for (const q of s.players.filter(q => q.team === 1)) q.pos = { x: 460, y: 5 };
       expect(rethink(s, 4).moveX).toBeGreaterThan(0.9);
       s.players[4].pos = { x: 480 - LEVELS[level].shootRange - 1, y: 62 };
+      s.ball.pos = { ...s.players[4].pos };
       expect(rethink(s, 4).kick).toBeUndefined();
       s.players[4].pos = { x: 480 - LEVELS[level].shootRange + 1, y: 62 };
+      s.ball.pos = { ...s.players[4].pos };
       expect(rethink(s, 4).kick).toBe('shot');
     }
   });
@@ -71,11 +75,11 @@ describe('the computer thinks', () => {
     towards(rethink(s, 6), s.players[6].pos, s.ball.pos);
     expect(s.brain[6].role).toBe('chaser');
   });
-  test('a team that owns the ball has no chaser: everyone else holds the shifted anchor and stands still within 3 units', () => {
+  test('a team that owns the ball has no chaser: everyone else supports and stands still within 3 units', () => {
     const s = playing();
     s.players[0].pos = { x: 12, y: 20 }; s.ball.owner = 0; s.ball.pos = { x: 12, y: 20 };
     for (const p of s.players.filter(q => q.team === 0 && q.role === 'out')) {
-      towards(rethink(s, p.id), p.pos, { x: p.anchor.x + (12 - 240) * ANCHOR_SHIFT_X, y: p.anchor.y + (20 - FIELD_MID_Y) * ANCHOR_SHIFT_Y });
+      towards(rethink(s, p.id), p.pos, planSupport(s, p, PRO).target!);
       expect(s.brain[p.id].role).toBe('support');
     }
     const p = s.players[2], target = s.brain[2].target;
@@ -90,9 +94,12 @@ describe('the computer thinks', () => {
   test('nextRandom is consumed only when a plan needs a number', () => {
     const s = playing(); const goal = goalCenter(1), carrier = s.players[4];
     carrier.pos = { x: goal.x - (PRO.shootRange + 1), y: 62 };
+    for (const q of s.players.filter(q => q.team === 1)) q.pos = { x: 460, y: 5 };
+    s.ball.pos = { ...carrier.pos };
     const rng = s.rng;
     rethink(s, 4); expect(s.rng).toBe(rng);
     carrier.pos = { x: goal.x - (PRO.shootRange - 1), y: 62 };
+    s.ball.pos = { ...carrier.pos };
     const shot = rethink(s, 4);
     expect(shot.kick).toBe('shot'); expect(shot.aim).toBeDefined(); expect(s.rng).not.toBe(rng);
   });

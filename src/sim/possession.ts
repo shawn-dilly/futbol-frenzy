@@ -53,7 +53,8 @@ export function pickPassTarget(state: MatchState, passer: PlayerState, aim: Vec)
   const nearest = mates.reduce((a, b) => (dist(b.pos, passer.pos) < dist(a.pos, passer.pos) ? b : a));
   if (isZero(aim)) return nearest.id;
   let best: PlayerState | null = null, bestAngle = PASS_CONE_RAD;
-  for (const m of mates) { // ascending id: equal angle -> nearer, then lower id
+  const outfieldInCone = mates.filter(m => m.role === 'out' && angleBetween(aim, sub(m.pos, passer.pos)) <= PASS_CONE_RAD);
+  for (const m of outfieldInCone.length ? outfieldInCone : mates) { // ascending id: equal angle -> nearer, then lower id
     const angle = angleBetween(aim, sub(m.pos, passer.pos));
     const better = best === null ? angle <= bestAngle
       : angle < bestAngle || (angle === bestAngle && dist(m.pos, passer.pos) < dist(best.pos, passer.pos));

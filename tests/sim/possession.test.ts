@@ -96,3 +96,12 @@ test('a kicking status ends 12 ticks after the kick and the player is free again
   runTicks(s, 1);
   expect(s.players[4].status).toEqual({ kind: 'free' });
 });
+
+test('directional passes prefer an outfielder in the cone and fall back to the keeper', () => {
+  s.players[4].pos = { x: 200, y: 62 }; s.players[0].pos = { x: 20, y: 62 };
+  s.players[1].pos = { x: 160, y: 66 };
+  s.players[2].pos = { x: 200, y: 10 }; s.players[3].pos = { x: 200, y: 110 };
+  expect(pickPassTarget(s, s.players[4], { x: -1, y: 0 })).toBe(1);
+  s.players[1].pos = { x: 200, y: 20 };
+  expect(pickPassTarget(s, s.players[4], { x: -1, y: 0 })).toBe(0);
+});

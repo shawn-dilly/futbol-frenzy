@@ -144,6 +144,8 @@ Rules:
 
 ### Task 3: Attacking and keepers
 
+**Authorized adjustments:** Directional passing prefers standing outfielders in the cone before the keeper, retaining existing ordering and fallback. Keeper prediction blends tracking toward the intercept by positioning and ignores crossings in the past. A keeper holds when all distribution lanes are blocked. Update obsolete brain fixtures to reflect open lanes and support movement; preserve passing and scoring regression tests.
+
 **Files:** Create `src/sim/brainAttack.ts`, `src/sim/brainKeeper.ts`; modify `brain.ts`, `movement.ts`, `constants.ts`; tests `tests/sim/brainAttack.test.ts`, `tests/sim/brainKeeper.test.ts`.
 
 **Interfaces — produces:**
@@ -163,9 +165,12 @@ Rules:
 - **Receiver / chaser:** run at the ball (existing behaviour).
 - **Keeper:** with the ball: after `GK_HOLD_TICKS`, pass to the teammate with an open lane who is farthest from any opponent (not simply the nearest). Without it: if the ball is free and moving toward his goal faster than `PICKUP_MAX_BALL_SPEED / 2`, move to the y where the ball's path crosses his line (clamped to the goal mouth, ± `PLAYER_RADIUS`); otherwise track the ball's y as now. `GK_SPEED × keeperSpeedFactor` applies in `movement.ts` (read from the level; no level names in code). A keeper leaves his line to collect a free ball inside `GK_CLAIM_DIST` (30) of his goal when he is the nearest player to it.
 
-- [ ] **Step 1:** `brainAttack.test.ts`: exact decisions for hand-placed positions — shoots in range with an open lane; aims at the far post (keeper high → aim low and the reverse) with exact coordinates at `shotErrorRad` 0; passes under pressure to the most advanced open teammate; does not pass into a blocked lane; does not pass backwards beyond `PASS_BACK_LIMIT`; `passMistakeChance` 1 takes the second-best; swerves away from an opponent ahead (sign and magnitude of the heading); turbo only with space and `usesTurbo`. `laneIsOpen` boundary cases at exactly `LANE_HALF_WIDTH` (6). Support targets at `positioning` 0 and 1 with exact coordinates for both teams (mirroring).
-- [ ] **Step 2:** `brainKeeper.test.ts`: intercept y for a shot from each side (exact), clamped at the posts; ignores a slow or outgoing ball; distribution picks the unmarked teammate over the nearer marked one; claims a loose ball inside `GK_CLAIM_DIST` only when nearest; `keeperSpeedFactor` scales his speed exactly.
-- [ ] **Step 3:** Wire into `brain.ts`. The existing human scoring tests (far-post shot scores, central shot is saved) must still pass at level `pro`; if the smarter keeper breaks the far-post goal, report the numbers rather than weakening the test. Full check; commit `feat(sim): computer passing, shooting, support runs and smarter keepers`.
+- [x] **Step 1:** `brainAttack.test.ts`: exact decisions for hand-placed positions — shoots in range with an open lane; aims at the far post (keeper high → aim low and the reverse) with exact coordinates at `shotErrorRad` 0; passes under pressure to the most advanced open teammate; does not pass into a blocked lane; does not pass backwards beyond `PASS_BACK_LIMIT`; `passMistakeChance` 1 takes the second-best; swerves away from an opponent ahead (sign and magnitude of the heading); turbo only with space and `usesTurbo`. `laneIsOpen` boundary cases at exactly `LANE_HALF_WIDTH` (6). Support targets at `positioning` 0 and 1 with exact coordinates for both teams (mirroring).
+- [x] **Step 2:** `brainKeeper.test.ts`: intercept y for a shot from each side (exact), clamped at the posts; ignores a slow or outgoing ball; distribution picks the unmarked teammate over the nearer marked one; claims a loose ball inside `GK_CLAIM_DIST` only when nearest; `keeperSpeedFactor` scales his speed exactly.
+- [x] **Step 3:** Wire into `brain.ts`. The existing human scoring tests (far-post shot scores, central shot is saved) must still pass at level `pro`; if the smarter keeper breaks the far-post goal, report the numbers rather than weakening the test. Full check; commit `feat(sim): computer passing, shooting, support runs and smarter keepers`.
+
+
+**Independent verification:** Sol approved; build, 138 targeted tests and 4 e2e tests passed, original passing/scoring tests unchanged; screenshots inspected without new clipping. Earlier implementation checks: 478 unit tests and typecheck passed.
 
 ### Task 4: Catch-up boost, balance bands, level on screen, docs
 

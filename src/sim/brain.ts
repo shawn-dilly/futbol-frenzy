@@ -1,15 +1,15 @@
 import type { BrainMemory, BrainRole, MatchState, PlayerIntent, PlayerState, Vec } from './types';
 import {
-  ARRIVE_DIST, BIG_HIT_CHARGE_TICKS, BRAIN_BIG_HOLD_EXTRA_TICKS, BRAIN_TAP_TICKS, CHARGE_ABORT_RANGE_FACTOR, FIELD_MID_Y, FIELD_W,
-  GK_HOLD_TICKS, GK_LINE_X, GOAL_HALF, SHOT_Y_MARGIN, TURBO_COST,
+  ARRIVE_DIST, BIG_HIT_CHARGE_TICKS, BRAIN_BIG_HOLD_EXTRA_TICKS, BRAIN_TAP_TICKS, CHARGE_ABORT_RANGE_FACTOR, TURBO_COST,
 } from './constants';
-import { goalCenter, neutralIntent, otherTeam } from './setup';
+import { neutralIntent } from './setup';
 import { LEVELS, type LevelSpec } from './levels';
-import { nextRandom } from './rng';
 import { ballSide, roleOf } from './brainRoles';
-import { interceptPoint, planDefence, shiftedAnchor, type Plan } from './brainDefend';
+import { interceptPoint, planDefence } from './brainDefend';
+import { planCarrier, planSupport } from './brainAttack';
+import { planKeeper } from './brainKeeper';
 import { isHumanTeammate } from './status';
-import { clamp, dist, norm, rotate, sub } from './vec';
+import { dist, norm, rotate, sub } from './vec';
 
 export type BrainIntent = PlayerIntent & { kick?: 'pass' | 'shot'; aim?: Vec };
 
@@ -24,33 +24,15 @@ const move = (p: PlayerState, target: Vec): BrainIntent => {
 const moveOrHold = (p: PlayerState, target: Vec): BrainIntent =>
   dist(p.pos, target) < ARRIVE_DIST ? move(p, p.pos) : move(p, target);
 
-// ---- plans for the roles with no defending in them (Task 3 replaces the own-ball and keeper ones) ----
+// ---- choosing the plan for a role ----
 
-/** The carrier runs at goal and shoots from inside the level's shootRange, aiming at a random point of the goal mouth. */
-function planCarrier(state: MatchState, p: PlayerState, level: LevelSpec): Plan {
-  const goal = goalCenter(otherTeam(p.team));
-  if (dist(p.pos, goal) > level.shootRange) return { target: goal };
-  const aimY = FIELD_MID_Y + (nextRandom(state) * 2 - 1) * (GOAL_HALF - SHOT_Y_MARGIN);
-  return { target: goal, action: 'shot', aim: sub({ x: goal.x, y: aimY }, state.ball.pos) };
-}
-
-/** The keeper holds the ball for GK_HOLD_TICKS and then passes (his next think is on that tick); otherwise he tracks the ball along his line. */
-function planKeeper(state: MatchState, p: PlayerState): Plan {
-  if (state.ball.owner === p.id) {
-    const wait = GK_HOLD_TICKS - state.ball.ownerTicks;
-    return wait > 0 ? { target: { ...p.pos }, thinkAt: state.tick + wait } : { target: { ...p.pos }, action: 'pass' };
-  }
-  const lineX = p.team === 0 ? GK_LINE_X : FIELD_W - GK_LINE_X;
-  return { target: { x: lineX, y: clamp(state.ball.pos.y, FIELD_MID_Y - GOAL_HALF, FIELD_MID_Y + GOAL_HALF) } };
-}
-
-function planFor(state: MatchState, p: PlayerState, role: BrainRole, level: LevelSpec): Plan {
+function planFor(state: MatchState, p: PlayerState, role: BrainRole, level: LevelSpec): Partial<BrainMemory> {
   switch (role) {
-    case 'keeper': return planKeeper(state, p);
+    case 'keeper': return planKeeper(state, p, level);
     case 'carrier': return planCarrier(state, p, level);
     case 'presser': case 'cover': case 'marker': return planDefence(state, p, role, level);
     case 'chaser': case 'receiver': return { target: { ...state.ball.pos } };
-    default: return { target: shiftedAnchor(state, p) };
+    default: return planSupport(state, p, level);
   }
 }
 

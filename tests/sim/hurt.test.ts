@@ -132,7 +132,7 @@ test('pickPassTarget skips downed teammates, and falls back when all are down', 
   knockDown(s, 2);
   expect(pickPassTarget(s, s.players[4], { x: -1, y: -0.6 })).toBe(1);
   knockDown(s, 1);
-  expect(pickPassTarget(s, s.players[4], { x: -1, y: -0.6 })).toBe(0);
+  expect(pickPassTarget(s, s.players[4], { x: -1, y: -0.6 })).toBe(3);
   knockDown(s, 3); knockDown(s, 0);
   expect(pickPassTarget(s, s.players[4], { x: -1, y: -0.6 })).toBe(2);
 });
