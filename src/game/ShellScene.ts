@@ -2,13 +2,13 @@ import Phaser from 'phaser';
 import { frameKey } from '../art/sprites';
 import { ATLAS_KEY, BALL_KEY } from './BootScene';
 import { drawText } from '../art/pixelFont';
-import { PAL } from '../art/palette';
-import { TEAMS } from '../content/teams';
+import { KITS, PAL } from '../art/palette';
+import { resolveKits, TEAMS } from '../content/teams';
 import { LEVEL_ORDER, type Level } from '../sim';
 import { consumeResult, retryCup, quitCup, cupMatchConfig, startCup, type CupSession } from './cupSession';
 import { parseMatchParams } from './params';
 import { setupConfig, type MatchLength, type SetupSelection } from './setupSelection';
-import type { MatchLaunch } from './launch';
+import { matchTeams, type MatchLaunch } from './launch';
 
 let runCounter = 0;
 const lengths: MatchLength[] = ['short', 'long', 'five'];
@@ -68,7 +68,7 @@ export class ShellScene extends Phaser.Scene {
       matchId = this.cup.matchId;
     }
     this.currentMatchLaunch = { config, mode: this.mode, matchId, mute: params.mute,
-      teamNames: [TEAMS[this.selection.team].name, this.cup ? this.cup.opponents[this.cup.rung].name : TEAMS[this.selection.opponent].name] };
+      ...matchTeams(TEAMS[this.selection.team], this.cup ? this.cup.opponents[this.cup.rung] : TEAMS[this.selection.opponent]) };
     this.scene.start('match', this.currentMatchLaunch);
   }
   settleCupResult(id: string | null, [home, away]: readonly [number, number]): CupSession['status'] {
@@ -82,7 +82,7 @@ export class ShellScene extends Phaser.Scene {
     if (this.cup.status === 'ended') this.cup = retryCup(this.cup);
     if (this.cup.status !== 'active') return null;
     this.currentMatchLaunch = { ...this.currentMatchLaunch, config: cupMatchConfig(this.cup), matchId: this.cup.matchId,
-      teamNames: [this.cup.selectedTeam.name, this.cup.opponents[this.cup.rung].name] };
+      ...matchTeams(this.cup.selectedTeam, this.cup.opponents[this.cup.rung]) };
     return this.currentMatchLaunch;
   }
 
@@ -130,16 +130,17 @@ export class ShellScene extends Phaser.Scene {
     }
     text(this.mode === 'cup' ? 'CUP SETUP' : 'MATCH SETUP', 160, 5, PAL.yel, 2, 'c');
     const opponent = this.mode === 'cup' ? TEAMS.findIndex((_, i) => i !== this.selection.team) : this.selection.opponent;
+    const kits = resolveKits(TEAMS[this.selection.team], TEAMS[opponent]);
     [this.selection.team, opponent].forEach((teamIndex, side) => {
-      const x = side ? 180 : 12; const team = TEAMS[teamIndex]; const col = side ? PAL.blue : PAL.red;
+      const x = side ? 180 : 12; const team = TEAMS[teamIndex]; const col = KITS[kits[side].outfield].jersey;
       rect(x, 22, 128, 80, col); rect(x + 1, 23, 126, 78, PAL.dk); rect(x + 1, 23, 126, 12, col);
-      text(team.name, x + 64, 26, PAL.ink, 1, 'c'); rect(x + 6, 40, 36, 35, PAL.navy); this.add.image(x + 24, 58, ATLAS_KEY, frameKey(side ? team.kits.away[0] : team.kits.home[0], 'idle', 0)).setScale(2).setFlipX(!!side); text(side ? 'CPU' : 'P1', x + 23, 78, PAL.wht, 1, 'c');
+      text(team.name, x + 64, 26, PAL.ink, 1, 'c'); rect(x + 6, 40, 36, 35, PAL.navy); this.add.image(x + 24, 58, ATLAS_KEY, frameKey(kits[side].outfield, 'idle', 0)).setScale(2).setFlipX(!!side); text(side ? 'CPU' : 'P1', x + 23, 78, PAL.wht, 1, 'c');
       Object.entries(team.ratings).forEach(([name, value], i) => { const y = 38 + i * 12; text(name, x + 45, y); for (let j = 0; j < 8; j++) rect(x + 45 + j * 8, y + 6, 7, 3, j < Math.round(value * 8) ? PAL.yel : PAL.navy); });
       if (!side || this.mode === 'friendly') button(side, x, 88, 128, 22, '<  CHANGE  >');
     });
     text('VS', 160, 55, PAL.wht, 3, 'c');
     button(2, 12, 112, 145, 22, `LEVEL: < ${this.selection.level} >`);
-    const label = this.selection.length === 'short' ? '2 X 120S' : this.selection.length === 'long' ? '2 X 240S' : 'FIRST TO 5';
+    const label = this.selection.length === 'short' ? '2 MIN/HALF' : this.selection.length === 'long' ? '4 MIN/HALF' : 'FIRST TO 5';
     button(3, 163, 112, 145, 22, `LENGTH: < ${label} >`);
     button(4, 12, 145, 90, 24, '< BACK'); button(5, 110, 145, 198, 24, 'KICK OFF >', PAL.red);
   }

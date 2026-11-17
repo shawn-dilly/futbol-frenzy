@@ -15,7 +15,7 @@ export interface CupSession {
 }
 
 function copyTeam(team: TeamRecord): TeamRecord {
-  return { ...team, ratings: { ...team.ratings }, kits: { home: [...team.kits.home], away: [...team.kits.away] } };
+  return { ...team, ratings: { ...team.ratings } };
 }
 function copyConfig(config: MatchConfig): MatchConfig {
   return { ...config, human: [...config.human], level: [...config.level], ...(config.ratings && { ratings: [{ ...config.ratings[0] }, { ...config.ratings[1] }] }) };

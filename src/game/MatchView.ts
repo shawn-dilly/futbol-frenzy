@@ -1,3 +1,4 @@
+import type { MatchKits } from '../content/teams';
 import Phaser from 'phaser';
 import { canvasRect } from '../art/canvasRect';
 import { PAL } from '../art/palette';
@@ -21,7 +22,7 @@ const BALL_CENTER_PX = Math.floor(BALL_PX / 2); // sprite columns left of the ba
 /** Body centre is column ORIGIN_X, but flipX mirrors about x = ORIGIN_X; shift a flipped sprite right to keep the body still. */
 const FLIP_OFFSET_PX = 1;
 const MARKER = { w: 3, h: 2, above: 20, color: Phaser.Display.Color.HexStringToColor(PAL.yel).color }; // px above the feet
-const GOALKEEPER_KIT_OFFSET = 2;
+
 /** Dazed marker: two yellow pixels this far above the feet, and this far either side of the body centre. */
 const DAZED = { above: 24, dxLeft: -3, dxRight: 2, color: MARKER.color };
 
@@ -49,7 +50,7 @@ export class MatchView {
   private offset = { x: 0, y: 0 };
 
   /** `random` feeds the shake; it is the presentation's own generator, never the sim's. */
-  constructor(private readonly scene: Phaser.Scene, private readonly random: () => number) {
+  constructor(private readonly scene: Phaser.Scene, private readonly random: () => number, private readonly kits: MatchKits) {
     const tex = scene.textures.createCanvas(PITCH_KEY, PITCH_TEX_W, PITCH_TEX_H);
     if (!tex) throw new Error('pitch texture could not be created');
     drawPitch(canvasRect(tex.context));
@@ -174,7 +175,7 @@ export class MatchView {
   private syncPlayer(view: PlayerView, p: PlayerState, state: MatchState, camX: number, marker = true): void {
     const s = this.screenPos(p.pos, camX);
     const x = Math.round(s.x), y = Math.round(s.y);
-    const kit = p.team + (p.role === 'gk' ? GOALKEEPER_KIT_OFFSET : 0);
+    const kit = this.kits[p.team][p.role === 'gk' ? 'keeper' : 'outfield'];
     view.flip = nextFlip(view.flip, p.facing.x);
     const { key, tick } = animFor(p, state.tick);
     const def = ANIMATIONS[key];

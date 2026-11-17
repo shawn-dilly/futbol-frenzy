@@ -1,3 +1,4 @@
+import { resolveKits, type MatchKits, type TeamRecord } from '../content/teams';
 import type { MatchConfig } from '../sim';
 import { parseMatchParams } from './params';
 
@@ -6,7 +7,12 @@ export interface MatchLaunch {
   mode: 'demo' | 'direct' | 'friendly' | 'cup';
   matchId: string | null;
   mute: boolean;
+  kits?: MatchKits;
   teamNames?: [string, string];
+}
+
+export function matchTeams(home: TeamRecord, away: TeamRecord): Pick<MatchLaunch, 'teamNames' | 'kits'> {
+  return { teamNames: [home.name, away.name], kits: resolveKits(home, away) };
 }
 
 export function launchFromSearch(search: string): MatchLaunch {

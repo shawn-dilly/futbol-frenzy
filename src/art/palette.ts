@@ -6,10 +6,14 @@ export const PAL = {
 
 export interface Kit { jersey: string; trim: string; shorts: string; hair: string; skin: string }
 
-/** 0 Rhinos outfield, 1 Vipers outfield, 2 Rhinos keeper, 3 Vipers keeper. */
-export const KITS: [Kit, Kit, Kit, Kit] = [
+export const KIT = { red: 0, blue: 1, cyanKeeper: 2, charcoalKeeper: 3, gold: 4, orange: 5, ivory: 6, violet: 7 } as const;
+export const KITS: readonly Kit[] = [
   { jersey: PAL.red, trim: PAL.wht, shorts: PAL.wht, hair: '#3a2414', skin: PAL.skin },
   { jersey: PAL.blue, trim: PAL.yel, shorts: PAL.navy, hair: PAL.yel, skin: PAL.skin },
-  { jersey: PAL.grn, trim: PAL.ink, shorts: PAL.ink, hair: PAL.org, skin: PAL.skin },
-  { jersey: PAL.org, trim: PAL.ink, shorts: PAL.ink, hair: PAL.ink, skin: PAL.skin },
+  { jersey: '#45fbeb', trim: PAL.ink, shorts: PAL.ink, hair: PAL.org, skin: PAL.skin },
+  { jersey: PAL.navy, trim: PAL.yel, shorts: PAL.yel, hair: PAL.ink, skin: PAL.skin },
+  { jersey: PAL.yel, trim: PAL.navy, shorts: PAL.navy, hair: PAL.ink, skin: PAL.skin2 },
+  { jersey: PAL.org, trim: PAL.navy, shorts: PAL.navy, hair: PAL.ink, skin: PAL.skin },
+  { jersey: PAL.wht, trim: PAL.red, shorts: PAL.red, hair: PAL.ink, skin: PAL.skin2 },
+  { jersey: '#a646df', trim: PAL.wht, shorts: PAL.wht, hair: PAL.ink, skin: PAL.skin },
 ];

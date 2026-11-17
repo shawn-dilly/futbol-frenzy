@@ -31,7 +31,11 @@ export class Hud {
   private banner: { text: string; untilTick: number } | null = null;
   private fulltimeTick: number | null = null;
 
-  constructor(scene: Phaser.Scene, private readonly teamNames: readonly [string, string] = TEAM_NAMES) {
+  constructor(
+    scene: Phaser.Scene,
+    private readonly teamNames: readonly [string, string] = TEAM_NAMES,
+    private readonly colors: readonly [string, string],
+  ) {
     const tex = scene.textures.createCanvas(HUD_KEY, SCREEN_W, SCREEN_H);
     if (!tex) throw new Error('hud texture could not be created');
     this.texture = tex;
@@ -69,13 +73,13 @@ export class Hud {
     ctx.clearRect(0, 0, SCREEN_W, SCREEN_H);
     const rect = canvasRect(ctx);
     rect(0, 0, SCREEN_W, HUD_BAR_H, PAL.ink);
-    rect(LEFT.badgeX, BADGE.y, BADGE.size, BADGE.size, PAL.red);
+    rect(LEFT.badgeX, BADGE.y, BADGE.size, BADGE.size, this.colors[0]);
     drawText(rect, this.teamNames[0], LEFT.nameX, TEXT_Y, PAL.wht);
     drawText(rect, String(score[0]), LEFT.scoreX, TEXT_Y, PAL.yel);
     drawText(rect, matchLabel, SCREEN_W / 2, TEXT_Y, PAL.wht, 1, 'c');
     drawText(rect, String(score[1]), RIGHT.scoreX, TEXT_Y, PAL.yel);
     drawText(rect, this.teamNames[1], RIGHT.nameRightX, TEXT_Y, PAL.wht, 1, 'r');
-    rect(RIGHT.badgeX, BADGE.y, BADGE.size, BADGE.size, PAL.blue);
+    rect(RIGHT.badgeX, BADGE.y, BADGE.size, BADGE.size, this.colors[1]);
     rage.forEach((r, team) => {
       const frameW = RAGE.maxPx + 2 * RAGE.frame;
       const x = team === 0 ? RAGE.leftX : RAGE.rightEdgeX - frameW; // the right meter mirrors the left: it fills from the screen edge

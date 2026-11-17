@@ -1,6 +1,7 @@
+import { resolveKits, TEAMS } from '../content/teams';
 import Phaser from 'phaser';
 import { drawText } from '../art/pixelFont';
-import { PAL } from '../art/palette';
+import { KITS, PAL } from '../art/palette';
 import { DEPTH, GOAL_BANNER_TICKS, SCREEN_H, SCREEN_W, canRestart } from './layout';
 import { HALFTIME_PAUSE_TICKS, createMatch, neutralPad, step, type HitType, type HurtTier, type MatchState, type PadInput, type SimEvent } from '../sim';
 import { KeyboardPad, mergePads } from '../input/keyboard';
@@ -109,8 +110,9 @@ export class MatchScene extends Phaser.Scene {
       calloutText: () => this.calloutBanner.visibleText(this.state.tick),
     };
     window.__ff = hook;
-    this.view = new MatchView(this, seededRandom(this.seed ^ EFFECT_SEED_SALT));
-    this.hud = new Hud(this, this.launch.teamNames);
+    const kits = this.launch.kits ?? resolveKits(TEAMS[0], TEAMS[1]);
+    this.view = new MatchView(this, seededRandom(this.seed ^ EFFECT_SEED_SALT), kits);
+    this.hud = new Hud(this, this.launch.teamNames, [KITS[kits[0].outfield].jersey, KITS[kits[1].outfield].jersey]);
     this.calloutBanner = new CalloutBanner(this);
     this.flash = this.add.rectangle(0, 0, SCREEN_W, SCREEN_H, 0xffffff).setOrigin(0, 0).setDepth(DEPTH.flash).setAlpha(0);
     this.keys = new KeyboardPad(this);
