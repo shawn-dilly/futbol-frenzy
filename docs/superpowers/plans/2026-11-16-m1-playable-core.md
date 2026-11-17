@@ -816,7 +816,7 @@ export function sfxForEvent(e: SimEvent): SfxName | null;  // kick/pass→'pass'
 - `Sfx` never throws: any failure creating or resuming the context, or scheduling a sound, is swallowed and leaves the game running silently.
 - `MatchScene`: `mute=1` sets `muted`; the first pointer-down or key-down calls `unlock()`; each event maps through `sfxForEvent`. The `goal` event plays `goal` only (not also `whistle`).
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 ```ts
 // tests/audio/sfx.test.ts
@@ -841,10 +841,10 @@ test('muted play never throws', () => {
 });
 ```
 
-- [ ] **Step 2:** Run `npm test`. Expected: FAIL.
-- [ ] **Step 3:** Implement `sfx.ts` and the scene wiring.
-- [ ] **Step 4:** Run `npm test`. Expected: PASS. Run `npm run dev`, play, and listen: five distinguishable sounds, none before the first click, none with `?mute=1`, no console errors.
-- [ ] **Step 5:** Commit: `feat(audio): synthesised sound effects wired to sim events`.
+- [x] **Step 2:** Run `npm test`. Expected: FAIL.
+- [x] **Step 3:** Implement `sfx.ts` and the scene wiring.
+- [x] **Step 4:** Run `npm test`. Expected: PASS. Run `npm run dev`, play, and listen: five distinguishable sounds, none before the first click, none with `?mute=1`, no console errors.
+- [x] **Step 5:** Commit: `feat(audio): synthesised sound effects wired to sim events`.
 
 ---
 
