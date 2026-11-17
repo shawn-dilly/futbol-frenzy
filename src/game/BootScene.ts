@@ -1,7 +1,8 @@
 import Phaser from 'phaser';
 import { canvasRect } from '../art/canvasRect';
 import { KITS, PAL } from '../art/palette';
-import { ANIMS, type AnimName, FRAME_H, FRAME_W, atlasLayout, drawPlayerFrame, frameKey } from '../art/sprites';
+import { FRAME_H, FRAME_W, atlasLayout, drawFrame, frameKey } from '../art/sprites';
+import { ANIMATIONS } from '../content/animations';
 
 export const ATLAS_KEY = 'atlas';
 export const BALL_KEY = 'ball';
@@ -15,14 +16,15 @@ export class BootScene extends Phaser.Scene {
   create(): void {
     const slots = new Map(atlasLayout().map(s => [s.key, s]));
     const width = Math.max(...[...slots.values()].map(s => s.x)) + FRAME_W;
-    const atlas = this.textures.createCanvas(ATLAS_KEY, width, KITS.length * FRAME_H);
+    const height = Math.max(...[...slots.values()].map(s => s.y)) + FRAME_H;
+    const atlas = this.textures.createCanvas(ATLAS_KEY, width, height);
     if (!atlas) throw new Error('atlas texture could not be created');
     KITS.forEach((kit, k) => {
-      for (const anim of Object.keys(ANIMS) as AnimName[]) {
-        for (let f = 0; f < ANIMS[anim].frames; f++) {
-          const slot = slots.get(frameKey(k, anim, f));
-          if (!slot) throw new Error(`no atlas slot for ${frameKey(k, anim, f)}`);
-          drawPlayerFrame(canvasRect(atlas.context, slot.x, slot.y), kit, anim, f);
+      for (const [key, def] of Object.entries(ANIMATIONS)) {
+        for (let f = 0; f < def.frames.length; f++) {
+          const slot = slots.get(frameKey(k, key, f));
+          if (!slot) throw new Error(`no atlas slot for ${frameKey(k, key, f)}`);
+          drawFrame(canvasRect(atlas.context, slot.x, slot.y), kit, key, f);
           atlas.add(slot.key, 0, slot.x, slot.y, FRAME_W, FRAME_H);
         }
       }

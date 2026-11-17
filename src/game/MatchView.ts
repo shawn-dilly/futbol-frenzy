@@ -1,11 +1,12 @@
 import Phaser from 'phaser';
 import { canvasRect } from '../art/canvasRect';
 import { PAL } from '../art/palette';
-import { ANIMS, ORIGIN_X, ORIGIN_Y, type AnimName, frameIndex, frameKey } from '../art/sprites';
+import { ORIGIN_X, ORIGIN_Y, frameIndex, frameKey } from '../art/sprites';
+import { ANIMATIONS } from '../content/animations';
 import type { MatchState, PlayerState, TeamId } from '../sim';
 import { animFor } from './playerAnim';
 import { ATLAS_KEY, BALL_KEY, BALL_PX } from './BootScene';
-import { DEPTH, PITCH_TEX_ORIGIN_X, PITCH_TEX_W, SCREEN_H, cameraTarget, nextFlip, worldToScreen } from './layout';
+import { DEPTH, PITCH_TEX_ORIGIN_X, PITCH_TEX_W, SCREEN_H, arcLift, cameraTarget, nextFlip, worldToScreen } from './layout';
 import { drawPitch } from './pitchArt';
 
 const PITCH_KEY = 'pitch';
@@ -17,9 +18,6 @@ const BALL_CENTER_PX = Math.floor(BALL_PX / 2); // sprite columns left of the ba
 const FLIP_OFFSET_PX = 1;
 const MARKER = { w: 3, h: 2, above: 20, color: Phaser.Display.Color.HexStringToColor(PAL.yel).color }; // px above the feet
 const GOALKEEPER_KIT_OFFSET = 2;
-
-/** Until Task 5 draws the new frames, a key the atlas lacks shows idle. */
-const drawable = (key: string): AnimName => (Object.hasOwn(ANIMS, key) ? (key as AnimName) : 'idle');
 
 interface PlayerView { sprite: Phaser.GameObjects.Image; shadow: Phaser.GameObjects.Rectangle; flip: boolean }
 
@@ -73,11 +71,11 @@ export class MatchView {
     const kit = p.team + (p.role === 'gk' ? GOALKEEPER_KIT_OFFSET : 0);
     view.flip = nextFlip(view.flip, p.facing.x);
     const { key, tick } = animFor(p, state.tick);
-    const anim = drawable(key);
+    const lift = arcLift(ANIMATIONS[key].arcHeight, p.statusTick, p.statusTicks);
     view.sprite
-      .setFrame(frameKey(kit, anim, frameIndex(anim, tick)))
+      .setFrame(frameKey(kit, key, frameIndex(key, tick)))
       .setFlipX(view.flip)
-      .setPosition(x - ORIGIN_X + (view.flip ? FLIP_OFFSET_PX : 0), y - ORIGIN_Y)
+      .setPosition(x - ORIGIN_X + (view.flip ? FLIP_OFFSET_PX : 0), y - ORIGIN_Y - Math.round(lift))
       .setDepth(p.pos.y);
     view.shadow.setPosition(x - SHADOW.w / 2, y);
     if (state.config.human[p.team] && state.controlled[p.team] === p.id) {

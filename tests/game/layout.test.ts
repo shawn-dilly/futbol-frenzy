@@ -1,6 +1,6 @@
 import { expect, test } from 'vitest';
 import {
-  DEPTH, FULLTIME_RESTART_DELAY_TICKS, TEAM_NAMES, canRestart, cameraTarget, fullTimeLines, formatClock, nextFlip, turboPips, worldToScreen,
+  DEPTH, arcLift, FULLTIME_RESTART_DELAY_TICKS, TEAM_NAMES, canRestart, cameraTarget, fullTimeLines, formatClock, nextFlip, turboPips, worldToScreen,
 } from '../../src/game/layout';
 
 test('camera follows the ball and stops at both ends', () => {
@@ -36,4 +36,15 @@ test('restart is allowed only at full time, once the delay has passed', () => {
 test('full-time banner lines: result always, hint once restart is allowed', () => {
   expect(fullTimeLines([3, 1], false)).toEqual(['FULL TIME', 'RHINOS 3 - 1 VIPERS']);
   expect(fullTimeLines([0, 0], true)).toEqual(['FULL TIME', 'RHINOS 0 - 0 VIPERS', 'TAP TO PLAY AGAIN']);
+});
+
+test('arcLift is zero at both ends and peaks at the midpoint', () => {
+  expect(arcLift(22, 0, 100)).toBe(0);
+  expect(arcLift(22, 100, 100)).toBeCloseTo(0, 10);
+  expect(arcLift(22, 50, 100)).toBeCloseTo(22, 10);
+  expect(arcLift(30, 25, 100)).toBeCloseTo(30 * Math.sin(Math.PI / 4), 10);
+});
+test('arcLift is zero without an arc or for an open-ended status', () => {
+  expect(arcLift(undefined, 40, 100)).toBe(0);
+  expect(arcLift(22, 40, 0)).toBe(0);
 });

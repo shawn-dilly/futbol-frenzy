@@ -1,35 +1,50 @@
-import { expect, test } from 'vitest';
+import { describe, expect, test } from 'vitest';
 import { KITS } from '../../src/art/palette';
-import { ANIMS, type AnimName, POSES, FRAME_H, FRAME_W, atlasLayout, drawPlayerFrame, frameIndex, frameKey } from '../../src/art/sprites';
+import { FRAME_H, FRAME_W, atlasLayout, drawFrame, frameIndex, frameKey } from '../../src/art/sprites';
+import { ANIMATIONS } from '../../src/content/animations';
+import legacy from './fixtures/legacy-frames.json';
 
-const grid = (anim: AnimName, f: number) => { const g = new Map<string, string>(); let out = false;
-  drawPlayerFrame((x, y, w, h, c) => { for (let i = 0; i < w; i++) for (let j = 0; j < h; j++) {
-    if (x + i < 0 || y + j < 0 || x + i >= FRAME_W || y + j >= FRAME_H) out = true; g.set(`${x + i},${y + j}`, c); } }, KITS[0], anim, f);
-  return { key: JSON.stringify([...g].sort()), out, size: g.size }; };
-test('every frame of every anim draws inside its box and is not empty', () => {
-  for (const a of Object.keys(ANIMS) as AnimName[]) for (let f = 0; f < ANIMS[a].frames; f++) {
-    const r = grid(a, f); expect(r.out, `${a}${f}`).toBe(false); expect(r.size).toBeGreaterThan(40); }
-});
-test('the run cycle has six distinct frames', () => {
-  expect(new Set([0, 1, 2, 3, 4, 5].map(f => grid('run', f).key)).size).toBe(6);
-});
-test('frameIndex loops run and holds the last kick frame', () => {
-  expect(frameIndex('run', 0)).toBe(0); expect(frameIndex('run', 29)).toBe(5); expect(frameIndex('run', 30)).toBe(0);
-  expect(frameIndex('kick', 11)).toBe(2); expect(frameIndex('kick', 500)).toBe(2);
-});
-test('atlas layout has one unique slot per kit, anim, and frame', () => {
-  const l = atlasLayout(); expect(l.length).toBe(4 * (2 + 6 + 3));
-  expect(new Set(l.map(e => e.key)).size).toBe(l.length);
-  expect(l).toContainEqual({ key: frameKey(1, 'idle', 0), x: 0, y: 20 });
-});
-test('every animation has as many poses as its declared frame count', () => {
-  for (const a of Object.keys(ANIMS) as AnimName[]) expect(POSES[a].length, a).toBe(ANIMS[a].frames);
-});
-test('run frame 5 is frame 2 on the other leg: support leg mirrored, trailing leg unchanged, support boot moves with its leg', () => {
-  const mirror = ([x, y, w, h]: number[]) => [0 - (x + w - 1), y, w, h];
-  const [f2, f5] = [POSES.run[2], POSES.run[5]];
-  expect(f5.legs[0]).toEqual(mirror(f2.legs[0]));
-  expect(f5.legs.slice(1)).toEqual(f2.legs.slice(1));
-  const [supportBoot, trailBoot] = f2.boots;
-  expect(f5.boots).toEqual([[supportBoot[0] + 1, supportBoot[1], supportBoot[2], supportBoot[3]], trailBoot]);
+const pixels = (key: string, f: number): string[] => {
+  const g = new Map<string, string>();
+  drawFrame((x, y, w, h, c) => { for (let i = 0; i < w; i++) for (let j = 0; j < h; j++) g.set(`${x + i},${y + j}`, c); }, KITS[0], key, f);
+  return [...g].map(([k, c]) => `${k},${c}`).sort();
+};
+
+describe('sprites', () => {
+  test('idle, run and kick draw the same pixels as before the data rewrite', () => {
+    const expected = legacy as Record<string, string[]>;
+    expect(Object.keys(expected).length).toBe(11);
+    for (const [name, px] of Object.entries(expected)) {
+      const cut = name.lastIndexOf('_');
+      expect(pixels(name.slice(0, cut), Number(name.slice(cut + 1))), name).toEqual(px);
+    }
+  });
+
+  test('the run cycle has six distinct frames', () => {
+    expect(new Set([0, 1, 2, 3, 4, 5].map(f => pixels('run', f).join())).size).toBe(6);
+  });
+
+  test('frameIndex wraps looping animations and clamps the rest', () => {
+    expect(frameIndex('run', 0)).toBe(0); expect(frameIndex('run', 29)).toBe(5); expect(frameIndex('run', 30)).toBe(0);
+    expect(frameIndex('kick', 11)).toBe(2); expect(frameIndex('kick', 500)).toBe(2);
+    expect(ANIMATIONS.hurt_wipeout_0.loop).toBe(true);
+    const wipe = ANIMATIONS.hurt_wipeout_0;
+    expect(frameIndex('hurt_wipeout_0', wipe.frames.length * wipe.ticksPerFrame)).toBe(0);
+    const knock = ANIMATIONS.hurt_knockdown_0;
+    expect(frameIndex('hurt_knockdown_0', 10000)).toBe(knock.frames.length - 1);
+  });
+
+  test('atlas keys are unique, aligned to cells and at most 1024 px wide', () => {
+    const layout = atlasLayout();
+    const frameCount = Object.values(ANIMATIONS).reduce((n, a) => n + a.frames.length, 0);
+    expect(layout.length).toBe(KITS.length * frameCount);
+    expect(new Set(layout.map(e => e.key)).size).toBe(layout.length);
+    expect(new Set(layout.map(e => `${e.x},${e.y}`)).size).toBe(layout.length);
+    for (const e of layout) {
+      expect(e.x + FRAME_W).toBeLessThanOrEqual(1024);
+      expect(e.x % FRAME_W).toBe(0);
+      expect(e.y % FRAME_H).toBe(0);
+    }
+    expect(layout[0]).toEqual({ key: frameKey(0, 'idle', 0), x: 0, y: 0 });
+  });
 });

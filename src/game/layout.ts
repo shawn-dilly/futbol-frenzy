@@ -63,3 +63,9 @@ export function fullTimeLines(score: readonly [number, number], restartAllowed: 
   if (restartAllowed) lines.push('TAP TO PLAY AGAIN');
   return lines;
 }
+
+/** Pixels a sprite is lifted `statusTick` ticks into a status of `statusTicks`: 0 at both ends, `arcHeight` at the midpoint. */
+export function arcLift(arcHeight: number | undefined, statusTick: number, statusTicks: number): number {
+  if (!arcHeight || statusTicks <= 0) return 0;
+  return arcHeight * Math.sin(Math.PI * Math.min(statusTick, statusTicks) / statusTicks);
+}

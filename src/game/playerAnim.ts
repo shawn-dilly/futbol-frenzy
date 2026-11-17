@@ -1,3 +1,4 @@
+import { hurtAnimKey } from '../content/animations';
 import type { PlayerState } from '../sim';
 
 export type AnimKey = string;
@@ -11,6 +12,6 @@ export function animFor(p: PlayerState, matchTick: number): { key: AnimKey; tick
     case 'charging': return { key: 'charge', tick: p.statusTick };
     case 'lunging': return { key: `lunge_${s.hit}`, tick: p.statusTick };
     case 'recovering': return { key: s.landed ? 'idle' : `recover_${s.hit}`, tick: p.statusTick };
-    case 'hurt': return { key: `hurt_${s.tier}_${s.variant}`, tick: p.statusTick };
+    case 'hurt': return { key: hurtAnimKey(s.tier, s.variant), tick: p.statusTick };
   }
 }
