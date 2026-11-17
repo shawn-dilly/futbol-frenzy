@@ -1,10 +1,11 @@
 import { test, expect } from '@playwright/test';
 import { reconstructReplay, type ReplayRecord } from '../src/game/replay';
 import type { MatchState } from '../src/sim';
+import type { MatchLaunch } from '../src/game/launch';
 
 declare global {
   interface Window {
-    __ff?: { state: MatchState; replay: () => ReplayRecord; pause: () => void; resume: () => void };
+    __ff?: { state: MatchState; replay: () => ReplayRecord; pause: () => void; resume: () => void; launch: (launch: MatchLaunch) => void; halftimeGate: () => boolean; continueHalftime: () => void };
   }
 }
 

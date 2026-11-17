@@ -12,7 +12,7 @@ import { EFFECT_SEED_SALT, HIT_FEEDBACK, craterLandTicks, flashAlpha, soundsForH
 import { bigHitReady, chargeFill, chargeJustStarted } from './indicators';
 import { MatchView } from './MatchView';
 import { FixedStepper } from './loop';
-import { parseMatchParams } from './params';
+import { launchFromSearch, type MatchLaunch } from './launch';
 import { createReplayRecord, recordReplayInput, type ReplayRecord } from './replay';
 import { outgoingAt } from './outgoing';
 import { Sfx, sfxForEvent } from '../audio/sfx';
@@ -20,7 +20,7 @@ import { Sfx, sfxForEvent } from '../audio/sfx';
 declare global {
   interface Window {
     /** Dev/test hooks: `showCallout` shows the callout a hit of that tier and type would; `calloutText` is what the banner shows now ('' if nothing). */
-    __ff?: { state: MatchState; showCallout: (tier: HurtTier, hit: HitType) => void; calloutText: () => string; replay: () => ReplayRecord; pause: () => void; resume: () => void }
+    __ff?: { state: MatchState; showCallout: (tier: HurtTier, hit: HitType) => void; calloutText: () => string; replay: () => ReplayRecord; pause: () => void; resume: () => void; halftimeGate: () => boolean; continueHalftime: () => void; launch: (launch: MatchLaunch) => void }
   }
 }
 
@@ -48,6 +48,8 @@ export class MatchScene extends Phaser.Scene {
   private paused = false;
   private hidden = false;
   private seed = 0;
+  private launch!: MatchLaunch;
+  private halftimeGated = false;
   /** Sim tick of the full-time whistle, null until it blows. */
   private fulltimeTick: number | null = null;
   /** Audio resources are released on each shutdown. */
@@ -55,12 +57,16 @@ export class MatchScene extends Phaser.Scene {
 
   constructor() { super('match'); }
 
-  init(data: { seed?: number }): void {
-    this.seed = data.seed ?? parseMatchParams(window.location.search).seed;
+  init(data?: MatchLaunch | { seed?: number }): void {
+    const fallback = launchFromSearch(window.location.search);
+    this.launch = data && 'config' in data ? structuredClone(data) : fallback;
+    if (data && 'seed' in data && data.seed !== undefined) this.launch.config.seed = data.seed;
+    this.seed = this.launch.config.seed;
   }
 
   create(): void {
     this.paused = false;
+    this.halftimeGated = false;
     this.hidden = document.hidden;
     this.stepper.reset();
     this.fulltimeTick = null;
@@ -68,9 +74,8 @@ export class MatchScene extends Phaser.Scene {
     this.freezeTicks = 0;
     this.wasCharging = false;
     this.flashStartMs = -Infinity;
-    const params = parseMatchParams(window.location.search);
-    this.sfx.muted = params.mute;
-    this.state = createMatch({ seed: this.seed, halfSeconds: params.halfSeconds, human: [!params.demo, false], level: [params.level2 ?? params.level, params.level] });
+    this.sfx.muted = this.launch.mute;
+    this.state = createMatch(this.launch.config);
     this.replay = createReplayRecord(this.state.config);
     this.callouts = new CalloutPicker(CALLOUTS, seededRandom(this.seed ^ CALLOUT_SEED_SALT));
     let active = true;
@@ -79,6 +84,9 @@ export class MatchScene extends Phaser.Scene {
       pause: () => { if (active) this.pause(); },
       resume: () => { if (active) this.resume(); },
       replay: () => structuredClone(this.replay),
+      launch: (launch) => { if (active) this.scene.restart(launch); },
+      halftimeGate: () => this.isHalftimeGated(),
+      continueHalftime: () => { if (active) this.continueHalftime(); },
       showCallout: (tier, hit) => { if (!active) return; const c = this.callouts.pick(tier, hit); if (c) this.calloutBanner.show(c.text, tier, this.state.tick); },
       calloutText: () => this.calloutBanner.visibleText(this.state.tick),
     };
@@ -88,13 +96,13 @@ export class MatchScene extends Phaser.Scene {
     this.calloutBanner = new CalloutBanner(this);
     this.flash = this.add.rectangle(0, 0, SCREEN_W, SCREEN_H, 0xffffff).setOrigin(0, 0).setDepth(DEPTH.flash).setAlpha(0);
     this.keys = new KeyboardPad(this);
-    this.touch = params.demo ? null : new TouchControls(this);
+    this.touch = this.state.config.human[0] ? new TouchControls(this) : null;
     this.handleEvents(this.state.events);
     this.syncPresentation();
 
     // Only a fresh press restarts: a key already held at full time keeps auto-repeating keydown, which must not count.
     const restart = () => {
-      if (canRestart(this.state.phase, this.state.tick, this.fulltimeTick)) this.scene.restart({ seed: this.seed + 1 });
+      if (canRestart(this.state.phase, this.state.tick, this.fulltimeTick)) this.scene.restart({ ...this.launch, config: { ...this.launch.config, seed: this.seed + 1 } });
     };
     this.input.on('pointerdown', restart);
     const restartKey = (e: KeyboardEvent) => { if (!e.repeat) restart(); };
@@ -124,15 +132,23 @@ export class MatchScene extends Phaser.Scene {
 
   update(time: number, delta: number): void {
     this.nowMs = time;
-    if (this.paused || this.hidden) return;
+    if (this.paused || this.hidden || this.halftimeGated) return;
     const steps = this.stepper.advance(delta);
     for (let i = 0; i < steps; i++) {
       const inputs = this.readPads();
       recordReplayInput(this.replay, inputs);
+      const previousPhase = this.state.phase;
       step(this.state, inputs);
+      const gate = previousPhase !== 'halftime' && this.state.phase === 'halftime' && (this.launch.mode === 'friendly' || this.launch.mode === 'cup');
       this.handleEvents(this.state.events);
       this.landCraters();
       this.playChargeSound();
+      if (gate) {
+        this.halftimeGated = true;
+        this.freezeTicks = 0;
+        this.clearControls();
+        break;
+      }
       if (this.freezeTicks > 0) {
         // Hit-stop: the rest of this frame's steps are dropped and count towards the pause.
         this.stepper.freeze(this.freezeTicks, steps - i - 1);
@@ -142,6 +158,10 @@ export class MatchScene extends Phaser.Scene {
     }
     this.syncPresentation();
   }
+
+  isHalftimeGated(): boolean { return this.halftimeGated; }
+
+  continueHalftime(): void { this.halftimeGated = false; this.clearControls(); }
 
   pause(): void { this.paused = true; this.clearControls(); }
 
