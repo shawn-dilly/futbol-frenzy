@@ -20,6 +20,7 @@ export class ShellScene extends Phaser.Scene {
   private currentMatchLaunch: MatchLaunch | null = null;
   private screen: 'title' | 'setup' = 'title';
   private selection: SetupSelection = { team: 0, opponent: 1, level: 'pro', length: 'short' };
+  private injuryStyle: 'bandage' | 'pulse' = 'bandage';
   private focus = 0;
   private leaving = false;
   constructor() { super('shell'); }
@@ -36,7 +37,7 @@ export class ShellScene extends Phaser.Scene {
     if (this.leaving) return;
     if (event.repeat && (event.key === 'Enter' || event.key === ' ')) return;
     if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Enter', ' ', 'Escape', 'Tab'].includes(event.key)) event.preventDefault();
-    const targets = this.screen === 'title' ? [0, 1] : this.mode === 'cup' ? [0, 2, 3, 4, 5] : [0, 1, 2, 3, 4, 5];
+    const targets = this.screen === 'title' ? [0, 1] : this.mode === 'cup' ? [0, 2, 3, 6, 4, 5] : [0, 1, 2, 3, 6, 4, 5];
     const position = targets.indexOf(this.focus);
     if (event.key === 'ArrowUp') this.focus = targets[(position + targets.length - 1) % targets.length];
     else if (event.key === 'ArrowDown' || event.key === 'Tab') this.focus = targets[(position + (event.shiftKey ? targets.length - 1 : 1)) % targets.length];
@@ -52,6 +53,7 @@ export class ShellScene extends Phaser.Scene {
     if (index === 1 && this.mode === 'friendly') s.opponent = (s.opponent + direction + TEAMS.length) % TEAMS.length;
     if (index === 2) s.level = LEVEL_ORDER[(LEVEL_ORDER.indexOf(s.level) + direction + LEVEL_ORDER.length) % LEVEL_ORDER.length] as Level;
     if (index === 3) s.length = lengths[(lengths.indexOf(s.length) + direction + lengths.length) % lengths.length];
+    if (index === 6) this.injuryStyle = this.injuryStyle === 'bandage' ? 'pulse' : 'bandage';
     if (index === 4) { this.screen = 'title'; this.focus = 0; }
     if (index === 5) this.startMatch();
   }
@@ -67,7 +69,7 @@ export class ShellScene extends Phaser.Scene {
       config = cupMatchConfig(this.cup);
       matchId = this.cup.matchId;
     }
-    this.currentMatchLaunch = { config, mode: this.mode, matchId, mute: params.mute,
+    this.currentMatchLaunch = { config, injuryStyle: this.injuryStyle, mode: this.mode, matchId, mute: params.mute,
       ...matchTeams(TEAMS[this.selection.team], this.cup ? this.cup.opponents[this.cup.rung] : TEAMS[this.selection.opponent]) };
     this.scene.start('match', this.currentMatchLaunch);
   }
@@ -142,6 +144,8 @@ export class ShellScene extends Phaser.Scene {
     button(2, 12, 112, 145, 22, `LEVEL: < ${this.selection.level} >`);
     const label = this.selection.length === 'short' ? '2 MIN/HALF' : this.selection.length === 'long' ? '4 MIN/HALF' : 'FIRST TO 5';
     button(3, 163, 112, 145, 22, `LENGTH: < ${label} >`);
-    button(4, 12, 145, 90, 24, '< BACK'); button(5, 110, 145, 198, 24, 'KICK OFF >', PAL.red);
+    button(4, 12, 145, 52, 24, '< BACK');
+    button(6, 68, 145, 122, 24, `INJURY: ${this.injuryStyle}`);
+    button(5, 194, 145, 114, 24, 'KICK OFF >', PAL.red);
   }
 }

@@ -2,7 +2,7 @@ import { expect, test } from 'vitest';
 import { createMatch, blankMemory } from '../../src/sim/setup';
 import { hurtPlayer } from '../../src/sim/hurt';
 import { resolveContacts } from '../../src/sim/attack';
-import { setStatus } from '../../src/sim/status';
+import { isInjured, setStatus } from '../../src/sim/status';
 import { matchConfig } from '../helpers';
 
 test.each([0, 1] as const)('team %i uses three reserves including keeper then falls back to dazed', team => {
@@ -16,6 +16,7 @@ test.each([0, 1] as const)('team %i uses three reserves including keeper then fa
     hurtPlayer(s, p, 'wipeout', { x: 1, y: 0 }, 10);
     const replacement = s.players[id];
     expect(replacement).not.toBe(p);
+    expect(isInjured(s, replacement)).toBe(false);
     expect([replacement.id, replacement.team, replacement.role, replacement.health]).toEqual([id, team, 'gk', 100]);
     expect([replacement.status, replacement.statusTick, replacement.statusTicks, replacement.turboTicks, replacement.hitCooldown, replacement.kickCooldown, replacement.knock]).toEqual([{ kind: 'free' }, 0, 0, 0, 0, 0, { x: 0, y: 0 }]);
     expect(s.brain[id]).toEqual(blankMemory());

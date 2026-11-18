@@ -1,5 +1,6 @@
 import type { MatchState, PlayerState, PlayerStatus } from './types';
-import { DAZED_HEALTH, HURT_TIERS } from './constants';
+import { LEVELS } from './levels';
+import { PLAYER_INJURY_HEALTH, DAZED_HEALTH, HURT_TIERS } from './constants';
 
 /** Enters `status` for `ticks` ticks (0 = open-ended). */
 export function setStatus(p: PlayerState, status: PlayerStatus, ticks: number): void {
@@ -26,6 +27,12 @@ export function isDown(p: PlayerState): boolean {
 /** Badly hurt (health under DAZED_HEALTH): slower, and may fumble a pass. */
 export function isDazed(p: PlayerState): boolean {
   return p.health < DAZED_HEALTH;
+}
+
+export function isInjured(state: MatchState, p: PlayerState): boolean {
+  if (!state.config.human.some(Boolean)) return isDazed(p);
+  const threshold = state.config.human[p.team] ? PLAYER_INJURY_HEALTH : LEVELS[state.config.level[p.team]].injuryHealth;
+  return p.health < threshold;
 }
 
 /** The players who are not down; if every one is down, all of them (callers always need someone to pick). */

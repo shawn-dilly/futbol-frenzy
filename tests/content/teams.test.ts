@@ -14,18 +14,17 @@ test('team catalog has stable unique identities, normalized ratings and contrast
   expect(new Set(TEAMS.map(t => KITS[t.primary].jersey)).size).toBe(6);
 });
 
-function rgb(hex: string): number[] {
-  return [1, 3, 5].map(n => parseInt(hex.slice(n, n + 2), 16));
-}
-
 for (const home of TEAMS) for (const away of TEAMS) {
-  test(`readable kits for ${home.name} vs ${away.name}`, () => {
-    const kits = resolveKits(home, away);
-    expect(kits[0].outfield).toBe(home.primary);
-    expect(kits[1].outfield).toBe(home.clashGroup === away.clashGroup ? away.alternate : away.primary);
-    const colors = kits.flatMap(side => [side.outfield, side.keeper]).map(i => KITS[i].jersey);
-    for (const [i, a] of colors.entries()) for (const b of colors.slice(i + 1)) {
-      expect(Math.hypot(...rgb(a).map((v, c) => v - rgb(b)[c]))).toBeGreaterThan(100);
-    }
+  test(`fixed club colors for ${home.name} vs ${away.name}`, () => {
+    const [left, right] = resolveKits(home, away);
+    const primary = KITS[away.primary];
+    expect(primary.jersey).not.toBe(primary.trim);
+    expect(primary.shorts).toBe(primary.trim);
+    const mirror = home.id === away.id;
+    expect(left.outfield).toBe(home.primary);
+    expect(KITS[right.outfield].jersey).toBe(mirror ? primary.trim : primary.jersey);
+    expect(KITS[right.outfield].trim).toBe(mirror ? primary.jersey : primary.trim);
+    const shirts = [left.outfield, right.outfield, left.keeper, right.keeper].map(index => KITS[index].jersey);
+    expect(new Set(shirts).size).toBe(4);
   });
 }

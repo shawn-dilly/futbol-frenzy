@@ -2,7 +2,10 @@ import { resolveKits, type MatchKits, type TeamRecord } from '../content/teams';
 import type { MatchConfig } from '../sim';
 import { parseMatchParams } from './params';
 
+import type { InjuryStyle } from './indicators';
+
 export interface MatchLaunch {
+  injuryStyle?: InjuryStyle;
   config: MatchConfig;
   mode: 'demo' | 'direct' | 'friendly' | 'cup';
   matchId: string | null;

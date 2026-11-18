@@ -112,7 +112,7 @@ export class MatchScene extends Phaser.Scene {
     };
     window.__ff = hook;
     const kits = this.launch.kits ?? resolveKits(TEAMS[0], TEAMS[1]);
-    this.view = new MatchView(this, seededRandom(this.seed ^ EFFECT_SEED_SALT), kits);
+    this.view = new MatchView(this, seededRandom(this.seed ^ EFFECT_SEED_SALT), kits, this.launch.injuryStyle ?? 'bandage');
     this.hud = new Hud(this, this.launch.teamNames, [KITS[kits[0].outfield].jersey, KITS[kits[1].outfield].jersey]);
     this.calloutBanner = new CalloutBanner(this);
     this.flash = this.add.rectangle(0, 0, SCREEN_W, SCREEN_H, 0xffffff).setOrigin(0, 0).setDepth(DEPTH.flash).setAlpha(0);
@@ -296,6 +296,12 @@ export class MatchScene extends Phaser.Scene {
     rect(0, 0, 320, 180, PAL.navy);
     text(this.result?.title ?? 'HALF TIME', 160, 6, PAL.yel, 3, 'c');
     panel(12, 28, 176, 22, PAL.gry); text(this.launch.teamNames?.[0] ?? 'HOME', 20, 36, PAL.wht, 1); text(`${this.state.score[0]} - ${this.state.score[1]}`, 100, 33, PAL.yel, 2, 'c'); text(this.launch.teamNames?.[1] ?? 'AWAY', 180, 36, PAL.wht, 1, 'r');
+    const kits = this.launch.kits ?? resolveKits(TEAMS[0], TEAMS[1]);
+    kits.forEach((side, i) => {
+      const kit = KITS[side.outfield];
+      rect(i ? 138 : 20, 44, 42, 4, kit.jersey);
+      rect(i ? 138 : 20, 47, 42, 1, kit.trim);
+    });
     panel(12, 54, 176, 84, PAL.gry);
     const rows = [['SHOTS', 'shots'], ['BIG HITS', 'bigHits'], ['KOS', 'kos'], ['STEALS', 'steals']] as const;
     rows.forEach(([label, key], i) => { const y = 60 + i * 17; text(String(this.state.stats[0][key]), 24, y, PAL.wht, 2); text(label, 100, y + 2, PAL.gry, 1, 'c'); text(String(this.state.stats[1][key]), 176, y, PAL.wht, 2, 'r'); });

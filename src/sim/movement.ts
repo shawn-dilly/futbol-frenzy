@@ -4,7 +4,7 @@ import {
   TURBO_BURST_TICKS, TURBO_COST, TURBO_REFILL_PER_TICK, TURBO_SPEED,
 } from './constants';
 import { LEVELS } from './levels';
-import { isDazed } from './status';
+import { isInjured } from './status';
 import { add, clamp, clampLen, len, norm, scale } from './vec';
 
 function startTurboIfPressed(state: MatchState, p: PlayerState, intent: PlayerIntent): void {
@@ -20,7 +20,7 @@ function trailing(state: MatchState, team: 0 | 1): boolean {
 /** Units per second a player runs at on his own: turbo, Dazed and charging all change it. */
 function ownSpeed(state: MatchState, p: PlayerState): number {
   const base = p.role === 'gk' ? GK_SPEED * LEVELS[state.config.level[p.team]].keeperSpeedFactor : p.turboTicks > 0 ? TURBO_SPEED : RUN_SPEED;
-  return base * (1 + (state.config.ratings[p.team].speed - 0.5) * RATING_SPEED_SPAN) * (trailing(state, p.team) ? CATCHUP_SPEED_FACTOR : 1) * (isDazed(p) ? DAZED_SPEED_FACTOR : 1) * (p.status.kind === 'charging' ? CHARGE_MOVE_FACTOR : 1);
+  return base * (1 + (state.config.ratings[p.team].speed - 0.5) * RATING_SPEED_SPAN) * (trailing(state, p.team) ? CATCHUP_SPEED_FACTOR : 1) * (isInjured(state, p) ? DAZED_SPEED_FACTOR : 1) * (p.status.kind === 'charging' ? CHARGE_MOVE_FACTOR : 1);
 }
 
 /** The nearest point to `v` where a player can stand. */

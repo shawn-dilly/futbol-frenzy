@@ -105,3 +105,25 @@ for (const route of ['demo', 'match']) {
     }
   });
 }
+
+test('phone setup defaults to bandage and can launch with slow pulse', async ({ page }) => {
+  await page.setViewportSize({ width: 640, height: 360 });
+  await observeEntries(page);
+  await openFriendly(page);
+  for (const style of ['bandage', 'pulse']) {
+    await returnToShell(page);
+    await page.keyboard.press('Enter');
+    // Let Phaser register the newly drawn setup zones before tapping.
+    await page.evaluate(() => new Promise<void>(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))));
+    if (style === 'pulse') {
+      await page.mouse.click(260, 314);
+      await page.keyboard.press('ArrowDown'); // Back
+      await page.keyboard.press('ArrowDown'); // Kick Off
+    } else {
+      await page.keyboard.press('ArrowUp'); // wrap from team selection to Kick Off
+    }
+    await page.keyboard.press('Enter');
+    await page.waitForFunction(() => !!window.__ff);
+    expect(await page.evaluate(() => window.launches.at(-1)?.injuryStyle)).toBe(style);
+  }
+});

@@ -1,6 +1,6 @@
 import { expect, test } from 'vitest';
-import { DAZED_BLINK_TICKS, bigHitReady, chargeFill, chargeJustStarted, dazedMarkerVisible } from '../../src/game/indicators';
-import { BIG_HIT_CHARGE_TICKS, DAZED_HEALTH, MAX_HEALTH, TURBO_COST, createMatch, type PlayerState } from '../../src/sim';
+import { bigHitReady, chargeFill, chargeJustStarted, pulseAlpha } from '../../src/game/indicators';
+import { BIG_HIT_CHARGE_TICKS, TURBO_COST, createMatch, type PlayerState } from '../../src/sim';
 import { matchConfig } from '../helpers';
 
 const player = (): PlayerState => createMatch(matchConfig({ human: [true, false] })).players[4];
@@ -33,14 +33,6 @@ test('the charge sound starts on the step a charge begins, once', () => {
   expect(chargeJustStarted(true, p)).toBe(false);
 });
 
-test('the dazed marker blinks only on a dazed player', () => {
-  const p = player();
-  p.health = MAX_HEALTH;
-  expect(dazedMarkerVisible(p, 0)).toBe(false);
-  p.health = DAZED_HEALTH; expect(dazedMarkerVisible(p, 0)).toBe(false);
-  p.health = DAZED_HEALTH - 1;
-  expect(dazedMarkerVisible(p, 0)).toBe(true);
-  expect(dazedMarkerVisible(p, DAZED_BLINK_TICKS - 1)).toBe(true);
-  expect(dazedMarkerVisible(p, DAZED_BLINK_TICKS)).toBe(false);
-  expect(dazedMarkerVisible(p, DAZED_BLINK_TICKS * 2)).toBe(true);
+test('local injury pulse stays visible throughout its two-second cycle', () => {
+  for (const [tick, alpha] of [[0, 0.95], [30, 0.7], [60, 0.45], [120, 0.95]]) expect(pulseAlpha(tick)).toBeCloseTo(alpha);
 });

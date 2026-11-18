@@ -42,6 +42,7 @@ export const BIG_HIT_CHARGE_TICKS = 30, BIG_HIT_MAX_HOLD_TICKS = 90, CHARGE_MOVE
 export const HIT_COOLDOWN_TICKS = 20, LATE_HIT_COOLDOWN_TICKS = 90, HIT_LANDED_RECOVER_TICKS = 8;
 export const KNOCK_DECAY = 0.9, LOOSE_BALL_SPEED = 60;
 export const KNOCK_MIN_SPEED = 1; // units/s; knockback slower than this is zeroed
+export const PLAYER_INJURY_HEALTH = 65;
 export const MAX_HEALTH = 100, DAZED_HEALTH = 35, DAZED_SPEED_FACTOR = 0.8, DAZED_FUMBLE_CHANCE = 0.15;
 export const FUMBLE_COOLDOWN_TICKS = 20, HALFTIME_HEAL = 25;
 export const BRAIN_TAP_TICKS = 1; // a computer tap holds HIT for this many ticks

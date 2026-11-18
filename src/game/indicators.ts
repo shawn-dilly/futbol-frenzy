@@ -1,5 +1,4 @@
-import { BIG_HIT_CHARGE_TICKS, TURBO_COST, isDazed, type PlayerState } from '../sim';
-import { blinkOn } from './layout';
+import { BIG_HIT_CHARGE_TICKS, TURBO_COST, type PlayerState } from '../sim';
 
 /** 0..1 progress of a big-hit charge (1 = charged enough for a big hit); 0 when not charging. */
 export function chargeFill(p: PlayerState): number {
@@ -17,10 +16,9 @@ export function chargeJustStarted(wasCharging: boolean, p: PlayerState): boolean
   return !wasCharging && p.status.kind === 'charging';
 }
 
-/** Ticks each phase of the Dazed marker's blink lasts. */
-export const DAZED_BLINK_TICKS = 12;
+export type InjuryStyle = 'bandage' | 'pulse';
 
-/** Whether the Dazed marker (two yellow pixels over the head) is lit on this match tick. */
-export function dazedMarkerVisible(p: PlayerState, matchTick: number): boolean {
-  return isDazed(p) && blinkOn(matchTick, DAZED_BLINK_TICKS);
+/** One smooth two-second cycle, always visible even at minimum intensity. */
+export function pulseAlpha(tick: number): number {
+  return 0.7 + 0.25 * Math.cos(tick * Math.PI / 60);
 }

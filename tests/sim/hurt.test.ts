@@ -1,6 +1,7 @@
+import { applyMovement } from '../../src/sim/movement';
 import { test, expect } from 'vitest';
 import { createMatch, neutralPad, placeForKickoff } from '../../src/sim/setup';
-import { hurtPlayer, isDazed } from '../../src/sim/hurt';
+import { hurtPlayer, regenHealth, isDazed } from '../../src/sim/hurt';
 import { setStatus } from '../../src/sim/status';
 import { pickPassTarget, switchControl, updatePossession } from '../../src/sim/possession';
 import { brainIntent } from '../../src/sim/brain';
@@ -8,7 +9,7 @@ import { assignRoles } from '../../src/sim/brainRoles';
 import { nextRandom } from '../../src/sim/rng';
 import { step } from '../../src/sim/step';
 import {
-  DAZED_FUMBLE_CHANCE, FIELD_H, FUMBLE_COOLDOWN_TICKS, HALFTIME_HEAL, HURT, LOOSE_BALL_SPEED, PLAYER_RADIUS,
+  RUN_SPEED, DAZED_FUMBLE_CHANCE, FIELD_H, FUMBLE_COOLDOWN_TICKS, HALFTIME_HEAL, HURT, LOOSE_BALL_SPEED, PLAYER_RADIUS,
   HEALTH_REGEN_PER_TICK, MAX_HEALTH, RAGE_CONCEDE_GAIN, TURBO_SPEED,
 } from '../../src/sim/constants';
 import { norm, sub } from '../../src/sim/vec';
@@ -258,3 +259,19 @@ test.each([
   expect(s.controlled[0]).not.toBe(2);
   expect([1, 3, 4]).toContain(s.controlled[0]);
 });
+
+test.each([['rookie', 2], ['pro', 3], ['bruiser', 5], ['psycho', 7]] as const)(
+  '%s CPU slows after %i equal shoulder hits and recovers its stride', (level, hits) => {
+    const state = createMatch(matchConfig({ level: ['pro', level] }));
+    const player = state.players[6];
+    const intent = { ...neutralPad(), moveX: 1, moveY: 0, hitPress: false, hitHeld: false };
+    for (let i = 1; i <= hits; i++) {
+      hurtPlayer(state, player, 'stumble', { x: 1, y: 0 }, 10);
+      setStatus(player, { kind: 'free' }, 0);
+      applyMovement(state, player, intent);
+      expect(player.vel.x).toBeCloseTo(RUN_SPEED * (i === hits ? 0.8 : 1));
+    }
+    for (let i = 0; i < 660; i++) regenHealth(state);
+    applyMovement(state, player, intent);
+    expect(player.vel.x).toBe(RUN_SPEED);
+  });
