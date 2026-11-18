@@ -22,3 +22,15 @@ export const mirrorKit = (index: number): number => regular.length + index;
 export const KITS: readonly Kit[] = [...regular, ...regular.map(kit => ({
   ...kit, jersey: kit.trim, trim: kit.jersey, shorts: kit.jersey,
 }))];
+
+/** Choose the higher WCAG contrast ratio against a six-digit sRGB jersey color. */
+export function teamHeaderText(jersey: string): string {
+  const linear = (start: number) => {
+    const channel = parseInt(jersey.slice(start, start + 2), 16) / 255;
+    return channel <= 0.04045 ? channel / 12.92 : ((channel + 0.055) / 1.055) ** 2.4;
+  };
+  const luminance = 0.2126 * linear(1) + 0.7152 * linear(3) + 0.0722 * linear(5);
+  const blackContrast = (luminance + 0.05) / 0.05;
+  const whiteContrast = 1.05 / (luminance + 0.05);
+  return whiteContrast > blackContrast ? '#ffffff' : '#000000';
+}

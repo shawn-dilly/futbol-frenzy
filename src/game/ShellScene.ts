@@ -3,7 +3,7 @@ import Phaser from 'phaser';
 import { frameKey } from '../art/sprites';
 import { ATLAS_KEY, BALL_KEY } from './BootScene';
 import { drawText } from '../art/pixelFont';
-import { KITS, PAL } from '../art/palette';
+import { KITS, PAL, teamHeaderText } from '../art/palette';
 import { resolveKits, TEAMS } from '../content/teams';
 import { LEVEL_ORDER, type Level } from '../sim';
 import { consumeResult, retryCup, quitCup, cupMatchConfig, startCup, type CupSession } from './cupSession';
@@ -174,7 +174,7 @@ export class ShellScene extends Phaser.Scene {
     [this.selection.team, opponent].forEach((teamIndex, side) => {
       const x = side ? 180 : 12; const team = TEAMS[teamIndex]; const col = KITS[kits[side].outfield].jersey;
       rect(x, 22, 128, 80, col); rect(x + 1, 23, 126, 78, PAL.dk); rect(x + 1, 23, 126, 12, col);
-      text(team.name, x + 64, 26, PAL.ink, 1, 'c'); rect(x + 6, 40, 36, 35, PAL.navy); this.add.image(x + 24, 58, ATLAS_KEY, frameKey(kits[side].outfield, 'idle', 0)).setScale(2).setFlipX(!!side); text(side ? 'CPU' : 'P1', x + 23, 78, PAL.wht, 1, 'c');
+      text(team.name, x + 64, 26, teamHeaderText(col), 1, 'c'); rect(x + 6, 40, 36, 35, PAL.navy); this.add.image(x + 24, 58, ATLAS_KEY, frameKey(kits[side].outfield, 'idle', 0)).setScale(2).setFlipX(!!side); text(side ? 'CPU' : 'P1', x + 23, 78, PAL.wht, 1, 'c');
       Object.entries(team.ratings).forEach(([name, value], i) => { const y = 38 + i * 12; text(name, x + 45, y); for (let j = 0; j < 8; j++) rect(x + 45 + j * 8, y + 6, 7, 3, j < Math.round(value * 8) ? PAL.yel : PAL.navy); });
       if (!side || this.mode === 'friendly') button(side, x, 88, 128, 22, '<  CHANGE  >');
     });
