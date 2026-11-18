@@ -16,7 +16,7 @@ const teamMembers = (state: MatchState, team: TeamId): PlayerState[] => state.pl
 /**
  * One role per player of `team`, indexed by position in the team (0 = keeper, always 'keeper'). A human team's
  * controlled player is never given a role by the brain (he shows as 'support'); the others take the remaining roles,
- * except that nobody else chases a loose ball (the human does).
+ * with a loose-ball chaser when the human has selected an off-ball player.
  * Players who are down only get a pressing or chasing role when every outfielder of the team is down.
  */
 export function assignRoles(state: MatchState, team: TeamId): BrainRole[] {
@@ -30,7 +30,7 @@ export function assignRoles(state: MatchState, team: TeamId): BrainRole[] {
   if (owner === null) {
     const receiver = pool.find(p => p.id === state.ball.passTarget);
     if (receiver) give(receiver, 'receiver');
-    else if (!state.config.human[team]) give(nearestTo(free, state.ball.pos), 'chaser'); // on a human team the human is the chaser
+    else if (!state.config.human[team] || state.manualSelection[team]) give(nearestTo(free, state.ball.pos), 'chaser');
   } else if (owner.team === team) {
     give(pool.find(p => p.id === owner.id) ?? null, 'carrier');
   } else {

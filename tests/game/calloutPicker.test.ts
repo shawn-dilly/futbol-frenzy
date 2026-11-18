@@ -96,7 +96,7 @@ describe('calloutDrawKey', () => {
 
 describe('calloutStyle', () => {
   test('knockdown: small, white, 60 ticks, steady', () => {
-    expect(calloutStyle('knockdown')).toEqual({ scale: 1, color: PAL.wht, flash: false, ticks: 60 });
+    expect(calloutStyle('knockdown')).toEqual({ scale: 2, color: PAL.wht, flash: false, ticks: 60 });
   });
   test('wipeout: scale 2 orange 80 ticks', () => {
     expect(calloutStyle('wipeout')).toEqual({ scale: 2, color: PAL.org, flash: false, ticks: 80 });
@@ -123,4 +123,13 @@ describe('calloutVisible', () => {
     expect(calloutVisible(10, 10 + 110, s)).toBe(false);
     expect(calloutVisible(10, 10 + 108, s)).toBe(true);
   });
+});
+
+test('the announcer distinguishes late hits from dispossessions', () => {
+  const picker = new CalloutPicker([
+    { id: 'late', text: 'LATE', tiers: ['knockdown'], late: true },
+    { id: 'steal', text: 'STEAL', tiers: ['knockdown'], late: false },
+  ], seededRandom(3));
+  expect(picker.pick('knockdown', 'big', true)?.id).toBe('late');
+  expect(picker.pick('knockdown', 'big', false)?.id).toBe('steal');
 });

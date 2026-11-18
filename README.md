@@ -17,11 +17,11 @@ npm run dev      # http://localhost:5173
 |---|---|
 | Arrows / WASD | move |
 | J | pass (switch player without the ball) |
-| K | shoot |
+| K | shoot with the ball, cycle outfielders without it (NEXT) |
 | L | hit (see below) |
 | Space | turbo |
 
-**Hits.** A hit launches when you release HIT. A quick tap is a shoulder charge. A tap while a turbo burst is active is a slide tackle. Hold for about half a second (30 ticks) and release for a big hit; it costs a turbo segment, and on screen the HIT button fills and turns yellow when a big hit is ready. The ball carrier cannot hit. Players who are lunging, recovering or hurt cannot pick up the ball, and a flattened player is thrown in the direction of the hit. Hits fill the rage meters under the scores, and low health leaves a player Dazed.
+**Hits.** A hit launches when you release HIT. A quick tap is a shoulder charge. A tap while a turbo burst is active is a slide tackle. Hold for about half a second (30 ticks) and release for a big hit; it costs a turbo segment, and on screen the HIT button fills and turns yellow when a big hit is ready. With the ball, HIT calls the best-placed outfield teammate within tackling distance to make the check. Hold and release to charge that teammate’s hit while you keep dribbling. Without the ball, aim with the stick or release it to target the nearest opponent within lunging distance. NEXT cycles through available outfielders and keeps control behind play. SWITCH restores ball-side selection. Players who are lunging, recovering or hurt cannot pick up the ball, and a flattened player is thrown in the direction of the hit. Hits fill the rage meters under the scores, and low health leaves a player Dazed.
 
 On a phone or a touch screen the stick and buttons appear on screen. URL options: `?demo=1` (computer v computer), `?seed=N`, `?half=SECONDS`, `?mute=1`, `?level=rookie|pro|bruiser|psycho` (VIPERS computer level, default pro), and `?level2=rookie|pro|bruiser|psycho` (RHINOS level in demo mode; defaults to `level`).
 

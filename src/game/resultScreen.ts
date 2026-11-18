@@ -6,6 +6,6 @@ export function resultScreen(status: CupSession['status'] | null) {
     case 'ended': return { title: 'CUP ELIMINATION', action: 'RETRY' };
     case 'completed': return { title: 'CUP CHAMPIONS', action: null };
     case 'quit': return { title: 'FULL TIME', action: null };
-    default: return { title: 'FULL TIME', action: 'NEW MATCH' };
+    default: return { title: 'FULL TIME', action: 'REMATCH' };
   }
 }

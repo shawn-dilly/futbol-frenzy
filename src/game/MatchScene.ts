@@ -4,7 +4,7 @@ import Phaser from 'phaser';
 import { drawText } from '../art/pixelFont';
 import { KITS, PAL } from '../art/palette';
 import { DEPTH, GOAL_BANNER_TICKS, SCREEN_H, SCREEN_W, canRestart } from './layout';
-import { HALFTIME_PAUSE_TICKS, createMatch, neutralPad, step, type HitType, type HurtTier, type MatchState, type PadInput, type SimEvent } from '../sim';
+import { KICKOFF_PAUSE_TICKS, HALFTIME_PAUSE_TICKS, createMatch, neutralPad, step, type HitType, type HurtTier, type MatchState, type PadInput, type SimEvent } from '../sim';
 import { KeyboardPad, mergePads } from '../input/keyboard';
 import { TouchControls } from '../input/TouchControls';
 import { CALLOUTS } from '../content/callouts';
@@ -60,6 +60,8 @@ export class MatchScene extends Phaser.Scene {
   private seed = 0;
   private launch!: MatchLaunch;
   private halftimeGated = false;
+  private continuePending = false;
+  private runOnTick: number | null = null;
   private result: ReturnType<typeof resultScreen> | null = null;
   private leaving = false;
   private summaryUI: Phaser.GameObjects.GameObject[] = [];
@@ -79,6 +81,8 @@ export class MatchScene extends Phaser.Scene {
 
   create(): void {
     this.playback = null;
+    this.runOnTick = null;
+    this.continuePending = false;
     this.result = null;
     this.leaving = false;
     this.paused = false;
@@ -181,6 +185,7 @@ export class MatchScene extends Phaser.Scene {
       }
       return;
     }
+    if (this.continuePending && !this.paused && !this.hidden) this.continueHalftime();
     if (this.paused || this.hidden || this.result || this.halftimeGated) return;
     const steps = this.stepper.advance(delta);
     for (let i = 0; i < steps; i++) {
@@ -188,6 +193,7 @@ export class MatchScene extends Phaser.Scene {
       recordReplayInput(this.replay, inputs);
       const previousPhase = this.state.phase;
       step(this.state, inputs);
+      if (previousPhase === 'halftime' && this.state.phase === 'kickoff') this.runOnTick = this.state.tick;
       const shellMatch = this.launch.mode === 'friendly' || this.launch.mode === 'cup';
       this.handleEvents(this.state.events);
       this.landCraters();
@@ -263,7 +269,24 @@ export class MatchScene extends Phaser.Scene {
 
   isHalftimeGated(): boolean { return this.halftimeGated; }
 
-  continueHalftime(): void { if (!this.halftimeGated || this.playback) return; this.halftimeGated = false; this.hideSummary(); this.clearControls(); }
+  continueHalftime(): void {
+    if (!this.halftimeGated || this.playback) return;
+    this.continuePending = this.paused || this.hidden;
+    if (this.continuePending) return;
+    const pads: [PadInput, PadInput] = [neutralPad(), neutralPad()];
+    // Finish the stopped-clock interval behind the summary, preserving replay ticks.
+    while (this.state.phase === 'halftime') {
+      recordReplayInput(this.replay, pads);
+      step(this.state, pads);
+    }
+    this.runOnTick = this.state.tick;
+    this.halftimeGated = false;
+    this.clearControls();
+    this.view.clearTransientEffects();
+    this.handleEvents(this.state.events);
+    this.syncPresentation();
+    this.hideSummary();
+  }
 
   private hideSummary(): void { this.summaryUI.forEach(item => item.destroy()); this.summaryUI = []; }
 
@@ -309,7 +332,14 @@ export class MatchScene extends Phaser.Scene {
     panel(196, 28, 112, 76, PAL.yel); rect(197, 29, 110, 11, PAL.yel); text(this.result ? '2ND HALF HIT' : 'HIT OF THE HALF', 252, 32, PAL.ink, 1, 'c');
     text(this.state.halfHits[this.result ? 1 : 0] ? 'HIT AVAILABLE' : 'NO HIT', 252, 57, PAL.wht, 2, 'c'); text('WATCH REPLAY >', 252, 87, PAL.yel, 1, 'c');
     panel(196, 108, 112, 30, PAL.gry, PAL.dk); text('RESERVES', 252, 113, PAL.wht, 1, 'c'); text(`${this.state.reserves[0]} - ${this.state.reserves[1]}`, 252, 123, PAL.yel, 2, 'c');
-    const button = (x: number, y: number, w: number, h: number, action: () => void) => { const hit = this.add.rectangle(x, y, w, h, 0, 0).setOrigin(0).setDepth(2201).setInteractive(); hit.on('pointerdown', action); this.summaryUI.push(hit); };
+    const button = (x: number, y: number, w: number, h: number, action: () => void) => {
+      const hit = this.add.rectangle(x, y, w, h, 0, 0).setOrigin(0).setDepth(2201).setInteractive();
+      hit.on('pointerdown', (_pointer: Phaser.Input.Pointer, _x: number, _y: number, event: Phaser.Types.Input.EventData) => {
+        event.stopPropagation(); // a summary button can sit directly over PASS or HIT
+        action();
+      });
+      this.summaryUI.push(hit);
+    };
     const replay = () => this.startReplay(this.result ? 1 : 0);
     button(196, 40, 112, 64, replay);
     const footer = (x: number, w: number, label: string, action: () => void, primary = false) => {
@@ -319,10 +349,10 @@ export class MatchScene extends Phaser.Scene {
     };
     if (this.result && !this.result.action) {
       footer(12, 144, 'REPLAY R', replay);
-      footer(164, 144, 'TITLE ESC', () => this.leaveResult(true), true);
+      footer(164, 144, 'MAIN MENU', () => this.leaveResult(true), true);
     } else if (this.result?.action) {
       footer(12, 88, 'REPLAY R', replay);
-      footer(106, 94, 'TITLE ESC', () => this.leaveResult(true));
+      footer(106, 94, 'MAIN MENU', () => this.leaveResult(true));
       footer(206, 102, this.result.action, () => this.leaveResult(false), true);
     } else {
       footer(12, 144, 'REPLAY R', replay);
@@ -342,13 +372,15 @@ export class MatchScene extends Phaser.Scene {
 
   private syncPresentation(): void {
     const displayed = this.playback?.states[this.playback.cursor] ?? this.state;
-    this.view.sync(displayed, this.nowMs);
+    const runOn = this.runOnTick !== null && displayed.tick >= this.runOnTick && displayed.tick < this.runOnTick + KICKOFF_PAUSE_TICKS;
+    this.view.sync(displayed, this.nowMs, runOn);
     this.hud.sync(displayed, !!this.playback);
     this.calloutBanner.sync(displayed.tick);
     this.flash.setAlpha(flashAlpha(this.nowMs - this.flashStartMs));
     if (this.touch) {
       const me = this.state.players[this.state.controlled[0]];
-      this.touch.draw(chargeFill(me), bigHitReady(me, this.state.turbo[0]), this.state.ball.owner === me.id);
+      const charger = this.state.players.find(p => p.team === me.team && p.status.kind === 'charging' && p.status.calledTarget !== undefined) ?? me;
+      this.touch.draw(chargeFill(charger), bigHitReady(charger, this.state.turbo[0]), this.state.ball.owner === me.id);
     }
   }
 
@@ -400,7 +432,7 @@ export class MatchScene extends Phaser.Scene {
 
   private onHit(e: Extract<SimEvent, { type: 'hit' }>): void {
     const fb = HIT_FEEDBACK[e.tier];
-    const callout = this.callouts.pick(e.tier, e.hit);
+    const callout = this.callouts.pick(e.tier, e.hit, e.late);
     const clipPlayed = !!callout?.audio && this.sfx.playClip(callout.audio);
     soundsForHit(fb, clipPlayed).forEach(name => this.sfx.play(name));
     this.view.shake(fb.shakePx, fb.shakeMs, this.nowMs);

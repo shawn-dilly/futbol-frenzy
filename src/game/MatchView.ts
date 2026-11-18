@@ -6,12 +6,12 @@ import { ORIGIN_X, ORIGIN_Y, frameIndex, frameKey } from '../art/sprites';
 import { ANIMATIONS, airTicks } from '../content/animations';
 import type { MatchState, PlayerState, TeamId, Vec } from '../sim';
 import { outgoingAt } from './outgoing';
-import { animFor } from './playerAnim';
+import { animFor, runOnPlayer } from './playerAnim';
 import { ATLAS_KEY, INJURY_KEY, BALL_KEY, BALL_PX } from './BootScene';
 import { DEPTH, PITCH_TEX_H, PITCH_TEX_W, arcLift, cameraTarget, nextFlip, pitchImagePos, worldToScreen } from './layout';
 import { CRATER_H, CRATER_W, drawCrater, drawPitch } from './pitchArt';
 import { STAR_BURST, shakeOffset, starOffsets, strongerShake, type Shake } from './hitFeedback';
-import { isInjured } from '../sim';
+import { clamp, isInjured } from '../sim';
 import { pulseAlpha, type InjuryStyle } from './indicators';
 
 const PITCH_KEY = 'pitch';
@@ -113,17 +113,26 @@ export class MatchView {
     this.outgoing.push({ player, start, view: this.createPlayerView(player) });
   }
 
-  sync(state: MatchState, nowMs: number): void {
+  sync(state: MatchState, nowMs: number, runOn = false): void {
     this.offset = this.currentShake(nowMs);
-    const target = cameraTarget(state.ball.pos.x);
-    this.camX = this.camX === null ? target : this.camX + (target - this.camX) * CAMERA_EASE;
+    const selectedX = state.players[state.controlled[0]].pos.x;
+    const cameraSlack = 126; // leave room beyond the selected player for a tackle
+    const focus = state.config.human[0] && state.phase === 'play'
+      ? clamp(state.ball.pos.x, selectedX - cameraSlack, selectedX + cameraSlack) : state.ball.pos.x;
+    const target = cameraTarget(focus);
+    this.camX = this.camX === null || runOn ? target : this.camX + (target - this.camX) * CAMERA_EASE;
     const camX = Math.round(this.camX);
     const pitchAt = pitchImagePos(camX, this.offset);
     this.pitch.setPosition(pitchAt.x, pitchAt.y);
     if (this.players.length === 0) this.players = state.players.map(p => this.createPlayerView(p));
 
     this.markers.forEach(m => m.setVisible(false));
-    state.players.forEach((p, i) => this.syncPlayer(this.players[i], p, state, camX));
+    state.players.forEach((p, i) => {
+      if (runOn) {
+        p = runOnPlayer(p, state.phaseTicks);
+      }
+      this.syncPlayer(this.players[i], p, state, camX);
+    });
 
     for (let i = this.outgoing.length - 1; i >= 0; i--) {
       const actor = this.outgoing[i];

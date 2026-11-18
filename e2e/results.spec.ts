@@ -31,7 +31,10 @@ test('short friendly freezes at fulltime, returns from replay, rematches and exi
     if (seed === 1) {
       await page.keyboard.press('Enter');
       await page.waitForFunction(() => window.__ff?.state.config.seed === 2, null, { timeout: 5000 });
-    } else await page.keyboard.press('Escape');
+    } else {
+      const box = (await page.locator('canvas').boundingBox())!;
+      await page.mouse.click(box.x + box.width * 153 / 320, box.y + box.height * 157 / 180);
+    }
   }
   await page.waitForFunction(() => !window.__ff);
   await page.keyboard.press('Enter');

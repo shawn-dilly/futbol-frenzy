@@ -9,7 +9,7 @@ export interface CalloutStyle { scale: number; color: string; flash: boolean; ti
 /** How each tier's callout is drawn; bigger tiers are bigger, brighter and stay up longer. */
 const STYLES: Record<HurtTier, CalloutStyle> = {
   stumble: { scale: 1, color: PAL.wht, flash: false, ticks: 0 }, // no callout is ever shown for a stumble
-  knockdown: { scale: 1, color: PAL.wht, flash: false, ticks: 60 },
+  knockdown: { scale: 2, color: PAL.wht, flash: false, ticks: 60 },
   wipeout: { scale: 2, color: PAL.org, flash: false, ticks: 80 },
   overTheTop: { scale: 2, color: PAL.yel, flash: true, ticks: 110 },
 };
@@ -42,9 +42,9 @@ export class CalloutPicker {
 
   constructor(private readonly callouts: readonly Callout[], private readonly random: () => number) {}
 
-  pick(tier: HurtTier, hit: HitType): Callout | null {
+  pick(tier: HurtTier, hit: HitType, late?: boolean): Callout | null {
     const forTier = this.callouts.filter((c) => c.tiers.includes(tier));
-    const fits = (c: Callout) => !c.hitTypes || c.hitTypes.includes(hit);
+    const fits = (c: Callout) => (!c.hitTypes || c.hitTypes.includes(hit)) && (c.late === undefined || c.late === late);
     if (!forTier.some(fits)) return null;
     const fresh = (c: Callout) => fits(c) && c !== this.lastShown;
     let bag = this.bags.get(tier);

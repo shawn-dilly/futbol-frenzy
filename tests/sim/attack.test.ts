@@ -1,12 +1,12 @@
 import { describe, expect, test } from 'vitest';
 import { createMatch, neutralPad, neutralIntent } from '../../src/sim/setup';
 import { resolveContacts, updateAttack } from '../../src/sim/attack';
-import { setStatus, tickStatus } from '../../src/sim/status';
+import { isDown, setStatus, tickStatus } from '../../src/sim/status';
 import { applyMovement } from '../../src/sim/movement';
 import { hurtPlayer } from '../../src/sim/hurt';
 import { step } from '../../src/sim/step';
 import {
-  BIG_HIT_CHARGE_TICKS, BIG_HIT_MAX_HOLD_TICKS, CHARGE_MOVE_FACTOR, HIT_COOLDOWN_TICKS, RUN_SPEED, HIT_LANDED_RECOVER_TICKS, HITS, LATE_HIT_COOLDOWN_TICKS,
+  BIG_HIT_CHARGE_TICKS, BIG_HIT_MAX_HOLD_TICKS, CHARGE_MOVE_FACTOR, HIT_COOLDOWN_TICKS, RUN_SPEED, HIT_LANDED_RECOVER_TICKS, HITS,
   TICK_HZ, TURBO_COST, TURBO_REFILL_PER_TICK,
 } from '../../src/sim/constants';
 import { LEVELS, LEVEL_ORDER } from '../../src/sim/levels';
@@ -219,10 +219,10 @@ describe('contact', () => {
     expect(hits(s)).toEqual([expect.objectContaining({ hit: 'big', tier: 'overTheTop', damage: 24 * 2.5 * 1.05, late: true })]);
     expect(s.rage).toEqual([70, 6]);
   });
-  test('a hit on a player without the ball is late: 90-tick cooldown', () => {
+  test('a manually aimed late hit recovers in time to tackle another opponent', () => {
     const s = playing(); placeVictimAhead(s, 5);
     hold(s, 1);
-    expect(hits(s)[0].late).toBe(true); expect(s.players[TACKLER].hitCooldown).toBe(LATE_HIT_COOLDOWN_TICKS);
+    expect(hits(s)[0].late).toBe(true); expect(s.players[TACKLER].hitCooldown).toBe(HIT_COOLDOWN_TICKS);
   });
   test('a slide during a turbo burst does 16 x 1.05 x 1.2 damage', () => {
     const s = playing(); s.players[TACKLER].turboTicks = 50; placeVictimAhead(s, 6);
@@ -398,4 +398,44 @@ describe('the computer side', () => {
       expect(taken).toBe(true);
     });
   }
+});
+
+test('carrier HIT calls a nearby teammate check behind play without giving up the ball', () => {
+  const s = playing();
+  s.config.human[1] = false;
+  s.ball.owner = TACKLER;
+  s.players[MATE].pos = { x: 50, y: 55 };
+  s.players[VICTIM].pos = { x: 54, y: 55 };
+  runTicks(s, 1, HIT_DOWN);
+  expect(status(s, MATE).kind).toBe('charging');
+  runTicks(s, 2);
+  expect(status(s, VICTIM).kind).toBe('hurt');
+  expect(s.ball.owner).toBe(TACKLER);
+});
+
+test('off-ball SHOOT cycles the selected outfielder away from the ball', () => {
+  const s = playing();
+  step(s, [pad({ shoot: true }), neutralPad()]);
+  expect(s.controlled[0]).toBe(4);
+});
+
+test('three called checks can leave three non-carriers down together', () => {
+  const s = playing();
+  s.ball.owner = TACKLER;
+  s.players[MATE].pos = { x: 50, y: 50 };
+  s.players[VICTIM].pos = { x: 53, y: 50 };
+  s.players[1].pos = { x: 150, y: 50 };
+  s.players[7].pos = { x: 155, y: 50 };
+  hold(s, BIG_HIT_CHARGE_TICKS + 1);
+  expect(status(s, VICTIM)).toMatchObject({ kind: 'hurt', tier: 'knockdown' });
+  hold(s, BIG_HIT_CHARGE_TICKS + 1);
+  expect([status(s, VICTIM), status(s, 7)]).toEqual([
+    expect.objectContaining({ kind: 'hurt', tier: 'knockdown' }),
+    expect.objectContaining({ kind: 'hurt', tier: 'wipeout' }),
+  ]);
+  // A third checker meets another opponent while the first two are still on the turf.
+  s.players[8].pos = { ...s.players[4].pos };
+  hold(s, BIG_HIT_CHARGE_TICKS + 1);
+  runTicks(s, 4);
+  expect([VICTIM, 7, 8].map(id => isDown(s.players[id]))).toEqual([true, true, true]);
 });

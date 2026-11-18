@@ -112,7 +112,7 @@ export class TouchControls {
       disc(b.x, b.y, b.r, FACE[name].color, pad[name] ? ALPHA.pressed : ALPHA.button);
       if (name === 'hit' && fillR > 0) disc(b.x, b.y, fillR, bigHitReady ? PAL.yel : PAL.wht, ALPHA.pressed);
       disc(b.x, b.y, b.r, PAL.ink, 1, BUTTON_RING_PX);
-      const label = name === 'pass' && !hasBall ? 'SWITCH' : FACE[name].label;
+      const label = name === 'pass' && !hasBall ? 'SWITCH' : name === 'shoot' && !hasBall ? 'NEXT' : FACE[name].label;
       drawShadowedText(rect, label, b.x + LABEL_DX, b.y + LABEL_DY, PAL.wht, 1, 'c');
     }
     this.texture.refresh();

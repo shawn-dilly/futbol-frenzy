@@ -46,7 +46,7 @@ export const GOAL_BANNER_TICKS = 90;
 export const DEPTH = { pitch: -100, crater: -90, shadow: -50, ball: 0.1, marker: 1000, controls: 1500, callout: 1800, hud: 2000, flash: 2100 } as const;
 
 /** Callout banner: centre y on screen, and the widest a line may be (the screen minus a margin each side). */
-export const CALLOUT_CENTER_Y = 62;
+export const CALLOUT_CENTER_Y = 36;
 export const CALLOUT_MARGIN_PX = 4;
 export const CALLOUT_MAX_W = SCREEN_W - 2 * CALLOUT_MARGIN_PX;
 

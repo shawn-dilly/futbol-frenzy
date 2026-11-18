@@ -124,3 +124,16 @@ test.each([false, true])('manual switch with every outfielder unavailable = %s',
   // Equal distance selects the lower id. With no eligible outfielder keep control.
   expect(s.controlled[0]).toBe(allUnavailable ? 4 : 2);
 });
+
+test('NEXT keeps the checker through a teammate pickup and SWITCH restores normal passing', () => {
+  s.ball.owner = null;
+  s.ball.pos = { ...s.players[2].pos };
+  runTicks(s, 1, [pad({ shoot: true }), neutralPad()]);
+  expect(s.ball.owner).toBe(2);
+  expect(s.controlled[0]).toBe(1);
+  runTicks(s, 1, [pad({ pass: true }), neutralPad()]);
+  expect(s.controlled[0]).toBe(2);
+  runTicks(s, 1);
+  runTicks(s, 1, [pad({ pass: true }), neutralPad()]);
+  expect(s.controlled[0]).toBe(s.ball.passTarget);
+});

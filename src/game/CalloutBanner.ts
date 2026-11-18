@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
+import { PAL } from '../art/palette';
 import { canvasRect } from '../art/canvasRect';
-import { centeredLineTops, drawShadowedText, wrapText } from '../art/pixelFont';
+import { centeredLineTops, drawShadowedText, textHeight, textWidth, wrapText } from '../art/pixelFont';
 import { calloutDrawKey, calloutStyle } from './calloutPicker';
 import { CALLOUT_CENTER_Y, CALLOUT_MAX_W, DEPTH, SCREEN_H, SCREEN_W } from './layout';
 import type { HurtTier } from '../sim';
@@ -51,6 +52,8 @@ export class CalloutBanner {
       const lines = wrapText(shown.text, CALLOUT_MAX_W, style.scale);
       const rect = canvasRect(ctx);
       const tops = centeredLineTops(lines.length, style.scale, CALLOUT_CENTER_Y);
+      const width = Math.max(...lines.map(line => textWidth(line, style.scale))) + 8;
+      rect((SCREEN_W - width) / 2, tops[0] - 2, width, tops[tops.length - 1] - tops[0] + textHeight(style.scale) + 4, PAL.ink);
       lines.forEach((line, i) => {
         drawShadowedText(rect, line, SCREEN_W / 2, tops[i], style.color, style.scale, 'c');
       });

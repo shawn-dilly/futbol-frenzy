@@ -1,6 +1,7 @@
 import { test, expect } from 'vitest';
 import { createMatch } from '../../src/sim/setup';
-import { animFor } from '../../src/game/playerAnim';
+import { KICKOFF_PAUSE_TICKS } from '../../src/sim';
+import { animFor, runOnPlayer } from '../../src/game/playerAnim';
 import type { PlayerState, PlayerStatus } from '../../src/sim/types';
 import { matchConfig } from '../helpers';
 
@@ -63,4 +64,13 @@ test('hurt is hurt_<tier>_<variant> on the status tick', () => {
 
 test('a player with no velocity (as after a whistle) is idle on the match tick', () => {
   expect(animFor(player({ kind: 'free' }, 40, { x: 0, y: 0 }), 99)).toEqual({ key: 'idle', tick: 99 });
+});
+
+test('the run-on uses a moving render pose then settles exactly at kickoff without moving the sim player', () => {
+  const p = player({ kind: 'free' });
+  const entry = runOnPlayer(p, KICKOFF_PAUSE_TICKS);
+  expect(entry.pos.y).toBe(0);
+  expect(animFor(entry, 0).key).toBe('run');
+  expect(runOnPlayer(p, 1)).toEqual(p);
+  expect(entry.pos).not.toEqual(p.pos);
 });

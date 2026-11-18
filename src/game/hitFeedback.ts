@@ -18,8 +18,8 @@ export interface HitFeedback {
 
 export const HIT_FEEDBACK: Record<HurtTier, HitFeedback> = {
   stumble: { sounds: ['thud'], shakePx: 1, shakeMs: 80, freezeTicks: 0, flash: false, stars: false },
-  knockdown: { sounds: ['thud', 'grunt'], shakePx: 2, shakeMs: 150, freezeTicks: 0, flash: false, stars: false },
-  wipeout: { sounds: ['crunch', 'grunt', 'ooh'], shakePx: 4, shakeMs: 250, freezeTicks: 6, flash: false, stars: false },
+  knockdown: { sounds: ['thud', 'grunt'], shakePx: 2, shakeMs: 150, freezeTicks: 2, flash: false, stars: true },
+  wipeout: { sounds: ['crunch', 'grunt', 'ooh'], shakePx: 4, shakeMs: 250, freezeTicks: 6, flash: false, stars: true },
   overTheTop: { sounds: ['crunch', 'grunt', 'gasp'], shakePx: 6, shakeMs: 400, freezeTicks: 12, flash: true, stars: true },
 };
 

@@ -6,8 +6,8 @@ import {
 
 test('hit feedback per tier', () => {
   expect(HIT_FEEDBACK.stumble).toEqual({ sounds: ['thud'], shakePx: 1, shakeMs: 80, freezeTicks: 0, flash: false, stars: false });
-  expect(HIT_FEEDBACK.knockdown).toEqual({ sounds: ['thud', 'grunt'], shakePx: 2, shakeMs: 150, freezeTicks: 0, flash: false, stars: false });
-  expect(HIT_FEEDBACK.wipeout).toEqual({ sounds: ['crunch', 'grunt', 'ooh'], shakePx: 4, shakeMs: 250, freezeTicks: 6, flash: false, stars: false });
+  expect(HIT_FEEDBACK.knockdown).toEqual({ sounds: ['thud', 'grunt'], shakePx: 2, shakeMs: 150, freezeTicks: 2, flash: false, stars: true });
+  expect(HIT_FEEDBACK.wipeout).toEqual({ sounds: ['crunch', 'grunt', 'ooh'], shakePx: 4, shakeMs: 250, freezeTicks: 6, flash: false, stars: true });
   expect(HIT_FEEDBACK.overTheTop).toEqual({ sounds: ['crunch', 'grunt', 'gasp'], shakePx: 6, shakeMs: 400, freezeTicks: 12, flash: true, stars: true });
 });
 

@@ -329,7 +329,7 @@ export const ANIMATIONS: Record<string, AnimDef> = {
 
   // Hurt: knockdown
   hurt_knockdown_0: {
-    ticksPerFrame: 5, loop: false, arcHeight: 5, airFrames: 2,
+    ticksPerFrame: 5, loop: false, arcHeight: 9, airFrames: 2,
     frames: [
       // pitching forward
       [...px('skin', [[-2, -3, 2, 2], [0, -3, 2, 2]]), ...px('boot', [[-4, -1, 3, 1], [0, -1, 3, 1]]),
@@ -344,7 +344,7 @@ export const ANIMATIONS: Record<string, AnimDef> = {
     ],
   },
   hurt_knockdown_1: {
-    ticksPerFrame: 5, loop: false, arcHeight: 5, airFrames: 2,
+    ticksPerFrame: 5, loop: false, arcHeight: 9, airFrames: 2,
     frames: [
       // leaning back, arms up
       [...px('skin', [[-3, -3, 2, 2], [2, -3, 2, 2]]), ...px('boot', [[-3, -1, 2, 1], [2, -1, 3, 1]]),

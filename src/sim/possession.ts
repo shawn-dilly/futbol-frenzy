@@ -35,7 +35,8 @@ export function updatePossession(state: MatchState, excluded: ReadonlySet<number
       return;
     }
     ball.owner = taker.id; ball.ownerTicks = 0; ball.vel = { x: 0, y: 0 }; ball.passTarget = null;
-    state.controlled[taker.team] = taker.id;
+    if (state.controlled[taker.team] === taker.id) state.manualSelection[taker.team] = false;
+    if (!state.manualSelection[taker.team]) state.controlled[taker.team] = taker.id;
   } else {
     ball.ownerTicks += 1;
   }
@@ -71,7 +72,7 @@ export function kick(state: MatchState, p: PlayerState, kind: 'pass' | 'shot', a
     const target = state.players[pickPassTarget(state, p, aim)];
     ball.vel = scale(norm(sub(target.pos, ball.pos)), PASS_SPEED * (1 + (state.config.ratings[p.team].skill - 0.5) * RATING_SKILL_KICK_SPAN));
     ball.passTarget = target.id;
-    if (state.config.human[p.team]) state.controlled[p.team] = target.id;
+    if (state.config.human[p.team] && !state.manualSelection[p.team]) state.controlled[p.team] = target.id;
   } else {
     const dir = isZero(aim) ? sub(goalCenter(otherTeam(p.team)), ball.pos) : aim;
     ball.vel = scale(norm(dir), SHOT_SPEED * (1 + (state.config.ratings[p.team].skill - 0.5) * RATING_SKILL_KICK_SPAN));
@@ -93,11 +94,13 @@ export function nearestOutfield(state: MatchState, team: TeamId, exclude?: numbe
 
 /** Control goes to the team's nearest standing outfield player to the ball (never `exclude`, e.g. a player who cannot act). */
 export function switchControl(state: MatchState, team: TeamId, exclude?: number): void {
+  state.manualSelection[team] = false;
   state.controlled[team] = nearestOutfield(state, team, exclude);
 }
 
 /** A manual SWITCH uses the same eligibility as movement. Keep control if nobody can act. */
 export function manualSwitchControl(state: MatchState, team: TeamId): void {
+  state.manualSelection[team] = false;
   const eligible = state.players.filter(p => p.team === team && p.role === 'out' && canAct(p));
   // Roster slots are in ascending id order, so nearestTo resolves ties to the lower id.
   const nearest = nearestTo(eligible, state.ball.pos);

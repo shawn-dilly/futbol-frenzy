@@ -1,14 +1,14 @@
-import type { HitType, MatchState, PlayerIntent, PlayerState, TeamId } from './types';
+import type { HitType, PadInput, MatchState, PlayerIntent, PlayerState, TeamId } from './types';
 import {
-  BIG_HIT_CHARGE_TICKS, BIG_HIT_MAX_HOLD_TICKS, HIT_COOLDOWN_TICKS, HIT_LANDED_RECOVER_TICKS, HITS,
+  TICK_HZ, BIG_HIT_CHARGE_TICKS, BIG_HIT_MAX_HOLD_TICKS, HIT_COOLDOWN_TICKS, HIT_LANDED_RECOVER_TICKS, HITS,
   LATE_HIT_COOLDOWN_TICKS, TURBO_COST, RATING_POWER_MIN, RATING_POWER_SPAN, RATING_DIRTY_LATE_DAMAGE_SPAN,
 } from './constants';
 import { hurtPlayer } from './hurt';
 import { LEVELS } from './levels';
 import { hitDamage, rageAfterHit, tierFor } from './rage';
 import { attackDir } from './setup';
-import { isDown, isHumanTeammate, setStatus } from './status';
-import { isZero, nearestTo, norm } from './vec';
+import { isDown, isHumanControlled, isHumanTeammate, setStatus } from './status';
+import { dist, isZero, nearestTo, norm, sub } from './vec';
 
 /** How long a computer team waits between hits (its level's value). */
 const teamCooldown = (state: MatchState, team: TeamId): number => LEVELS[state.config.level[team]].teamHitCooldownTicks;
@@ -23,11 +23,17 @@ function holdComputerTeam(state: MatchState, team: TeamId): void {
   for (const q of state.players) if (q.team === team) q.hitCooldown = Math.max(q.hitCooldown, teamCooldown(state, team));
 }
 
-/** Starts the lunge: the facing is fixed here (the intent's heading if any, else the team's attack direction). */
+/** Lock the heading at release. A neutral human stick assists toward an opponent within lunge range. */
 function launch(state: MatchState, p: PlayerState, hit: HitType, intent: PlayerIntent): void {
   if (!state.config.human[p.team]) holdComputerTeam(state, p.team);
   const heading = { x: intent.moveX, y: intent.moveY };
   if (!isZero(heading)) p.facing = norm(heading);
+  else if (isHumanControlled(state, p)) {
+    const spec = HITS[hit];
+    const reach = spec.reach + spec.lungeTicks * spec.lungeSpeed / TICK_HZ;
+    const target = nearestTo(state.players.filter(q => q.team !== p.team && !isDown(q)), p.pos, reach);
+    if (target) p.facing = norm(sub(target.pos, p.pos));
+  }
   if (isZero(p.facing)) p.facing = { x: attackDir(p.team), y: 0 };
   setStatus(p, { kind: 'lunging', hit }, HITS[hit].lungeTicks);
 }
@@ -81,7 +87,7 @@ function land(state: MatchState, tackler: PlayerState, victim: PlayerState, hit:
   const previous = state.halfHits[halfIndex];
   if (!previous || damage > previous.damage) state.halfHits[halfIndex] = { tick: state.tick + 1, eventIndex, damage };
   setStatus(tackler, { kind: 'recovering', hit, landed: true }, HIT_LANDED_RECOVER_TICKS);
-  tackler.hitCooldown = cooldownAfter(state, tackler, late ? LATE_HIT_COOLDOWN_TICKS : HIT_COOLDOWN_TICKS);
+  tackler.hitCooldown = cooldownAfter(state, tackler, late && !isHumanControlled(state, tackler) ? LATE_HIT_COOLDOWN_TICKS : HIT_COOLDOWN_TICKS);
 }
 
 function whiff(state: MatchState, tackler: PlayerState, hit: HitType): void {
@@ -100,4 +106,26 @@ export function resolveContacts(state: MatchState): void {
     if (victim) { hitVictims.add(victim.id); land(state, p, victim, hit); }
     else if (p.statusTick >= HITS[hit].lungeTicks - 1) whiff(state, p, hit);
   }
+}
+
+// A carrier calls the outfielder best placed to check a nearby opponent.
+export function callTeammateHit(state: MatchState, inputs: [PadInput, PadInput]): void {
+  if (state.ball.owner === null) return;
+  const owner = state.players[state.ball.owner];
+  if (!isHumanControlled(state, owner) || !inputs[owner.team].hit || state.prevInput[owner.team].hit) return;
+  const opponents = state.players.filter(p => p.team !== owner.team && !isDown(p));
+  const { reach, lungeTicks, lungeSpeed } = HITS.shoulder;
+  let range = reach + lungeTicks * lungeSpeed / TICK_HZ;
+  let best: PlayerState | undefined;
+  let target: PlayerState | null = null;
+  for (const p of state.players) {
+    if (p.team !== owner.team || p === owner || p.role !== 'out' || p.status.kind !== 'free' || p.hitCooldown) continue;
+    const opponent = nearestTo(opponents, p.pos, range);
+    if (opponent) {
+      range = dist(p.pos, opponent.pos);
+      best = p;
+      target = opponent;
+    }
+  }
+  if (best && target) setStatus(best, { kind: 'charging', teammate: true, calledTarget: target.id }, 0);
 }

@@ -5,7 +5,7 @@ export type Level = 'rookie' | 'pro' | 'bruiser' | 'psycho';
 export type HitType = 'shoulder' | 'slide' | 'big';
 export type HurtTier = 'stumble' | 'knockdown' | 'wipeout' | 'overTheTop';
 export type PlayerStatus =
-  | { kind: 'free' } | { kind: 'kicking' } | { kind: 'charging'; teammate?: true }
+  | { kind: 'free' } | { kind: 'kicking' } | { kind: 'charging'; teammate?: true; calledTarget?: number }
   | { kind: 'lunging'; hit: HitType }
   | { kind: 'recovering'; hit: HitType; landed: boolean }
   | { kind: 'hurt'; tier: HurtTier; variant: number };
@@ -54,6 +54,6 @@ export interface MatchState {
   brain: BrainMemory[];
   liveTicks: number; // live ticks since kickoff
   defensiveHitAt: number[]; // earliest live tick for each player
-  controlled: [number, number]; turbo: [number, number];
+  controlled: [number, number]; manualSelection: [boolean, boolean]; turbo: [number, number];
   prevInput: [PadInput, PadInput]; events: SimEvent[];
 }

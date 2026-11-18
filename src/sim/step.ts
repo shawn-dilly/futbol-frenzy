@@ -3,9 +3,10 @@ import { applyKnockOnly, applyMovement, updateTurboMeters } from './movement';
 import { moveFreeBall } from './ball';
 import { advanceFlow } from './flow';
 import { brainIntent, type BrainIntent } from './brain';
-import { resolveContacts, updateAttack } from './attack';
+import { callTeammateHit, resolveContacts, updateAttack } from './attack';
 import { blankMemory, neutralIntent } from './setup';
 import { canAct, isHumanControlled, tickStatus } from './status';
+import { norm, sub } from './vec';
 import { decayRage } from './rage';
 import { regenHealth } from './hurt';
 import { kick, manualSwitchControl, tickKickCooldowns, updatePossession } from './possession';
@@ -26,9 +27,13 @@ export function padToIntent(pad: PadInput, prev: PadInput): PlayerIntent {
 function intentFor(state: MatchState, p: PlayerState, inputs: [PadInput, PadInput]): BrainIntent {
   const human = isHumanControlled(state, p);
   const padIntent = human ? padToIntent(inputs[p.team], state.prevInput[p.team]) : null;
+  if (!human && p.status.kind === 'charging' && p.status.calledTarget !== undefined) {
+    const heading = norm(sub(state.players[p.status.calledTarget].pos, p.pos));
+    return { ...neutralIntent(), moveX: heading.x, moveY: heading.y, hitHeld: inputs[p.team].hit };
+  }
   if (!canAct(p)) {
     if (!padIntent) state.brain[p.id] = blankMemory(); // a flattened computer player gets up with no stale plan
-    return padIntent ? { ...neutralIntent(), pass: padIntent.pass } : neutralIntent(); // PASS still switches control
+    return padIntent ? { ...neutralIntent(), pass: padIntent.pass, shoot: state.ball.owner !== p.id && padIntent.shoot } : neutralIntent(); // PASS still switches control
   }
   return padIntent ?? brainIntent(state, p);
 }
@@ -50,6 +55,11 @@ function applyActions(state: MatchState, intents: BrainIntent[]): void {
     const req = kickRequest(state, p, intents[p.id]);
     if (req) kick(state, p, req.kind, req.aim);
     else if (isHumanControlled(state, p) && intents[p.id].pass && state.ball.owner !== p.id) manualSwitchControl(state, p.team);
+    else if (isHumanControlled(state, p) && intents[p.id].shoot && state.ball.owner !== p.id) {
+      const mates = state.players.filter(q => q.team === p.team && q.role === 'out' && canAct(q));
+      state.controlled[p.team] = (mates.find(q => q.id > p.id) ?? mates[0] ?? p).id;
+      state.manualSelection[p.team] = state.controlled[p.team] !== state.ball.owner;
+    }
   }
 }
 
@@ -57,6 +67,7 @@ function stepPlay(state: MatchState, inputs: [PadInput, PadInput]): TeamId | nul
   state.liveTicks += 1;
   tickKickCooldowns(state);
   for (const p of state.players) { p.hitCooldown = Math.max(0, p.hitCooldown - 1); tickStatus(p); }
+  callTeammateHit(state, inputs);
   const intents = state.players.map(p => intentFor(state, p, inputs));
   for (const p of state.players) updateAttack(state, p, intents[p.id]);
   applyActions(state, intents);

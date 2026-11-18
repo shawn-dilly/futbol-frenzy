@@ -1,5 +1,5 @@
 import { ANIMATIONS, GETUP_TICKS, hurtAnimKey } from '../content/animations';
-import type { PlayerState } from '../sim';
+import { clamp, FIELD_W, FORMATION, KICKOFF_PAUSE_TICKS, type PlayerState } from '../sim';
 
 const CONTACT_POSE_TICKS = 5;
 
@@ -35,4 +35,22 @@ export function animFor(p: PlayerState, matchTick: number): { key: AnimKey; tick
     case 'recovering': return { key: `recover_${s.hit}`, tick: p.statusTick };
     case 'hurt': return { key: hurtAnimKey(s.tier, s.variant), tick: p.statusTick };
   }
+}
+
+const RUN_ON = {
+  staggerTicks: 2, travelTicks: KICKOFF_PAUSE_TICKS - 16, easing: 1.4,
+  entryY: 0, teamOffsetX: 46, playerSpacingX: 9,
+};
+
+/** Render both teams entering from the far touchline, settling before the whistle. */
+export function runOnPlayer(p: PlayerState, phaseTicks: number): PlayerState {
+  const slot = p.id % FORMATION.length;
+  const elapsed = KICKOFF_PAUSE_TICKS - phaseTicks;
+  const travel = clamp((elapsed - slot * RUN_ON.staggerTicks) / RUN_ON.travelTicks, 0, 1);
+  const remaining = (1 - travel) ** RUN_ON.easing;
+  const entryX = FIELD_W / 2 + (p.team ? 1 : -1) * (RUN_ON.teamOffsetX + slot * RUN_ON.playerSpacingX);
+  const pos = { x: p.pos.x + (entryX - p.pos.x) * remaining, y: p.pos.y + (RUN_ON.entryY - p.pos.y) * remaining };
+  if (remaining === 0) return p;
+  const facing = { x: Math.sign(p.pos.x - entryX), y: 1 };
+  return { ...p, pos, facing, vel: facing };
 }

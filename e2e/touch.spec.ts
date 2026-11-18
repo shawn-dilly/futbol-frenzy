@@ -79,7 +79,8 @@ for (const hit of ['shoulder', 'big'] as const) {
     expect(await frame(attacker)).toContain(`lunge_${hit}`);
     expect(await frame(victim)).toContain('hurt_');
     await page.screenshot({ path: `artifacts/${hit}-contact.png` });
-    await page.clock.runFor(96);
+    // Sample the recovery after the tier-specific impact freeze.
+    for (let i = 0; i < 12 && (await frame(attacker)).includes('lunge'); i++) await page.clock.runFor(16);
     expect(await frame(attacker)).toContain(hit === 'shoulder' ? 'recover_shoulder' : 'getup');
     await page.screenshot({ path: `artifacts/${hit}-follow.png` });
     await page.clock.runFor(144);

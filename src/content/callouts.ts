@@ -7,7 +7,7 @@ import type { HitType, HurtTier } from '../sim';
  * Text is upper case, uses only glyphs the pixel font has, and wraps to at most two lines at its tier's scale.
  * The id is the text in lower-case kebab-case.
  */
-export interface Callout { id: string; text: string; tiers: HurtTier[]; hitTypes?: HitType[]; weight?: number; audio?: string }
+export interface Callout { id: string; text: string; tiers: HurtTier[]; hitTypes?: HitType[]; late?: boolean; weight?: number; audio?: string }
 
 const KD: HurtTier[] = ['knockdown'];
 const WO: HurtTier[] = ['wipeout'];
@@ -17,6 +17,9 @@ const WO_OTT: HurtTier[] = ['wipeout', 'overTheTop'];
 const ALL: HurtTier[] = ['knockdown', 'wipeout', 'overTheTop'];
 
 export const CALLOUTS: Callout[] = [
+  { id: 'wrong-ball', text: 'WRONG BALL!', tiers: ALL, late: true, weight: 5 },
+  { id: 'behind-the-play', text: 'BEHIND THE PLAY!', tiers: ALL, late: true, weight: 5 },
+  { id: 'ball-jars-loose', text: 'BALL JARS LOOSE!', tiers: ALL, late: false, weight: 5 },
   // Seed lines from the design.
   { id: 'crunch', text: 'CRUNCH!', tiers: ALL },
   { id: 'that-s-gonna-leave-a-mark', text: "THAT'S GONNA LEAVE A MARK!", tiers: WO_OTT },

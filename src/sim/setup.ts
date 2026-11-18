@@ -62,6 +62,7 @@ export function placeForKickoff(state: MatchState, kicking: TeamId): void {
   const kicker = state.players[kicking * PLAYERS_PER_TEAM + STRIKER_INDEX];
   kicker.pos = { x: KICKOFF_SPOT.x - attackDir(kicking) * KICKER_BEHIND_BALL, y: KICKOFF_SPOT.y };
   state.ball.owner = kicker.id;
+  state.manualSelection = [false, false];
   state.controlled[kicking] = kicker.id;
 
   const other = otherTeam(kicking);
@@ -94,7 +95,7 @@ export function createMatch(config: MatchConfig): MatchState {
     phase: 'kickoff', phaseTicks: 0, half: 1, clockTicks: config.halfSeconds * TICK_HZ,
     score: [0, 0], stats: [{ shots: 0, bigHits: 0, kos: 0, steals: 0 }, { shots: 0, bigHits: 0, kos: 0, steals: 0 }], halfHits: [null, null], reserves: [TEAM_RESERVES, TEAM_RESERVES], kickoffTeam: 0, rage: [0, 0], lastHitTick: [0, 0],
     players, ball: { pos: { ...KICKOFF_SPOT }, vel: { x: 0, y: 0 }, owner: null, ownerTicks: 0, passTarget: null },
-    brain: players.map(blankMemory), liveTicks: 0, defensiveHitAt: [], controlled: [0, 0], turbo: [1, 1],
+    brain: players.map(blankMemory), liveTicks: 0, defensiveHitAt: [], controlled: [0, 0], manualSelection: [false, false], turbo: [1, 1],
     prevInput: [neutralPad(), neutralPad()], events: [],
   };
   placeForKickoff(state, 0);
