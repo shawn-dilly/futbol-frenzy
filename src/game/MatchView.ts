@@ -11,7 +11,7 @@ import { ATLAS_KEY, INJURY_KEY, BALL_KEY, BALL_PX } from './BootScene';
 import { DEPTH, PITCH_TEX_H, PITCH_TEX_W, arcLift, cameraTarget, nextFlip, pitchImagePos, worldToScreen } from './layout';
 import { CRATER_H, CRATER_W, drawCrater, drawPitch } from './pitchArt';
 import { STAR_BURST, shakeOffset, starOffsets, strongerShake, type Shake } from './hitFeedback';
-import { clamp, isInjured } from '../sim';
+import { isInjured } from '../sim';
 import { pulseAlpha, type InjuryStyle } from './indicators';
 
 const PITCH_KEY = 'pitch';
@@ -104,6 +104,8 @@ export class MatchView {
       .map(sprite => ({ frame: sprite.frame.name, y: sprite.y }));
   }
 
+  ballScreenX(): number { return this.ball.x + BALL_CENTER_PX; }
+
   markerY(team: TeamId): number | null {
     const marker = this.markers[team];
     return marker.visible ? marker.y : null;
@@ -115,11 +117,8 @@ export class MatchView {
 
   sync(state: MatchState, nowMs: number, runOn = false): void {
     this.offset = this.currentShake(nowMs);
-    const selectedX = state.players[state.controlled[0]].pos.x;
-    const cameraSlack = 126; // leave room beyond the selected player for a tackle
-    const focus = state.config.human[0] && state.phase === 'play'
-      ? clamp(state.ball.pos.x, selectedX - cameraSlack, selectedX + cameraSlack) : state.ball.pos.x;
-    const target = cameraTarget(focus);
+    const manual = state.phase === 'play' && state.config.human[0] && state.manualSelection[0];
+    const target = cameraTarget(state.ball.pos.x, manual ? state.players[state.controlled[0]].pos.x : undefined);
     this.camX = this.camX === null || runOn ? target : this.camX + (target - this.camX) * CAMERA_EASE;
     const camX = Math.round(this.camX);
     const pitchAt = pitchImagePos(camX, this.offset);

@@ -1,4 +1,4 @@
-import { RAGE_MAX, TICK_HZ, TURBO_COST, type Phase, type Vec } from '../sim';
+import { clamp, RAGE_MAX, TICK_HZ, TURBO_COST, type Phase, type Vec } from '../sim';
 
 export const SCREEN_W = 320;
 export const SCREEN_H = 180;
@@ -8,8 +8,12 @@ export const CAMERA_MIN_X = -16;
 export const CAMERA_MAX_X = 176;
 const CAMERA_HALF_SCREEN = SCREEN_W / 2;
 
-export function cameraTarget(ballX: number): number {
-  return Math.min(CAMERA_MAX_X, Math.max(CAMERA_MIN_X, ballX - CAMERA_HALF_SCREEN));
+const MANUAL_CAMERA_SLACK_PX = 126; // leave room beyond the selected player for a tackle
+
+export function cameraTarget(ballX: number, selectedX?: number): number {
+  const focus = selectedX === undefined ? ballX
+    : clamp(ballX, selectedX - MANUAL_CAMERA_SLACK_PX, selectedX + MANUAL_CAMERA_SLACK_PX);
+  return Math.min(CAMERA_MAX_X, Math.max(CAMERA_MIN_X, focus - CAMERA_HALF_SCREEN));
 }
 
 export function worldToScreen(pos: Vec, camX: number): { x: number; y: number } {

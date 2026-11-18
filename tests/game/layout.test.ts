@@ -79,3 +79,10 @@ test('the pitch image has a margin as wide as the biggest shake, so no edge show
 });
 
 test('a callout line may be as wide as the screen less a 4 px margin each side', () => { expect(CALLOUT_MAX_W).toBe(312); });
+
+test('deliberate off-ball framing leaves tackle room on either side', () => {
+  expect(cameraTarget(54)).toBe(CAMERA_MIN_X);
+  expect(cameraTarget(54, 371)).toBe(85);
+  expect(cameraTarget(426, 109)).toBe(75);
+  expect(cameraTarget(240, 220)).toBe(80);
+});

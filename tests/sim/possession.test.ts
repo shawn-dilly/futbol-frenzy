@@ -1,5 +1,5 @@
 import { test, expect, beforeEach } from 'vitest';
-import { createMatch, neutralPad } from '../../src/sim/setup';
+import { createMatch, neutralPad, placeForKickoff } from '../../src/sim/setup';
 import { pickPassTarget, updatePossession } from '../../src/sim/possession';
 import { len } from '../../src/sim/vec';
 import type { MatchState, PadInput } from '../../src/sim/types';
@@ -136,4 +136,19 @@ test('NEXT keeps the checker through a teammate pickup and SWITCH restores norma
   runTicks(s, 1);
   runTicks(s, 1, [pad({ pass: true }), neutralPad()]);
   expect(s.controlled[0]).toBe(s.ball.passTarget);
+});
+
+test('NEXT framing ends on selected player pickup and resets for both sides at kickoff', () => {
+  s.ball.owner = null;
+  s.ball.pos = { ...s.players[2].pos };
+  runTicks(s, 1, [pad({ shoot: true }), neutralPad()]);
+  expect(s.manualSelection[0]).toBe(true);
+  freeBallAt(s.controlled[0], 0);
+  updatePossession(s);
+  expect(s.ball.owner).toBe(s.controlled[0]);
+  expect(s.manualSelection[0]).toBe(false);
+
+  s.manualSelection = [true, true];
+  placeForKickoff(s, 1);
+  expect(s.manualSelection).toEqual([false, false]);
 });
