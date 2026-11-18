@@ -1,4 +1,4 @@
-import { BIG_HIT_CHARGE_TICKS, TURBO_COST, type PlayerState } from '../sim';
+import { TICK_HZ, BIG_HIT_CHARGE_TICKS, TURBO_COST, type PlayerState } from '../sim';
 
 /** 0..1 progress of a big-hit charge (1 = charged enough for a big hit); 0 when not charging. */
 export function chargeFill(p: PlayerState): number {
@@ -16,9 +16,10 @@ export function chargeJustStarted(wasCharging: boolean, p: PlayerState): boolean
   return !wasCharging && p.status.kind === 'charging';
 }
 
+export const DEFAULT_INJURY_STYLE = 'pulse';
 export type InjuryStyle = 'bandage' | 'pulse';
 
-/** One smooth two-second cycle, always visible even at minimum intensity. */
+/** Opacity of the red overlay over a fully opaque player during one two-second cycle. */
 export function pulseAlpha(tick: number): number {
-  return 0.7 + 0.25 * Math.cos(tick * Math.PI / 60);
+  return 0.16 * (1 + Math.cos(tick * Math.PI / TICK_HZ));
 }

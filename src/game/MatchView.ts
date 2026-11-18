@@ -7,7 +7,7 @@ import { ANIMATIONS, airTicks } from '../content/animations';
 import type { MatchState, PlayerState, TeamId, Vec } from '../sim';
 import { outgoingAt } from './outgoing';
 import { animFor } from './playerAnim';
-import { ATLAS_KEY, BALL_KEY, BALL_PX } from './BootScene';
+import { ATLAS_KEY, INJURY_KEY, BALL_KEY, BALL_PX } from './BootScene';
 import { DEPTH, PITCH_TEX_H, PITCH_TEX_W, arcLift, cameraTarget, nextFlip, pitchImagePos, worldToScreen } from './layout';
 import { CRATER_H, CRATER_W, drawCrater, drawPitch } from './pitchArt';
 import { STAR_BURST, shakeOffset, starOffsets, strongerShake, type Shake } from './hitFeedback';
@@ -22,6 +22,7 @@ const BALL_SHADOW_W = BALL_PX + 1;
 const BALL_CENTER_PX = Math.floor(BALL_PX / 2); // sprite columns left of the ball's position
 /** Body centre is column ORIGIN_X, but flipX mirrors about x = ORIGIN_X; shift a flipped sprite right to keep the body still. */
 const FLIP_OFFSET_PX = 1;
+const INJURY_DEPTH_OFFSET = 0.001; // draw over the wearer at the same pitch position
 const MARKER = { w: 8, h: 5, above: 19, color: Phaser.Display.Color.HexStringToColor(PAL.yel).color }; // px above the feet
 
 /** Star pixels: this big, this far above the feet at the burst centre. */
@@ -30,13 +31,7 @@ const STAR = { size: 2, centerAbove: 8, color: MARKER.color };
 interface StarBurst { pos: Vec; startMs: number; stars: Phaser.GameObjects.Rectangle[] }
 interface Crater { pos: Vec; image: Phaser.GameObjects.Image }
 
-const BANDAGE = [
-  { dx: -3, dy: -18, w: 7, h: 4, color: 0x452e32 },
-  { dx: -2, dy: -17, w: 5, h: 2, color: 0xffe5bd },
-  { dx: 0, dy: -17, w: 1, h: 2, color: 0xb96a4b },
-];
-
-interface PlayerView { sprite: Phaser.GameObjects.Image; shadow: Phaser.GameObjects.Rectangle; bandage: Phaser.GameObjects.Rectangle[]; flip: boolean }
+interface PlayerView { sprite: Phaser.GameObjects.Image; shadow: Phaser.GameObjects.Rectangle; injury: Phaser.GameObjects.Image; flip: boolean }
 
 /** Draws the pitch, players and ball from match state. Reads state, never writes it. */
 export class MatchView {
@@ -96,7 +91,7 @@ export class MatchView {
     this.clearCraters();
     this.bursts.forEach(b => b.stars.forEach(star => star.destroy()));
     this.bursts.length = 0;
-    this.outgoing.forEach(({ view }) => { view.sprite.destroy(); view.shadow.destroy(); view.bandage.forEach(d => d.destroy()); });
+    this.outgoing.forEach(({ view }) => { view.sprite.destroy(); view.shadow.destroy(); view.injury.destroy(); });
     this.outgoing.length = 0;
     this.shaking = null;
   }
@@ -134,7 +129,7 @@ export class MatchView {
       const actor = this.outgoing[i];
       const elapsed = state.tick - actor.start;
       if (elapsed >= actor.player.statusTicks) {
-        actor.view.sprite.destroy(); actor.view.shadow.destroy(); actor.view.bandage.forEach(d => d.destroy());
+        actor.view.sprite.destroy(); actor.view.shadow.destroy(); actor.view.injury.destroy();
         this.outgoing.splice(i, 1); continue;
       }
       this.syncPlayer(actor.view, outgoingAt(actor.player, elapsed), state, camX, false);
@@ -177,9 +172,9 @@ export class MatchView {
   }
 
   private createPlayerView(p: PlayerState): PlayerView {
-    const bandage = BANDAGE.map(({ w, h, color }) =>
-      this.scene.add.rectangle(0, 0, w, h, color).setOrigin(0, 0).setDepth(DEPTH.marker).setVisible(false));
-    return { sprite: this.scene.add.image(0, 0, ATLAS_KEY).setName(`player-${p.id}`).setOrigin(0, 0), shadow: this.shadowRect(SHADOW.w), bandage, flip: nextFlip(false, p.facing.x) };
+    const sprite = this.scene.add.image(0, 0, ATLAS_KEY).setName(`player-${p.id}`).setOrigin(0, 0);
+    const injury = this.scene.add.image(0, 0, INJURY_KEY).setOrigin(0, 0).setVisible(false);
+    return { sprite, shadow: this.shadowRect(SHADOW.w), injury, flip: nextFlip(false, p.facing.x) };
   }
 
   private syncPlayer(view: PlayerView, p: PlayerState, state: MatchState, camX: number, marker = true): void {
@@ -190,17 +185,20 @@ export class MatchView {
     const { key, tick } = animFor(p, state.tick);
     const def = ANIMATIONS[key];
     const lift = arcLift(def.arcHeight, tick, airTicks(def));
+    const frame = frameIndex(key, tick);
     view.sprite
-      .setFrame(frameKey(kit, key, frameIndex(key, tick)))
+      .setFrame(frameKey(kit, key, frame))
       .setFlipX(view.flip)
       .setPosition(x - ORIGIN_X + (view.flip ? FLIP_OFFSET_PX : 0), y - ORIGIN_Y - Math.round(lift))
       .setDepth(p.pos.y);
     view.shadow.setPosition(x - SHADOW.w / 2, y);
-    const injured = marker && isInjured(state, p);
-    const pulse = this.injuryStyle === 'pulse';
-    view.bandage.forEach((part, i) => part.setVisible(injured && !pulse)
-      .setPosition(x + BANDAGE[i].dx, y - Math.round(lift) + BANDAGE[i].dy));
-    view.sprite.setAlpha(injured && pulse ? pulseAlpha(state.tick) : 1);
+    const upright = p.status.kind === 'free' || p.status.kind === 'charging' || p.status.kind === 'kicking';
+    view.injury.setVisible(marker && upright && isInjured(state, p));
+    if (view.injury.visible) {
+      view.injury.setFrame(`${this.injuryStyle}_${key}_${frame}`)
+        .setPosition(view.sprite.x, view.sprite.y).setDepth(p.pos.y + INJURY_DEPTH_OFFSET).setFlipX(view.flip)
+        .setAlpha(this.injuryStyle === 'pulse' ? pulseAlpha(state.tick) : 1);
+    }
     if (marker && state.config.human[p.team] && state.controlled[p.team] === p.id) {
       this.markers[p.team as TeamId].setVisible(true).setPosition(x, y - MARKER.above - Math.round(lift));
     }

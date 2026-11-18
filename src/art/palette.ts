@@ -14,7 +14,7 @@ const regular: readonly Kit[] = [
   { jersey: PAL.navy, trim: PAL.yel, shorts: PAL.yel, hair: PAL.ink, skin: PAL.skin },
   { jersey: PAL.yel, trim: PAL.pur, shorts: PAL.pur, hair: PAL.ink, skin: PAL.skin2 },
   { jersey: PAL.org, trim: PAL.blue, shorts: PAL.blue, hair: PAL.ink, skin: PAL.skin },
-  { jersey: PAL.wht, trim: PAL.grn, shorts: PAL.grn, hair: PAL.ink, skin: PAL.skin2 },
+  { jersey: PAL.wht, trim: '#702349', shorts: '#702349', hair: PAL.ink, skin: PAL.skin2 },
   { jersey: '#a646df', trim: PAL.wht, shorts: PAL.wht, hair: PAL.ink, skin: PAL.skin },
 ];
 

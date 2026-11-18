@@ -33,6 +33,6 @@ test('the charge sound starts on the step a charge begins, once', () => {
   expect(chargeJustStarted(true, p)).toBe(false);
 });
 
-test('local injury pulse stays visible throughout its two-second cycle', () => {
-  for (const [tick, alpha] of [[0, 0.95], [30, 0.7], [60, 0.45], [120, 0.95]]) expect(pulseAlpha(tick)).toBeCloseTo(alpha);
+test('red overlay gently rises and falls over two seconds', () => {
+  for (const [tick, alpha] of [[0, 0.32], [30, 0.16], [60, 0], [120, 0.32]]) expect(pulseAlpha(tick)).toBeCloseTo(alpha);
 });

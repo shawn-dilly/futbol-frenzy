@@ -106,16 +106,23 @@ for (const route of ['demo', 'match']) {
   });
 }
 
-test('phone setup defaults to bandage and can launch with slow pulse', async ({ page }) => {
+test('phone setup defaults to Pulse and exposes the Bandage choice', async ({ page }) => {
   await page.setViewportSize({ width: 640, height: 360 });
   await observeEntries(page);
   await openFriendly(page);
-  for (const style of ['bandage', 'pulse']) {
+  for (const style of ['pulse', 'bandage']) {
     await returnToShell(page);
     await page.keyboard.press('Enter');
     // Let Phaser register the newly drawn setup zones before tapping.
     await page.evaluate(() => new Promise<void>(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))));
-    if (style === 'pulse') {
+    const pulse = page.getByRole('button', { name: 'Injury indicator: Pulse', exact: true });
+    await expect(pulse).toBeVisible();
+    if (style === 'bandage') {
+      await pulse.dispatchEvent('click'); // Assistive activation can arrive without a pointer press.
+      const bandage = page.getByRole('button', { name: 'Injury indicator: Bandage' });
+      await expect(bandage).toBeFocused();
+      await bandage.press('Space');
+      await expect(pulse).toBeFocused();
       await page.mouse.click(260, 314);
       await page.keyboard.press('ArrowDown'); // Back
       await page.keyboard.press('ArrowDown'); // Kick Off
@@ -124,6 +131,7 @@ test('phone setup defaults to bandage and can launch with slow pulse', async ({ 
     }
     await page.keyboard.press('Enter');
     await page.waitForFunction(() => !!window.__ff);
+    await expect(page.getByRole('button', { name: /Injury indicator/, includeHidden: true })).toHaveCount(0);
     expect(await page.evaluate(() => window.launches.at(-1)?.injuryStyle)).toBe(style);
   }
 });

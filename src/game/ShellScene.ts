@@ -1,3 +1,4 @@
+import { DEFAULT_INJURY_STYLE, type InjuryStyle } from './indicators';
 import Phaser from 'phaser';
 import { frameKey } from '../art/sprites';
 import { ATLAS_KEY, BALL_KEY } from './BootScene';
@@ -8,8 +9,10 @@ import { LEVEL_ORDER, type Level } from '../sim';
 import { consumeResult, retryCup, quitCup, cupMatchConfig, startCup, type CupSession } from './cupSession';
 import { parseMatchParams } from './params';
 import { setupConfig, type MatchLength, type SetupSelection } from './setupSelection';
+import { SCREEN_W, SCREEN_H } from './layout';
 import { matchTeams, type MatchLaunch } from './launch';
 
+const INJURY_BUTTON = { x: 68, y: 145, w: 122, h: 24 };
 let runCounter = 0;
 const lengths: MatchLength[] = ['short', 'long', 'five'];
 
@@ -20,22 +23,42 @@ export class ShellScene extends Phaser.Scene {
   private currentMatchLaunch: MatchLaunch | null = null;
   private screen: 'title' | 'setup' = 'title';
   private selection: SetupSelection = { team: 0, opponent: 1, level: 'pro', length: 'short' };
-  private injuryStyle: 'bandage' | 'pulse' = 'bandage';
+  private injuryStyle: InjuryStyle = DEFAULT_INJURY_STYLE;
+  private injuryButton!: HTMLButtonElement;
   private focus = 0;
   private leaving = false;
   constructor() { super('shell'); }
 
   create(): void {
     this.leaving = false;
+    const button = document.createElement('button');
+    this.injuryButton = button;
+    button.type = 'button';
+    button.style.cssText = 'position:fixed;opacity:0;margin:0;padding:0;border:0';
+    document.body.append(button);
+    button.onclick = () => {
+      this.focus = 6;
+      this.activate(6, 1);
+      this.render();
+    };
+    button.onfocus = () => { this.focus = 6; this.render(); };
+    this.scale.on('resize', this.positionInjuryButton, this);
     // Menu commands follow native presses. Phaser can re-emit queued events within a frame.
     const onKey = (event: KeyboardEvent) => this.onKey(event);
     window.addEventListener('keydown', onKey);
-    this.events.once('shutdown', () => window.removeEventListener('keydown', onKey));
+    this.events.once('shutdown', () => {
+      window.removeEventListener('keydown', onKey);
+      this.scale.off('resize', this.positionInjuryButton, this);
+      button.remove();
+    });
     this.render();
   }
   private onKey(event: KeyboardEvent): void {
     if (this.leaving) return;
-    if (event.repeat && (event.key === 'Enter' || event.key === ' ')) return;
+    if (event.repeat && (event.key === 'Enter' || event.key === ' ')) {
+      event.preventDefault();
+      return;
+    }
     if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Enter', ' ', 'Escape', 'Tab'].includes(event.key)) event.preventDefault();
     const targets = this.screen === 'title' ? [0, 1] : this.mode === 'cup' ? [0, 2, 3, 6, 4, 5] : [0, 1, 2, 3, 6, 4, 5];
     const position = targets.indexOf(this.focus);
@@ -95,8 +118,22 @@ export class ShellScene extends Phaser.Scene {
     this.focus = 0;
   }
 
+  private positionInjuryButton(): void {
+    const bounds = this.game.canvas.getBoundingClientRect();
+    const { x, y, w, h } = INJURY_BUTTON;
+    Object.assign(this.injuryButton.style, {
+      left: `${bounds.left + x * bounds.width / SCREEN_W}px`, top: `${bounds.top + y * bounds.height / SCREEN_H}px`,
+      width: `${w * bounds.width / SCREEN_W}px`, height: `${h * bounds.height / SCREEN_H}px`,
+    });
+  }
+
   private render(): void {
     if (this.leaving) return;
+    this.injuryButton.hidden = this.screen !== 'setup';
+    this.injuryButton.textContent = `Injury indicator: ${this.injuryStyle === 'pulse' ? 'Pulse' : 'Bandage'}`;
+    if (!this.injuryButton.hidden) this.positionInjuryButton();
+    if (!this.injuryButton.hidden && this.focus === 6) this.injuryButton.focus();
+    else this.injuryButton.blur();
     this.children.removeAll(true);
     const g = this.add.graphics();
     const rect = (x: number, y: number, w: number, h: number, color: string) => { g.fillStyle(Phaser.Display.Color.HexStringToColor(color).color); g.fillRect(x, y, w, h); };
@@ -105,6 +142,7 @@ export class ShellScene extends Phaser.Scene {
     const button = (index: number, x: number, y: number, w: number, h: number, label: string, color: string = PAL.dk) => {
       rect(x, y, w, h, index === this.focus ? PAL.yel : PAL.gry); rect(x + 1, y + 1, w - 2, h - 2, color);
       text(label, x + w / 2, y + Math.floor((h - 5) / 2), PAL.wht, 1, 'c');
+      if (index === 6) return; // The native injury button owns pointer and assistive activation.
       this.add.zone(x, y, w, h).setOrigin(0).setInteractive().on('pointerdown', (p: Phaser.Input.Pointer) => {
         if (this.leaving) return;
         this.focus = index;
@@ -145,7 +183,7 @@ export class ShellScene extends Phaser.Scene {
     const label = this.selection.length === 'short' ? '2 MIN/HALF' : this.selection.length === 'long' ? '4 MIN/HALF' : 'FIRST TO 5';
     button(3, 163, 112, 145, 22, `LENGTH: < ${label} >`);
     button(4, 12, 145, 52, 24, '< BACK');
-    button(6, 68, 145, 122, 24, `INJURY: ${this.injuryStyle}`);
+    button(6, INJURY_BUTTON.x, INJURY_BUTTON.y, INJURY_BUTTON.w, INJURY_BUTTON.h, `INJURY: ${this.injuryStyle}`);
     button(5, 194, 145, 114, 24, 'KICK OFF >', PAL.red);
   }
 }

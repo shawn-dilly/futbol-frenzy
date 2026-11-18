@@ -1,3 +1,4 @@
+import { DEFAULT_INJURY_STYLE } from './indicators';
 import { resolveKits, TEAMS } from '../content/teams';
 import Phaser from 'phaser';
 import { drawText } from '../art/pixelFont';
@@ -112,7 +113,7 @@ export class MatchScene extends Phaser.Scene {
     };
     window.__ff = hook;
     const kits = this.launch.kits ?? resolveKits(TEAMS[0], TEAMS[1]);
-    this.view = new MatchView(this, seededRandom(this.seed ^ EFFECT_SEED_SALT), kits, this.launch.injuryStyle ?? 'bandage');
+    this.view = new MatchView(this, seededRandom(this.seed ^ EFFECT_SEED_SALT), kits, this.launch.injuryStyle ?? DEFAULT_INJURY_STYLE);
     this.hud = new Hud(this, this.launch.teamNames, [KITS[kits[0].outfield].jersey, KITS[kits[1].outfield].jersey]);
     this.calloutBanner = new CalloutBanner(this);
     this.flash = this.add.rectangle(0, 0, SCREEN_W, SCREEN_H, 0xffffff).setOrigin(0, 0).setDepth(DEPTH.flash).setAlpha(0);
